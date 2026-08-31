@@ -1,0 +1,126 @@
+# Example multi-type site (fictional). Safe to commit / share.
+# Copy and adapt for your own installation.
+# Keep real site YAML out of git (see .gitignore).
+#
+# Conventions used here (typical B-Logicx layout, not a real site):
+#   group 2  — lights / outlets
+#   group 3  — shutters / covers
+#   group 10 — software members
+# Types: normal | shutter | sfeer | exu | rtc
+
+addresses:
+  - type: normal
+    name: Kitchen ceiling
+    group: 2
+    address: 33
+    on_command: Set
+    off_command: Reset
+    check_status: true
+
+  - type: normal
+    name: Hallway
+    group: 2
+    address: 34
+    on_command: Toggle
+    off_command: Toggle
+    check_status: true
+
+  - type: normal
+    name: Workshop outlet
+    group: 2
+    address: 90
+    on_command: Set
+    off_command: Reset
+    check_status: true
+
+  - type: normal
+    name: Soft member demo
+    group: 10
+    address: 12
+    on_command: Set
+    off_command: Reset
+    check_status: false
+
+  - type: shutter
+    name: South awning
+    open_group: 3
+    open_address: 10
+    close_group: 3
+    close_address: 11
+    open_time: 28
+    close_time: 28
+    check_status: true
+
+  - type: shutter
+    name: Office blind
+    open_group: 3
+    open_address: 20
+    close_group: 3
+    close_address: 21
+    open_time: 22
+    close_time: 22
+    check_status: true
+
+  - type: sfeer
+    name: Lounge
+    group: 5
+    check_status: true
+    moods:
+      - name: Reading
+        address: 221
+      - name: Cinema
+        address: 222
+      - name: Bright
+        address: 223
+
+  - type: sfeer
+    name: Study
+    group: 6
+    check_status: true
+    moods:
+      - name: Focus
+        address: 221
+      - name: Soft
+        address: 222
+
+  - type: exu
+    name: Front PIR
+    group: 1
+    address: 30
+    check_status: false
+
+  - type: exu
+    name: Side door contact
+    group: 1
+    address: 31
+    check_status: false
+
+  - type: rtc
+    name: Bus clock
+    group: 1
+    address: 1
+    sync_interval_hours: 12
+    sync_minute: 17
+    sync_on_startup: true
+    sync_on_dst: true
+    dst_delay_minutes: 1
+
+  - type: ldm
+    name: Garden light sensor
+    group: 1
+    address: 23
+    check_status: true
+
+  - type: tsm
+    name: Hall thermostat
+    group: 1
+    address: 45
+    check_status: true
+
+  - type: normal
+    name: Software member example
+    group: 10
+    address: 200
+    on_command: Toggle
+    off_command: Reset
+    check_status: false

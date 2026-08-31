@@ -1,0 +1,44 @@
+# Fixture for offline tests — short travel times (fictional addresses)
+# Lights group 2, covers group 3 (not a real site map).
+addresses:
+  - type: normal
+    name: Toggle light
+    group: 2
+    address: 100
+    on_command: Toggle
+    off_command: Toggle
+    check_status: true
+
+  - type: normal
+    name: SetReset light
+    group: 2
+    address: 101
+    on_command: Set
+    off_command: Reset
+    check_status: true
+
+  - type: shutter
+    name: Fast cover
+    open_group: 3
+    open_address: 40
+    close_group: 3
+    close_address: 41
+    open_time: 0.15
+    close_time: 0.15
+    check_status: true
+
+  - type: sfeer
+    name: Demo room
+    group: 5
+    check_status: true
+    moods:
+      - name: Dinner
+        address: 221
+      - name: TV
+        address: 222
+
+  - type: exu
+    name: Door EXU
+    group: 1
+    address: 40
+    check_status: true

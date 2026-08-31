@@ -1,0 +1,71 @@
+# B-Logicx addresses (full replace on import)
+# Types: normal | shutter | sfeer | exu | rtc
+# Fictional example values only — replace with your bus map.
+#
+# Example conventions: lights/outlets group 2, covers group 3,
+# software members group 10 (not a real site).
+
+addresses:
+  - type: normal
+    name: Kitchen Light
+    group: 2
+    address: 33
+    on_command: Set
+    off_command: Reset
+    check_status: true
+
+  - type: shutter
+    name: Office Blind
+    open_group: 3
+    open_address: 20
+    close_group: 3
+    close_address: 21
+    open_time: 30
+    close_time: 30
+    check_status: true
+
+  - type: sfeer
+    name: Lounge
+    group: 5
+    check_status: true
+    moods:
+      - name: Reading
+        address: 221
+      - name: Cinema
+        address: 222
+
+  - type: exu
+    name: Example EXU input
+    group: 1
+    address: 30
+    check_status: false
+
+  - type: rtc
+    name: Bus clock
+    group: 1
+    address: 1
+    sync_interval_hours: 12
+    sync_minute: 17
+    sync_on_startup: true
+    sync_on_dst: true
+    dst_delay_minutes: 1
+
+  - type: ldm
+    name: Porch light sensor
+    group: 1
+    address: 23
+    check_status: true
+
+  - type: tsm
+    name: Living thermostat
+    group: 1
+    address: 45
+    check_status: true
+
+  - type: normal
+    name: Software Member Example
+    group: 10
+    address: 200
+    on_command: Toggle
+    off_command: Reset
+    check_status: false

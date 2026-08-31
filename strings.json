@@ -1,0 +1,164 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "B-Logicx Gateway",
+        "data": {
+          "host": "IP address or hostname of the BL-NWM gateway",
+          "port": "Port (default 10001)"
+        }
+      }
+    },
+    "error": {
+      "invalid_host": "Invalid IP address or hostname",
+      "cannot_connect": "Failed to connect to the gateway. Please check the IP, port, and that the device is reachable from Home Assistant."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "B-Logicx configuration",
+        "description": "Current entries:\n{addresses}\n\nChoose an action below. YAML import overwrites all existing entries."
+      },
+      "add_address": {
+        "title": "Add bus address — choose type",
+        "description": "Current entries:\n{addresses}\n\nNormal → switch. Cover → open/close pair. EXU → listen-only binary sensor. RTC → bus clock. (Sfeer rooms: use Add room for Sfeer.)",
+        "data": {
+          "address_type": "Entry type"
+        }
+      },
+      "add_normal": {
+        "title": "Add Normal Bus Address",
+        "description": "One bus address as a switch.\n\n{example}",
+        "data": {
+          "name": "Name",
+          "group": "Group",
+          "address": "Address",
+          "on_command": "On command",
+          "off_command": "Off command",
+          "check_status": "Check status on startup (send Status command)"
+        }
+      },
+      "add_exu": {
+        "title": "Add EXU (listen-only)",
+        "description": "{example}",
+        "data": {
+          "name": "Name",
+          "group": "Group (default 1)",
+          "address": "Address",
+          "check_status": "Check status on startup (send Status only)"
+        }
+      },
+      "add_rtc": {
+        "title": "Add RTC (bus clock)",
+        "description": "{example}",
+        "data": {
+          "name": "Name",
+          "group": "Group (default 1)",
+          "address": "Address",
+          "sync_interval_hours": "Sync interval (hours)",
+          "sync_minute": "Sync at minute (avoid 0 = on the hour)",
+          "sync_on_startup": "Sync on integration startup (after Status probes)",
+          "sync_on_dst": "Sync after daylight-saving time changes",
+          "dst_delay_minutes": "Minutes after DST change before sync"
+        }
+      },
+      "add_ldm": {
+        "title": "Add LDM (light sensor)",
+        "description": "{example}",
+        "data": {
+          "name": "Name",
+          "group": "Group",
+          "address": "Address",
+          "check_status": "Request light level on startup (also adds Refresh button)"
+        }
+      },
+      "add_tsm": {
+        "title": "Add TSM (temperature)",
+        "description": "{example}",
+        "data": {
+          "name": "Name",
+          "group": "Group",
+          "address": "Address",
+          "check_status": "Request Status on startup (also adds Refresh button)"
+        }
+      },
+
+      "add_shutter": {
+        "title": "Add Roller / Shutter / Blind (Cover)",
+        "description": "{example}",
+        "data": {
+          "name": "Cover name",
+          "open_group": "Open group",
+          "open_address": "Open address",
+          "close_group": "Close group",
+          "close_address": "Close address",
+          "open_time": "Open travel time (seconds)",
+          "close_time": "Close travel time (seconds)",
+          "check_status": "Check status on startup"
+        }
+      },
+      "add_sfeer_room": {
+        "title": "Add room for Sfeer",
+        "description": "{example}",
+        "data": {
+          "room_name": "Room name",
+          "group": "Bus group (first room usually 5, then 6…)",
+          "check_status": "Check status on startup"
+        }
+      },
+      "add_sfeer_mood": {
+        "title": "Add Sfeer — choose room",
+        "description": "{example}",
+        "data": {
+          "room": "Sfeer room"
+        }
+      },
+      "add_sfeer_mood_details": {
+        "title": "Add Sfeer — mood",
+        "description": "{example}",
+        "data": {
+          "mood_name": "Mood name",
+          "address": "Address (usually 221, 222, …)"
+        }
+      },
+      "edit_select": {
+        "title": "Edit entry",
+        "description": "Select which entry to edit."
+      },
+      "remove_select": {
+        "title": "Remove entry",
+        "description": "Select which entry to remove.",
+        "data": {
+          "entry_to_remove": "Entry to remove"
+        }
+      },
+      "remove_confirm": {
+        "title": "Confirm removal",
+        "description": "Remove this entry?\n\n{entry}",
+        "data": {
+          "confirm": "Yes, remove this entry"
+        }
+      },
+      "import_yaml": {
+        "title": "Import from YAML",
+        "description": "{warning}\n\nUpload a YAML file matching the template (addresses: list). This replaces all configured entries.",
+        "data": {
+          "import_yaml": "YAML file"
+        }
+      },
+      "download_yaml_template": {
+        "title": "Download YAML template",
+        "description": "{warning}\n\n{template}",
+        "data": {
+          "template": "Template content (copy everything below)"
+        }
+      }
+    },
+    "error": {
+      "invalid_yaml": "Could not read or parse the YAML file.",
+      "invalid_format": "YAML structure or one or more entries are invalid.",
+      "required": "This field is required."
+    }
+  }
+}

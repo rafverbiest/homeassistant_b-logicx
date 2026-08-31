@@ -1,0 +1,26 @@
+# Personal / real-site configuration (do not publish)
+site.yaml
+*.local.yaml
+private/
+
+# Editor / OS backups
+*~
+*.swp
+*.swo
+.DS_Store
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+
+# Local HA / tooling noise
+.storage/
+
+# DESIGN.md to be kept personal for now
+DESIGN.md
