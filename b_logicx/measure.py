@@ -3,15 +3,12 @@
 LDM light:
   Value g.a (g != 11) → light payload
   System G.A          → device id
-  raw = ((g<<8)|a) - 3 ; percent = raw * 100 / 1024
+  raw = (g<<8)|a ; percent = raw * 100 / 1024
 
-TSM thermostat burst:
+TSM (exactly three frames; anything after is ignored):
   Value 11.x          → measured °C = address/2 (offset included)
   Settings i.s        → preset i, setpoint s/2 °C
-  System G.A          → device id → commit temp from sticky Value 11
-  Data 0.26           → fixed marker (not temperature)
-  Select G.A          → handshake
-  System 15.16/48     → heat requested no/yes
+  System G.A          → device id → commit reading
 
 Dual sticky Values: group 11 is TSM-only; other groups are LDM-only.
 """
@@ -26,11 +23,6 @@ LDM_REQUEST_DATA_ADDRESS = 2
 
 # TSM measured temperature uses Value group 11
 TSM_VALUE_GROUP = 11
-
-# Heat requested (not plant on/off)
-HEAT_REQUESTED_GROUP = 15
-HEAT_REQUESTED_OFF_ADDRESS = 16
-HEAT_REQUESTED_ON_ADDRESS = 48
 
 TSM_PRESET_NAMES = {
     1: "Night",
@@ -48,8 +40,8 @@ def packed12(group: int, address: int) -> int:
 
 
 def value_frame_to_raw(group: int, address: int) -> int:
-    """LDM light count: packed − 3 (count+3 on the wire)."""
-    return packed12(group, address) - 3
+    """LDM light count: 12-bit packed field (group nibble + address)."""
+    return packed12(group, address)
 
 
 def raw_to_percent(raw: int) -> float:
@@ -74,17 +66,6 @@ def settings_to_preset(group: int, address: int) -> tuple[int, float, str]:
     return idx, setpoint, name
 
 
-def heat_requested_from_system(group: int, address: int) -> bool | None:
-    """True/False if System 15.16/15.48, else None."""
-    if int(group) != HEAT_REQUESTED_GROUP:
-        return None
-    if int(address) == HEAT_REQUESTED_ON_ADDRESS:
-        return True
-    if int(address) == HEAT_REQUESTED_OFF_ADDRESS:
-        return False
-    return None
-
-
 @dataclass
 class LdmReading:
     group: int
@@ -97,27 +78,29 @@ class LdmReading:
 
 @dataclass
 class TsmReading:
+    """Result of a complete TSM triple (Value 11 + Settings + System id)."""
+
     group: int
     address: int
-    temperature_c: float | None = None  # None = do not update temp entity
+    temperature_c: float
     value_address: int | None = None
     preset_index: int | None = None
     preset_name: str | None = None
     preset_setpoint: float | None = None
-    heat_requested: bool | None = None
 
 
 @dataclass
 class MeasureBusState:
-    """Dual-sticky multi-frame decode (LDM Value ≠ TSM Value 11)."""
+    """Dual-sticky multi-frame decode (LDM Value ≠ TSM Value 11).
 
-    # LDM: last Value with group != 11
+    TSM completes on the third frame (System device id) only.
+    """
+
     ldm_value_raw: int | None = None
     ldm_value_group: int | None = None
     ldm_value_address: int | None = None
     ldm_value_at: float = 0.0
 
-    # TSM: last Value with group == 11
     tsm_temp_c: float | None = None
     tsm_value_address: int | None = None
     tsm_value_at: float = 0.0
@@ -180,9 +163,8 @@ class MeasureBusState:
         now: float,
         *,
         max_age: float = VALUE_MAX_AGE_S,
-        heat: bool | None = None,
     ) -> TsmReading | None:
-        """Commit TSM reading from sticky Value 11 temp + optional Settings/heat."""
+        """Commit TSM on System id after sticky Value 11 (+ Settings if seen)."""
         if self.tsm_temp_c is None or self.tsm_value_at <= 0:
             return None
         if now - self.tsm_value_at > max_age:
@@ -195,23 +177,4 @@ class MeasureBusState:
             preset_index=self.last_settings_index,
             preset_name=self.last_settings_name,
             preset_setpoint=self.last_settings_setpoint,
-            heat_requested=heat,
-        )
-
-    def heat_only_reading(
-        self,
-        system_group: int,
-        system_address: int,
-        heat: bool,
-    ) -> TsmReading:
-        """Heat-requested update; temperature_c left None so entities keep last."""
-        return TsmReading(
-            group=system_group,
-            address=system_address,
-            temperature_c=None,
-            value_address=self.tsm_value_address,
-            preset_index=self.last_settings_index,
-            preset_name=self.last_settings_name,
-            preset_setpoint=self.last_settings_setpoint,
-            heat_requested=heat,
         )

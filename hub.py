@@ -13,21 +13,19 @@ from .b_logicx import BLXConnection, BLXEvent
 from .b_logicx.measure import (
     LDM_REQUEST_DATA_ADDRESS,
     LDM_REQUEST_DATA_GROUP,
-    VALUE_MAX_AGE_S,
     LdmReading,
     MeasureBusState,
     TsmReading,
-    heat_requested_from_system,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 # Status wait: long enough for a slow bus device, short enough not to stall setup.
-# Matches the ~2s gaps seen when replies were lost due to framing desync; with a
-# single shared receiver those gaps should no longer mean a permanent miss.
 _STATUS_TIMEOUT = 2.5
-# Brief settle after each Status exchange before the next address is queried.
-_STATUS_GAP = 0.05
+# After each request/response (Status, LDM, TSM), pause before the next transaction.
+# 50 ms was enough for most addresses but Status 5.223 (Sfeer) intermittently
+# missed Set/Reset; 100 ms is more reliable on a busy startup queue.
+_STATUS_GAP = 0.10  # 100 ms
 _MEASURE_TIMEOUT = 2.5
 
 
@@ -42,12 +40,10 @@ class BLogicxHub:
         self._listener_task: asyncio.Task | None = None
         # Keyed by (group, address) for early filtering of irrelevant datagrams
         self._listeners: dict[tuple[int, int], list[Callable[[BLXEvent], None]]] = {}
-        # Serialise Status queries: one Status at a time, wait for Set/Reset
-        # before sending the next. Parallel Status storms lose replies.
-        self._status_lock = asyncio.Lock()
+        # ONE lock for all bus request/response pairs (Status, LDM, TSM, RTC sequence).
+        # Prevents LDM Data/Select from interleaving mid Status-wait (missed Set/Reset).
+        self._request_lock = asyncio.Lock()
         self._pending_status: dict[tuple[int, int], asyncio.Future] = {}
-        # Serialise multi-frame TX (e.g. RTC Program sequences)
-        self._tx_lock = asyncio.Lock()
         # Last successful RTC sync per (group, address) → datetime (UTC-aware optional)
         self.rtc_last_sync: dict[tuple[int, int], object] = {}
         self._rtc_sync_callbacks: list = []
@@ -63,8 +59,6 @@ class BLogicxHub:
         ] = {}
         self._pending_ldm: dict[tuple[int, int], asyncio.Future] = {}
         self._pending_tsm: dict[tuple[int, int], asyncio.Future] = {}
-        # Last TSM identity for heat-requested association
-        self._last_tsm_identity: tuple[int, int] | None = None
 
     def register_listener(
         self, callback: Callable[[BLXEvent], None], group: int, address: int
@@ -162,6 +156,12 @@ class BLogicxHub:
                     fut = self._pending_status[key]
                     if not fut.done():
                         fut.set_result(event.command == "Set")
+                        _LOGGER.debug(
+                            "Status matched ← %s %s.%s",
+                            event.command,
+                            event.group,
+                            event.address,
+                        )
 
                 self._handle_measure_event(event, now)
 
@@ -177,11 +177,11 @@ class BLogicxHub:
             _LOGGER.error("B-Logicx listener error: %s", err)
 
     def _handle_measure_event(self, event: BLXEvent, now: float) -> None:
+        """LDM: Value(≠11)+System. TSM: Value 11 + Settings + System only."""
         cmd = event.command
         g, a = event.group, event.address
 
         if cmd == "Value":
-            # Dual sticky: group 11 → TSM temp; else → LDM light payload
             self._measure.note_value(g, a, now)
             return
 
@@ -189,56 +189,38 @@ class BLogicxHub:
             self._measure.note_settings(g, a, now)
             return
 
-        if cmd == "Data":
-            # TSM Data 0.26 is a fixed handshake marker — ignore for temperature
+        # Data / Select / System 15.x / other — not part of LDM or TSM triple
+        if cmd != "System":
             return
 
-        if cmd == "System":
-            heat = heat_requested_from_system(g, a)
-            if heat is not None:
-                tkey = self._last_tsm_identity
-                if tkey is not None and tkey in self._tsm_keys:
-                    full = self._measure.try_tsm_reading(
-                        tkey[0], tkey[1], now, heat=heat
-                    )
-                    if full is not None:
-                        self._dispatch_tsm(tkey, full)
-                    else:
-                        self._dispatch_tsm(
-                            tkey,
-                            self._measure.heat_only_reading(tkey[0], tkey[1], heat),
-                        )
-                return
+        key = (g, a)
+        if key in self._ldm_keys:
+            ldm = self._measure.try_ldm_reading(g, a, now)
+            if ldm is not None:
+                _LOGGER.debug(
+                    "LDM %s.%s raw=%s percent=%.2f (from Value %s.%s)",
+                    g,
+                    a,
+                    ldm.raw,
+                    ldm.percent,
+                    ldm.value_group,
+                    ldm.value_address,
+                )
+                self._dispatch_ldm(key, ldm)
+            return
 
-            key = (g, a)
-            if key in self._ldm_keys:
-                ldm = self._measure.try_ldm_reading(g, a, now)
-                if ldm is not None:
-                    _LOGGER.debug(
-                        "LDM %s.%s raw=%s percent=%.2f (from Value %s.%s)",
-                        g,
-                        a,
-                        ldm.raw,
-                        ldm.percent,
-                        ldm.value_group,
-                        ldm.value_address,
-                    )
-                    self._dispatch_ldm(key, ldm)
-                return
-
-            if key in self._tsm_keys:
-                self._last_tsm_identity = key
-                reading = self._measure.try_tsm_reading(g, a, now)
-                if reading is not None:
-                    _LOGGER.debug(
-                        "TSM %s.%s temperature=%.1f°C (from Value 11.%s)",
-                        g,
-                        a,
-                        reading.temperature_c,
-                        reading.value_address,
-                    )
-                    self._dispatch_tsm(key, reading)
-                return
+        if key in self._tsm_keys:
+            reading = self._measure.try_tsm_reading(g, a, now)
+            if reading is not None:
+                _LOGGER.debug(
+                    "TSM %s.%s temperature=%.1f°C (from Value 11.%s)",
+                    g,
+                    a,
+                    reading.temperature_c,
+                    reading.value_address,
+                )
+                self._dispatch_tsm(key, reading)
+            return
 
     def _dispatch_ldm(self, key: tuple[int, int], reading: LdmReading) -> None:
         fut = self._pending_ldm.get(key)
@@ -317,10 +299,10 @@ class BLogicxHub:
         *,
         inter_frame_delay: float = 0.01,
     ) -> None:
-        """Send multiple datagrams under the TX lock (e.g. RTC Program write)."""
+        """Send multiple datagrams under the request lock (e.g. RTC Program write)."""
         if self._conn is None:
             raise RuntimeError("Not connected")
-        async with self._tx_lock:
+        async with self._request_lock:
             for i, (command, group, address) in enumerate(frames):
                 if inter_frame_delay and i:
                     await asyncio.sleep(inter_frame_delay)
@@ -355,7 +337,12 @@ class BLogicxHub:
         deadline = loop.time() + timeout
         quiet_since: float | None = None
         while loop.time() < deadline:
-            busy = bool(self._pending_status) or self._status_lock.locked()
+            busy = (
+                bool(self._pending_status)
+                or bool(self._pending_ldm)
+                or bool(self._pending_tsm)
+                or self._request_lock.locked()
+            )
             if not busy:
                 if quiet_since is None:
                     quiet_since = loop.time()
@@ -373,14 +360,12 @@ class BLogicxHub:
     ) -> bool | None:
         """Send Status and wait for the matching Set/Reset reply.
 
-        Status queries are serialised with a lock so only one is in flight
-        at a time. Returns True if the device reported Set (on), False for
-        Reset (off), or None on timeout / cancel.
+        Serialised with LDM/TSM/RTC on ``_request_lock`` so no other TX can
+        interleave while waiting for Set/Reset.
 
-        Even after a timeout, a late Set/Reset will still update the entity
-        via its normal listener — only the Future wait is abandoned.
+        Returns True if Set (on), False if Reset (off), None on timeout/cancel.
         """
-        async with self._status_lock:
+        async with self._request_lock:
             if self._conn is None:
                 raise RuntimeError("Not connected")
 
@@ -415,7 +400,6 @@ class BLogicxHub:
             finally:
                 if self._pending_status.get(key) is fut:
                     self._pending_status.pop(key, None)
-                # Small gap so the next Status is not back-to-back on a busy bus
                 try:
                     await asyncio.sleep(_STATUS_GAP)
                 except asyncio.CancelledError:
@@ -426,7 +410,7 @@ class BLogicxHub:
     ) -> LdmReading | None:
         """Request LDM reading: Data 0.2 then Select g.a; wait for Value+System."""
         key = (group, address)
-        async with self._tx_lock:
+        async with self._request_lock:
             if self._conn is None:
                 raise RuntimeError("Not connected")
             loop = asyncio.get_running_loop()
@@ -454,13 +438,17 @@ class BLogicxHub:
             finally:
                 if self._pending_ldm.get(key) is fut:
                     self._pending_ldm.pop(key, None)
+                try:
+                    await asyncio.sleep(_STATUS_GAP)
+                except asyncio.CancelledError:
+                    pass
 
     async def async_request_tsm(
         self, group: int, address: int, *, timeout: float = _MEASURE_TIMEOUT
     ) -> TsmReading | None:
-        """Request TSM burst via Status g.a; wait for decoded reading."""
+        """Request TSM triple via Status g.a; wait for Value 11 + Settings + System."""
         key = (group, address)
-        async with self._tx_lock:
+        async with self._request_lock:
             if self._conn is None:
                 raise RuntimeError("Not connected")
             loop = asyncio.get_running_loop()
@@ -470,13 +458,17 @@ class BLogicxHub:
                 old.cancel()
             self._pending_tsm[key] = fut
             try:
-                _LOGGER.debug("TSM request → Status %s.%s", group, address)
+                _LOGGER.debug(
+                    "TSM request → Status %s.%s (expect Value 11 + Settings + System)",
+                    group,
+                    address,
+                )
                 await self._conn.send("Status", group, address)
                 reading: TsmReading = await asyncio.wait_for(fut, timeout=timeout)
                 return reading
             except asyncio.TimeoutError:
                 _LOGGER.warning(
-                    "No TSM reply for %s.%s within %.1fs", group, address, timeout
+                    "No TSM triple for %s.%s within %.1fs", group, address, timeout
                 )
                 return None
             except asyncio.CancelledError:
@@ -484,3 +476,7 @@ class BLogicxHub:
             finally:
                 if self._pending_tsm.get(key) is fut:
                     self._pending_tsm.pop(key, None)
+                try:
+                    await asyncio.sleep(_STATUS_GAP)
+                except asyncio.CancelledError:
+                    pass
