@@ -9,27 +9,19 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 
-from homeassistant.components.binary_sensor import (
-    BinarySensorDeviceClass,
-    BinarySensorEntity,
-)
+from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .b_logicx.measure import TsmReading
 from .b_logicx.models import BLXEvent
 from .const import (
     ADDRESS_TYPE_EXU,
-    ADDRESS_TYPE_TSM,
     CONF_ADDRESSES,
     CONF_HOST,
     DOMAIN,
     get_device_identifiers,
     get_entity_unique_id,
-    get_tsm_device_identifiers,
-    get_tsm_unique_id,
 )
 from .hub import BLogicxHub
 
@@ -41,42 +33,30 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up B-Logicx EXU and TSM heat-requested binary sensors."""
+    """Set up B-Logicx EXU binary sensors."""
     hub: BLogicxHub = hass.data[DOMAIN][entry.entry_id]
     host = entry.data[CONF_HOST]
     addresses: list[dict] = entry.data.get(CONF_ADDRESSES, [])
 
-    entities: list[BinarySensorEntity] = []
+    entities: list[BLogicxExuSensor] = []
     for addr in addresses:
-        t = addr.get("type")
+        if addr.get("type") != ADDRESS_TYPE_EXU:
+            continue
         try:
-            if t == ADDRESS_TYPE_EXU:
-                entities.append(
-                    BLogicxExuSensor(
-                        hub=hub,
-                        host=host,
-                        group=int(addr["group"]),
-                        address=int(addr["address"]),
-                        name=addr.get(
-                            "name", f"EXU {addr['group']}.{addr['address']}"
-                        ),
-                        check_status=addr.get("check_status", False),
-                    )
+            entities.append(
+                BLogicxExuSensor(
+                    hub=hub,
+                    host=host,
+                    group=int(addr["group"]),
+                    address=int(addr["address"]),
+                    name=addr.get(
+                        "name", f"EXU {addr['group']}.{addr['address']}"
+                    ),
+                    check_status=addr.get("check_status", False),
                 )
-            elif t == ADDRESS_TYPE_TSM:
-                entities.append(
-                    BLogicxTsmHeatRequestedSensor(
-                        hub=hub,
-                        host=host,
-                        group=int(addr["group"]),
-                        address=int(addr["address"]),
-                        name=addr.get(
-                            "name", f"TSM {addr['group']}.{addr['address']}"
-                        ),
-                    )
-                )
+            )
         except (KeyError, TypeError, ValueError) as err:
-            _LOGGER.error("Skipping invalid binary_sensor entry %s: %s", addr, err)
+            _LOGGER.error("Skipping invalid EXU entry %s: %s", addr, err)
 
     async_add_entities(entities)
 
@@ -140,48 +120,3 @@ class BLogicxExuSensor(BinarySensorEntity):
         else:
             return
         self.async_write_ha_state()
-
-
-class BLogicxTsmHeatRequestedSensor(BinarySensorEntity):
-    """TSM heat requested (System 15.48 / 15.16) — not plant on/off."""
-
-    _attr_should_poll = False
-    _attr_has_entity_name = True
-    _attr_name = "Heat requested"
-    _attr_device_class = BinarySensorDeviceClass.HEAT
-    _attr_icon = "mdi:radiator"
-
-    def __init__(
-        self,
-        hub: BLogicxHub,
-        host: str,
-        group: int,
-        address: int,
-        name: str,
-    ) -> None:
-        self._hub = hub
-        self._group = group
-        self._address = address
-        self._unsub = None
-        self._attr_unique_id = f"{get_tsm_unique_id(host, group, address)}_heat_req"
-        self._attr_device_info = DeviceInfo(
-            identifiers=get_tsm_device_identifiers(host, group, address),
-            name=name,
-            manufacturer="B-Logicx",
-            model=f"TSM {group}.{address}",
-        )
-        self._attr_is_on: bool | None = None
-
-    async def async_added_to_hass(self) -> None:
-        @callback
-        def _on_reading(reading: TsmReading) -> None:
-            if reading.heat_requested is not None:
-                self._attr_is_on = reading.heat_requested
-                self.async_write_ha_state()
-
-        self._unsub = self._hub.register_tsm(self._group, self._address, _on_reading)
-
-    async def async_will_remove_from_hass(self) -> None:
-        if self._unsub:
-            self._unsub()
-            self._unsub = None

@@ -6,7 +6,6 @@ import time
 
 from b_logicx.measure import (
     MeasureBusState,
-    heat_requested_from_system,
     raw_to_percent,
     settings_to_preset,
     value11_to_temperature_c,
@@ -16,12 +15,16 @@ from b_logicx.measure import (
 
 
 def test_ldm_codec_known_samples():
-    assert value_frame_to_raw(3, 218) == 983
-    assert abs(value_frame_to_percent(3, 218) - 96.0) < 0.05
-    assert value_frame_to_raw(3, 243) == 1008
-    assert abs(raw_to_percent(1008) - 98.4375) < 0.001
-    assert value_frame_to_raw(3, 211) == 976
-    assert abs(value_frame_to_percent(3, 211) - 95.3125) < 0.001
+    # raw = packed = (g<<8)|a  (no −3); percent = raw*100/1024
+    assert value_frame_to_raw(0, 14) == 14
+    assert abs(value_frame_to_percent(0, 14) - 1.3671875) < 0.001  # ~1.37%
+    assert value_frame_to_raw(3, 49) == 817
+    assert abs(value_frame_to_percent(3, 49) - 79.78515625) < 0.001  # ~79.79%
+    assert value_frame_to_raw(3, 218) == 986
+    assert abs(value_frame_to_percent(3, 218) - 96.2890625) < 0.001
+    assert value_frame_to_raw(3, 243) == 1011
+    assert abs(raw_to_percent(1011) - 98.73046875) < 0.001
+    assert value_frame_to_raw(3, 211) == 979
 
 
 def test_tsm_value11_temperature():
@@ -37,19 +40,13 @@ def test_settings_preset():
     assert idx == 2 and sp == 22.5 and name == "Day"
 
 
-def test_heat_requested():
-    assert heat_requested_from_system(15, 16) is False
-    assert heat_requested_from_system(15, 48) is True
-    assert heat_requested_from_system(1, 45) is None
-
-
 def test_ldm_sticky_pairing():
     st = MeasureBusState()
     now = time.monotonic()
     st.note_value(3, 211, now)
     reading = st.try_ldm_reading(1, 23, now + 0.1)
     assert reading is not None
-    assert reading.raw == 976
+    assert reading.raw == 979  # Value 3.211
     assert reading.group == 1 and reading.address == 23
 
 
@@ -69,7 +66,8 @@ def test_tsm_ignores_ldm_value():
     assert st.try_tsm_reading(1, 45, now + 0.1) is None
 
 
-def test_tsm_temp_from_value11():
+def test_tsm_triple_only():
+    """Complete TSM with Value + Settings + System — no trailing frames."""
     st = MeasureBusState()
     now = time.monotonic()
     st.note_value(11, 48, now)
@@ -82,7 +80,6 @@ def test_tsm_temp_from_value11():
 
 
 def test_interleaved_ldm_tsm_both_correct():
-    """Value 3.x + Value 11.x then Systems — each device gets its own sticky."""
     st = MeasureBusState()
     now = time.monotonic()
     st.note_value(3, 211, now)
@@ -90,7 +87,7 @@ def test_interleaved_ldm_tsm_both_correct():
     st.note_settings(2, 44, now + 0.02)
     ldm = st.try_ldm_reading(1, 23, now + 0.03)
     tsm = st.try_tsm_reading(1, 45, now + 0.04)
-    assert ldm is not None and ldm.raw == 976
+    assert ldm is not None and ldm.raw == 979
     assert tsm is not None and tsm.temperature_c == 24.0
     assert tsm.preset_name == "Day"
 
@@ -99,11 +96,11 @@ def test_interleaved_reverse_value_order():
     st = MeasureBusState()
     now = time.monotonic()
     st.note_value(11, 46, now)  # 23.0 °C
-    st.note_value(3, 243, now + 0.01)  # LDM 1008
+    st.note_value(3, 243, now + 0.01)  # LDM 1011
     tsm = st.try_tsm_reading(1, 45, now + 0.02)
     ldm = st.try_ldm_reading(1, 23, now + 0.03)
     assert tsm is not None and tsm.temperature_c == 23.0
-    assert ldm is not None and ldm.raw == 1008
+    assert ldm is not None and ldm.raw == 1011
 
 
 def test_ldm_stale_value():
@@ -114,7 +111,6 @@ def test_ldm_stale_value():
 
 
 def test_tsm_mid_burst_ldm_does_not_clobber_tsm_sticky():
-    """Value 11, Settings, Value 3 (LDM), System LDM, System TSM."""
     st = MeasureBusState()
     now = time.monotonic()
     st.note_value(11, 48, now)
@@ -122,5 +118,5 @@ def test_tsm_mid_burst_ldm_does_not_clobber_tsm_sticky():
     st.note_value(3, 211, now + 0.02)
     ldm = st.try_ldm_reading(1, 23, now + 0.03)
     tsm = st.try_tsm_reading(1, 45, now + 0.04)
-    assert ldm is not None and ldm.raw == 976
+    assert ldm is not None and ldm.raw == 979
     assert tsm is not None and tsm.temperature_c == 24.0

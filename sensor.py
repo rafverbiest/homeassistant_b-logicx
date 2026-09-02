@@ -293,8 +293,7 @@ class BLogicxTsmTemperatureSensor(_TsmEntityBase):
         return attrs
 
     def _apply_reading(self, reading: TsmReading) -> None:
-        if reading.temperature_c is not None:
-            self._attr_native_value = reading.temperature_c
+        self._attr_native_value = reading.temperature_c
         if reading.value_address is not None:
             self._value_address = reading.value_address
 

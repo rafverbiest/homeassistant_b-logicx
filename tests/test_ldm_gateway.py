@@ -49,7 +49,8 @@ async def test_ldm_request_tx_sequence(fake_gateway):
         ("Select", 1, 23),
     ]
     assert got[0].command == "Value"
-    assert value_frame_to_raw(got[0].group, got[0].address) == 976
+    # Value 3.211 → packed12 = (3<<8)|211 = 979
+    assert value_frame_to_raw(got[0].group, got[0].address) == 979
     assert got[1].command == "System"
     assert (got[1].group, got[1].address) == (1, 23)
 
