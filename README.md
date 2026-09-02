@@ -4,8 +4,6 @@ Custom integration for the **B-Logicx (BL-NWM)** bus gateway: switches, covers, 
 
 ## Install with HACS (custom repository)
 
-GitHub hosting is enough — no extra server required.
-
 1. Install [HACS](https://hacs.xyz/) if you do not already have it.
 2. In Home Assistant open **HACS** → top-right **⋮** → **Custom repositories**.
 3. Repository URL:
@@ -36,6 +34,9 @@ python3 /config/custom_components/b_logicx/blxmonitor.py -i <gateway-ip> -p 1000
 ```
 
 Program traffic is shown by default; use `--hide-program` to filter it.
+
+Using normal B-Logicx gateways like BL-NWM/NWX you can only open a single connection!
+While the integration is running, blxmonitor or the official BLConfig windows software needs a second connection, only available if you have BL-NWM2
 
 ## Development
 
