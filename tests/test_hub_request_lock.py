@@ -15,6 +15,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
+INTEGRATION_DIR = ROOT / "custom_components" / "b_logicx"
 
 
 def _import_hub():
@@ -24,12 +25,12 @@ def _import_hub():
 
     if "custom_components" not in sys.modules:
         cc = types.ModuleType("custom_components")
-        cc.__path__ = []
+        cc.__path__ = [str(ROOT / "custom_components")]
         sys.modules["custom_components"] = cc
 
     if "custom_components.b_logicx" not in sys.modules:
         pkg = types.ModuleType("custom_components.b_logicx")
-        pkg.__path__ = [str(ROOT)]
+        pkg.__path__ = [str(INTEGRATION_DIR)]
         sys.modules["custom_components.b_logicx"] = pkg
 
     if "homeassistant" not in sys.modules:
@@ -43,6 +44,8 @@ def _import_hub():
         sys.modules["homeassistant"] = ha
         sys.modules["homeassistant.core"] = ha_core
 
+    if str(INTEGRATION_DIR) not in sys.path:
+        sys.path.insert(0, str(INTEGRATION_DIR))
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
 

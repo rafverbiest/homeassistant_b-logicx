@@ -153,12 +153,16 @@ Add scenarios under `tests/` as bugs appear; prefer FakeGateway knobs
 ## Layout reminder
 
 ```text
-b_logicx/                 # project root (also HA custom component tree)
-  b_logicx/               # pure asyncio library
+homeassistant_b-logicx/          # GitHub / HACS repo root
+  hacs.json
+  custom_components/b_logicx/    # HA integration (what HACS installs)
+    b_logicx/                    # pure asyncio library
   tests/
   pytest.ini
   requirements-dev.txt
-  TESTS.md                # this file
+  TESTS.md
+  RELEASING.md
 ```
 
-Config is in `pytest.ini` (`asyncio_mode = auto`, `testpaths = tests`, `pythonpath = .`).
+Config is in `pytest.ini` (`asyncio_mode = auto`, `testpaths = tests`,
+`pythonpath = custom_components/b_logicx`).

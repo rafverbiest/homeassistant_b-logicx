@@ -50,7 +50,9 @@ def test_demo_site_yaml():
 
 
 def test_template_yaml():
-    content = (ROOT / "template.yaml").read_text()
+    content = (
+        ROOT / "custom_components" / "b_logicx" / "template.yaml"
+    ).read_text()
     entries, err = parse_addresses_yaml(content)
     assert err is None
     assert len(entries) >= 4

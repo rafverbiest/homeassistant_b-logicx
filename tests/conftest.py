@@ -11,9 +11,10 @@ import pytest_asyncio
 
 TESTS_DIR = Path(__file__).resolve().parent
 ROOT = TESTS_DIR.parent
+INTEGRATION_DIR = ROOT / "custom_components" / "b_logicx"
 
-# Prefer library + pure modules from integration root; load fixtures from tests/
-for p in (str(ROOT), str(TESTS_DIR)):
+# Integration package (HA layout) + tests/ for fake_gateway
+for p in (str(INTEGRATION_DIR), str(TESTS_DIR)):
     if p not in sys.path:
         sys.path.insert(0, p)
 

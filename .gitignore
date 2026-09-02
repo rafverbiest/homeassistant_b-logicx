@@ -14,6 +14,8 @@ private/
 # Python
 .venv/
 venv/
+custom_components/b_logicx/__pycache__/
+custom_components/b_logicx/**/__pycache__/
 __pycache__/
 *.py[cod]
 .pytest_cache/
