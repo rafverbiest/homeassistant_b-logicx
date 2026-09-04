@@ -2,6 +2,8 @@
 
 Custom integration for the **B-Logicx (BL-NWM)** bus gateway: switches, covers, Sfeer moods, EXU inputs, RTC clock sync, LDM light sensors, TSM thermostat telemetry, SoftM virtual status tracking, and an optional TCP bus repeater.
 
+**0.9.1:** Config changes reload once (Status probes no longer run twice). SoftM / bus-repeater integration options are preserved when editing addresses.
+
 ## Install with HACS (custom repository)
 
 1. Install [HACS](https://hacs.xyz/) if you do not already have it.
@@ -25,7 +27,7 @@ After install, configure addresses in the integration options (UI) or import YAM
 
 Copy the `custom_components/b_logicx` folder into your HA `config/custom_components/` directory, restart, then add the integration as above.
 
-## SoftM status tracking (v0.9)
+## SoftM status tracking (v0.9+)
 
 Home Assistant can act as a **virtual status module** for Software Members (SoftM):
 

@@ -357,6 +357,23 @@ class BLogicxConfigFlow(ConfigFlow, domain=DOMAIN):
 class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
     """Options: add/edit/remove entries; YAML import/template."""
 
+    def _finish_options(self) -> FlowResult:
+        """End the options flow without wiping SoftM / repeater settings.
+
+        ``async_create_entry(data=...)`` replaces ``config_entry.options``.
+        Address add/edit/remove must preserve the current options dict.
+        """
+        return self.async_create_entry(
+            title="", data=dict(self.config_entry.options)
+        )
+
+    async def _save_and_reload(self, addresses: list[dict]) -> None:
+        """Persist addresses. Reload is handled by the entry update listener."""
+        new_data = {**self.config_entry.data, CONF_ADDRESSES: addresses}
+        self.hass.config_entries.async_update_entry(
+            self.config_entry, data=new_data
+        )
+
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -551,7 +568,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                     self._edit_key = None
                 addresses = _upsert_by_key(addresses, new_addr)
                 await self._save_and_reload(addresses)
-                return self.async_create_entry(title="", data={})
+                return self._finish_options()
 
         defaults = getattr(self, "_edit_defaults", {}) or {}
         self._edit_defaults = None
@@ -639,7 +656,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                 self._edit_key = None
             addresses = _upsert_by_key(addresses, new_addr)
             await self._save_and_reload(addresses)
-            return self.async_create_entry(title="", data={})
+            return self._finish_options()
 
         defaults = getattr(self, "_edit_defaults", {}) or {}
         self._edit_defaults = None
@@ -688,7 +705,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                 self._edit_key = None
             addresses = _upsert_by_key(addresses, new_addr)
             await self._save_and_reload(addresses)
-            return self.async_create_entry(title="", data={})
+            return self._finish_options()
 
         defaults = getattr(self, "_edit_defaults", {}) or {}
         self._edit_defaults = None
@@ -740,7 +757,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                 self._edit_key = None
             addresses = _upsert_by_key(addresses, new_addr)
             await self._save_and_reload(addresses)
-            return self.async_create_entry(title="", data={})
+            return self._finish_options()
 
         defaults = getattr(self, "_edit_defaults", {}) or {}
         self._edit_defaults = None
@@ -811,7 +828,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                 self._edit_key = None
             addresses = _upsert_by_key(addresses, new_addr)
             await self._save_and_reload(addresses)
-            return self.async_create_entry(title="", data={})
+            return self._finish_options()
 
         defaults = getattr(self, "_edit_defaults", {}) or {}
         self._edit_defaults = None
@@ -930,7 +947,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                 self._edit_key = None
             addresses = _upsert_by_key(addresses, new_cover)
             await self._save_and_reload(addresses)
-            return self.async_create_entry(title="", data={})
+            return self._finish_options()
 
         defaults = getattr(self, "_edit_defaults", {}) or {}
         self._edit_defaults = None
@@ -1034,7 +1051,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
             }
             current = _upsert_by_key(current, new_room)
             await self._save_and_reload(current)
-            return self.async_create_entry(title="", data={})
+            return self._finish_options()
 
         used = {
             sfeer_room_group(a)
@@ -1160,7 +1177,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
             addresses = _upsert_by_key(addresses, new_room)
             self._sfeer_mood_room_key = None
             await self._save_and_reload(addresses)
-            return self.async_create_entry(title="", data={})
+            return self._finish_options()
 
         return self.async_show_form(
             step_id="add_sfeer_mood_details",
@@ -1281,7 +1298,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                 addresses = [a for a in current if _entry_key(a) != key]
                 await self._save_and_reload(addresses)
             self._remove_key = None
-            return self.async_create_entry(title="", data={})
+            return self._finish_options()
 
         return self.async_show_form(
             step_id="remove_confirm",
@@ -1315,7 +1332,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                             len(new_addresses),
                         )
                         await self._save_and_reload(new_addresses)
-                        return self.async_create_entry(title="", data={})
+                        return self._finish_options()
                 except Exception as err:
                     _LOGGER.exception("YAML import failed: %s", err)
                     errors["base"] = "invalid_yaml"
@@ -1372,10 +1389,3 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                 "template": template_link,
             },
         )
-
-    async def _save_and_reload(self, addresses: list[dict]) -> None:
-        new_data = {**self.config_entry.data, CONF_ADDRESSES: addresses}
-        self.hass.config_entries.async_update_entry(
-            self.config_entry, data=new_data
-        )
-        await self.hass.config_entries.async_reload(self.config_entry.entry_id)
