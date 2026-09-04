@@ -62,10 +62,16 @@ addresses:
     address: 45
     check_status: true
 
+  # SoftM with virtual status tracking (HA answers Toggle/Status/Timer).
+  # Use Set/Reset for HA control; wall Toggle is answered by SoftM tracking.
+  # Also enable Integration settings → SoftM status tracking.
   - type: normal
     name: Software Member Example
     group: 10
     address: 200
-    on_command: Toggle
+    on_command: Set
     off_command: Reset
-    check_status: false
+    enable_softm_status_tracking: true
+    softm_timer: 120
+    persist_state: true
+    default_state: false

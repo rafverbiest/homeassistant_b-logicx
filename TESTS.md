@@ -1,8 +1,11 @@
-# Offline tests (v0.7)
+# Offline tests (v0.9)
 
 These tests exercise the B-Logicx library and YAML config against an in-process
 **FakeGateway** (TCP, same 2-byte datagram protocol as a real BL-NWM).  
 They do **not** require Home Assistant or a physical gateway.
+
+SoftM tracker + YAML SoftM fields: `tests/test_softm.py`. Bus repeater subnet
+helper is covered there as well.
 
 ## Setup (once)
 

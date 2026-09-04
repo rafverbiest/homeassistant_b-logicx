@@ -32,7 +32,11 @@ from .const import (
     ADDRESS_TYPE_SHUTTER,
     ADDRESS_TYPE_TSM,
     CONF_ADDRESSES,
+    CONF_BUS_REPEATER_ENABLED,
+    CONF_BUS_REPEATER_PORT,
     CONF_PORT,
+    CONF_SOFTM_TRACKING_ENABLED,
+    DEFAULT_BUS_REPEATER_PORT,
     DEFAULT_CLOSE_TIME,
     DEFAULT_EXU_GROUP,
     DEFAULT_LDM_GROUP,
@@ -367,6 +371,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
         if current:
             menu_options["edit_select"] = "Edit entry"
             menu_options["remove_select"] = "Remove entry"
+        menu_options["integration_settings"] = "Integration settings"
         menu_options["download_yaml_template"] = "Download YAML template"
         menu_options["import_yaml"] = "Import from YAML"
 
@@ -375,6 +380,61 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
             menu_options=menu_options,
             description_placeholders={
                 "addresses": _format_address_list(current),
+            },
+        )
+
+    async def async_step_integration_settings(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """SoftM tracking master switch + TCP bus repeater."""
+        if user_input is not None:
+            opts = {
+                **self.config_entry.options,
+                CONF_SOFTM_TRACKING_ENABLED: user_input.get(
+                    CONF_SOFTM_TRACKING_ENABLED, False
+                ),
+                CONF_BUS_REPEATER_ENABLED: user_input.get(
+                    CONF_BUS_REPEATER_ENABLED, False
+                ),
+                CONF_BUS_REPEATER_PORT: int(
+                    user_input.get(
+                        CONF_BUS_REPEATER_PORT, DEFAULT_BUS_REPEATER_PORT
+                    )
+                ),
+            }
+            return self.async_create_entry(title="", data=opts)
+
+        opts = self.config_entry.options
+        return self.async_show_form(
+            step_id="integration_settings",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_SOFTM_TRACKING_ENABLED,
+                        default=opts.get(CONF_SOFTM_TRACKING_ENABLED, False),
+                    ): selector.BooleanSelector(),
+                    vol.Optional(
+                        CONF_BUS_REPEATER_ENABLED,
+                        default=opts.get(CONF_BUS_REPEATER_ENABLED, False),
+                    ): selector.BooleanSelector(),
+                    vol.Optional(
+                        CONF_BUS_REPEATER_PORT,
+                        default=int(
+                            opts.get(
+                                CONF_BUS_REPEATER_PORT, DEFAULT_BUS_REPEATER_PORT
+                            )
+                        ),
+                    ): int,
+                }
+            ),
+            description_placeholders={
+                "example": (
+                    "SoftM tracking: answer Toggle/Status for SoftMs with "
+                    "enable_softm_status_tracking (do not also use a hardware "
+                    "Status Module on those addresses). "
+                    "Bus repeater: listen on HA:port (default 10001) for "
+                    "BLConfig/blxmonitor; same-subnet clients only."
+                ),
             },
         )
 
@@ -444,33 +504,66 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
     async def async_step_add_normal(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
+        errors: dict[str, str] = {}
         if user_input is not None:
-            new_addr = {
-                "name": user_input["name"].strip(),
-                "type": ADDRESS_TYPE_NORMAL,
-                "group": int(user_input["group"]),
-                "address": int(user_input["address"]),
-                "on_command": user_input.get("on_command", DEFAULT_ON_COMMAND),
-                "off_command": user_input.get("off_command", DEFAULT_OFF_COMMAND),
-                "check_status": user_input.get("check_status", False),
-            }
-            addresses = list(self.config_entry.data.get(CONF_ADDRESSES, []))
-            edit_key = getattr(self, "_edit_key", None)
-            if edit_key:
-                addresses = [a for a in addresses if _entry_key(a) != edit_key]
-                self._edit_key = None
-            addresses = _upsert_by_key(addresses, new_addr)
-            await self._save_and_reload(addresses)
-            return self.async_create_entry(title="", data={})
+            softm = bool(user_input.get("enable_softm_status_tracking", False))
+            check = bool(user_input.get("check_status", False))
+            on_cmd = user_input.get("on_command", DEFAULT_ON_COMMAND)
+            off_cmd = user_input.get("off_command", DEFAULT_OFF_COMMAND)
+            if softm and check:
+                errors["base"] = "softm_check_conflict"
+            elif softm and (
+                on_cmd != DEFAULT_ON_COMMAND or off_cmd != DEFAULT_OFF_COMMAND
+            ):
+                errors["base"] = "softm_command_conflict"
+            else:
+                new_addr: dict[str, Any] = {
+                    "name": user_input["name"].strip(),
+                    "type": ADDRESS_TYPE_NORMAL,
+                    "group": int(user_input["group"]),
+                    "address": int(user_input["address"]),
+                    "on_command": on_cmd,
+                    "off_command": off_cmd,
+                    "check_status": False if softm else check,
+                    "enable_softm_status_tracking": softm,
+                    "persist_state": bool(
+                        user_input.get("persist_state", True)
+                    )
+                    if softm
+                    else False,
+                    "default_state": bool(
+                        user_input.get("default_state", False)
+                    )
+                    if softm
+                    else False,
+                }
+                timer = user_input.get("softm_timer")
+                if softm and timer not in (None, ""):
+                    timer_val = float(timer)
+                    if timer_val > 0:
+                        new_addr["softm_timer"] = timer_val
+                addresses = list(self.config_entry.data.get(CONF_ADDRESSES, []))
+                edit_key = getattr(self, "_edit_key", None)
+                if edit_key:
+                    addresses = [
+                        a for a in addresses if _entry_key(a) != edit_key
+                    ]
+                    self._edit_key = None
+                addresses = _upsert_by_key(addresses, new_addr)
+                await self._save_and_reload(addresses)
+                return self.async_create_entry(title="", data={})
 
         defaults = getattr(self, "_edit_defaults", {}) or {}
         self._edit_defaults = None
+        softm_def = bool(defaults.get("enable_softm_status_tracking", False))
         return self.async_show_form(
             step_id="add_normal",
             data_schema=vol.Schema(
                 {
                     vol.Required("name", default=defaults.get("name", "")): str,
-                    vol.Required("group", default=defaults.get("group", 2)): int,
+                    vol.Required(
+                        "group", default=defaults.get("group", 2)
+                    ): int,
                     vol.Required(
                         "address", default=defaults.get("address", 0)
                     ): int,
@@ -480,16 +573,50 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                     ): _command_selector(ON_COMMANDS, DEFAULT_ON_COMMAND),
                     vol.Required(
                         "off_command",
-                        default=defaults.get("off_command", DEFAULT_OFF_COMMAND),
+                        default=defaults.get(
+                            "off_command", DEFAULT_OFF_COMMAND
+                        ),
                     ): _command_selector(OFF_COMMANDS, DEFAULT_OFF_COMMAND),
                     vol.Optional(
                         "check_status",
-                        default=defaults.get("check_status", False),
+                        default=defaults.get("check_status", False)
+                        if not softm_def
+                        else False,
+                    ): selector.BooleanSelector(),
+                    vol.Optional(
+                        "enable_softm_status_tracking",
+                        default=softm_def,
+                    ): selector.BooleanSelector(),
+                    vol.Optional(
+                        "softm_timer",
+                        default=defaults.get("softm_timer", 0) or 0,
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=0,
+                            max=86400,
+                            step=1,
+                            unit_of_measurement="s",
+                            mode=selector.NumberSelectorMode.BOX,
+                        )
+                    ),
+                    vol.Optional(
+                        "persist_state",
+                        default=defaults.get("persist_state", True),
+                    ): selector.BooleanSelector(),
+                    vol.Optional(
+                        "default_state",
+                        default=defaults.get("default_state", False),
                     ): selector.BooleanSelector(),
                 }
             ),
+            errors=errors,
             description_placeholders={
-                "example": "e.g. name='Living room light', group=2, address=65",
+                "example": (
+                    "Normal switch or SoftM. SoftM tracking answers bus "
+                    "Toggle/Status/Timer — on/off commands must stay Set/Reset "
+                    "(Toggle is rejected). Do not combine with check_status. "
+                    "softm_timer>0 enables Timer pulses."
+                ),
             },
         )
 

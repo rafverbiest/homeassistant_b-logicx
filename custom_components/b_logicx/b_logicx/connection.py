@@ -17,6 +17,7 @@ import asyncio
 import logging
 import time
 from contextlib import asynccontextmanager
+from collections.abc import Callable
 from typing import AsyncIterator
 
 from .const import BLX_TCP_PORT, COMMAND_NAMES
@@ -24,6 +25,8 @@ from .models import BLXEvent
 from .protocol import decode_datagram, encode_datagram
 
 _LOGGER = logging.getLogger(__name__)
+
+RawRxCallback = Callable[[bytes], None]
 
 
 class BLXConnectionError(Exception):
@@ -92,6 +95,8 @@ class BLXConnection:
         self._recv_task: asyncio.Task | None = None
         self._subscribers: list[asyncio.Queue] = []
         self._start_lock: asyncio.Lock | None = None  # created lazily (needs running loop)
+        # Raw RX tee (before Program-skip) for bus repeater
+        self._raw_rx_callbacks: list[RawRxCallback] = []
 
     def _get_start_lock(self) -> asyncio.Lock:
         if self._start_lock is None:
@@ -197,6 +202,26 @@ class BLXConnection:
         _LOGGER.debug("RX %s (raw %02X %02X)", event, data[0], data[1])
         return event
 
+    def register_raw_rx(self, callback: RawRxCallback) -> Callable[[], None]:
+        """Register for every raw 2-byte RX datagram (before Program-skip)."""
+        self._raw_rx_callbacks.append(callback)
+
+        def _unreg() -> None:
+            if callback in self._raw_rx_callbacks:
+                self._raw_rx_callbacks.remove(callback)
+
+        return _unreg
+
+    async def send_raw(self, data: bytes) -> None:
+        """Send exactly 2 raw bytes to the gateway."""
+        if len(data) != 2:
+            raise ValueError("datagram must be exactly 2 bytes")
+        if self._writer is None:
+            await self.connect()
+        assert self._writer is not None
+        self._writer.write(data)
+        await self._writer.drain()
+
     async def send(self, command: str | int, group: int, address: int) -> None:
         """Send a command to the bus."""
         if self._writer is None:
@@ -267,6 +292,13 @@ class BLXConnection:
                 except Exception:
                     _LOGGER.exception("BLX receiver read failed")
                     break
+
+                # Tee raw bytes before Program-skip so repeaters see programming traffic
+                for cb in list(self._raw_rx_callbacks):
+                    try:
+                        cb(data)
+                    except Exception:
+                        _LOGGER.exception("Raw RX callback failed")
 
                 event = self._decode_datagram(data)
 

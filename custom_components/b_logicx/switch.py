@@ -6,8 +6,8 @@ Shutter/roller covers are handled by the cover platform (CoverEntity), not here.
 On/off commands are taken from the per-address config (defaults: Set / Reset).
 State is tracked from bus Set/Reset events.
 
-Status-on-startup is serialised via the hub (one Status at a time, wait for
-Set/Reset before the next) so concurrent entity setup does not drop replies.
+SoftM status tracking (enable_softm_status_tracking) uses RestoreEntity /
+default_state instead of check_status (mutually exclusive).
 """
 
 from __future__ import annotations
@@ -22,6 +22,7 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
     ADDRESS_TYPE_EXU,
@@ -66,6 +67,7 @@ async def async_setup_entry(
 
         on_command = addr.get("on_command", DEFAULT_ON_COMMAND)
         off_command = addr.get("off_command", DEFAULT_OFF_COMMAND)
+        softm = bool(addr.get("enable_softm_status_tracking", False))
         entities.append(
             BLogicxSwitch(
                 hub=hub,
@@ -76,7 +78,10 @@ async def async_setup_entry(
                 unique_id=get_entity_unique_id(host, addr["group"], addr["address"]),
                 on_command=on_command,
                 off_command=off_command,
-                check_status=addr.get("check_status", False),
+                check_status=False if softm else addr.get("check_status", False),
+                softm_tracking=softm,
+                persist_state=bool(addr.get("persist_state", softm)),
+                default_state=bool(addr.get("default_state", False)),
             )
         )
 
@@ -84,7 +89,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class BLogicxSwitch(SwitchEntity):
+class BLogicxSwitch(SwitchEntity, RestoreEntity):
     """Switch representing one normal address on the B-Logicx bus."""
 
     _attr_should_poll = False
@@ -100,6 +105,9 @@ class BLogicxSwitch(SwitchEntity):
         on_command: str,
         off_command: str,
         check_status: bool = False,
+        softm_tracking: bool = False,
+        persist_state: bool = False,
+        default_state: bool = False,
     ) -> None:
         self._hub = hub
         self._host = host
@@ -108,25 +116,35 @@ class BLogicxSwitch(SwitchEntity):
         self._on_command = on_command
         self._off_command = off_command
         self._check_status = check_status
+        self._softm_tracking = softm_tracking
+        self._persist_state = persist_state
+        self._default_state = default_state
         self._attr_name = name
         self._attr_unique_id = unique_id
-        self._attr_is_on = None  # unknown until first event / Status
+        self._attr_is_on = None  # unknown until first event / Status / restore
         self._unsub: Callable[[], None] | None = None
 
     async def async_added_to_hass(self) -> None:
-        """Register for bus events; optionally query Status (serialised on hub)."""
-        _LOGGER.debug(
-            "Switch %s.%s added to hass (check_status=%s), registering listener",
-            self._group,
-            self._address,
-            self._check_status,
-        )
+        """Register for bus events; seed SoftM or query Status."""
         self._unsub = self._hub.register_listener(
             self._handle_event, self._group, self._address
         )
 
+        if self._softm_tracking:
+            restored: bool | None = None
+            if self._persist_state:
+                last = await self.async_get_last_state()
+                if last is not None and last.state in ("on", "off"):
+                    restored = last.state == "on"
+            if restored is not None:
+                self._attr_is_on = restored
+            else:
+                self._attr_is_on = self._default_state
+            self._hub.softm_seed(self._group, self._address, bool(self._attr_is_on))
+            self.async_write_ha_state()
+            return
+
         if self._check_status:
-            # Hub serialises: wait for Set/Reset before the next Status goes out
             is_on = await self._hub.async_request_status(
                 self._group, self._address
             )
@@ -153,15 +171,6 @@ class BLogicxSwitch(SwitchEntity):
         if (event.group, event.address) != (self._group, self._address):
             return
 
-        _LOGGER.debug(
-            "Event received by switch %s.%s: %s %s.%s",
-            self._group,
-            self._address,
-            event.command,
-            event.group,
-            event.address,
-        )
-
         if event.command == "Set":
             new_state = True
         elif event.command == "Reset":
@@ -174,11 +183,19 @@ class BLogicxSwitch(SwitchEntity):
             self.async_write_ha_state()
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        await self._hub.async_send(self._on_command, self._group, self._address)
+        # SoftM tracking answers Toggle from the bus; HA must send Set/Reset
+        # so we do not double-flip when on_command is Toggle.
+        cmd = "Set" if self._softm_tracking else self._on_command
+        await self._hub.async_send(cmd, self._group, self._address)
         self._attr_is_on = True
+        if self._softm_tracking:
+            self._hub.softm_seed(self._group, self._address, True)
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        await self._hub.async_send(self._off_command, self._group, self._address)
+        cmd = "Reset" if self._softm_tracking else self._off_command
+        await self._hub.async_send(cmd, self._group, self._address)
         self._attr_is_on = False
+        if self._softm_tracking:
+            self._hub.softm_seed(self._group, self._address, False)
         self.async_write_ha_state()

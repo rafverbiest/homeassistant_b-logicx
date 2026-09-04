@@ -110,19 +110,49 @@ def normalize_yaml_entry(item: Any) -> dict:
     if t == ADDRESS_TYPE_NORMAL:
         if not name:
             raise ValueError("name required")
-        return {
+        softm_track = bool(item.get("enable_softm_status_tracking", False))
+        if softm_track and check:
+            raise ValueError(
+                "check_status and enable_softm_status_tracking cannot both be true"
+            )
+        on_cmd = str(item.get("on_command") or DEFAULT_ON_COMMAND).strip()
+        off_cmd = str(item.get("off_command") or DEFAULT_OFF_COMMAND).strip()
+        if softm_track and (
+            on_cmd != DEFAULT_ON_COMMAND or off_cmd != DEFAULT_OFF_COMMAND
+        ):
+            # SoftM VSM answers Toggle; HA must use absolute Set/Reset only
+            raise ValueError(
+                "enable_softm_status_tracking requires on_command: Set and "
+                "off_command: Reset (Toggle would double-flip)"
+            )
+        softm_timer = item.get("softm_timer")
+        if softm_timer is not None and softm_timer != "":
+            if not softm_track:
+                raise ValueError(
+                    "softm_timer requires enable_softm_status_tracking"
+                )
+            softm_timer_val: float | None = float(softm_timer)
+            if softm_timer_val <= 0:
+                raise ValueError("softm_timer must be > 0")
+        else:
+            softm_timer_val = None
+        persist = bool(item.get("persist_state", True if softm_track else False))
+        default_state = bool(item.get("default_state", False))
+        entry = {
             "name": name,
             "type": ADDRESS_TYPE_NORMAL,
             "group": int(item["group"]),
             "address": int(item["address"]),
-            "on_command": str(
-                item.get("on_command") or DEFAULT_ON_COMMAND
-            ).strip(),
-            "off_command": str(
-                item.get("off_command") or DEFAULT_OFF_COMMAND
-            ).strip(),
-            "check_status": check,
+            "on_command": on_cmd,
+            "off_command": off_cmd,
+            "check_status": False if softm_track else check,
+            "enable_softm_status_tracking": softm_track,
+            "persist_state": persist if softm_track else False,
+            "default_state": default_state if softm_track else False,
         }
+        if softm_timer_val is not None:
+            entry["softm_timer"] = softm_timer_val
+        return entry
 
     if t == ADDRESS_TYPE_EXU:
         if not name:

@@ -13,6 +13,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 import homeassistant.helpers.device_registry as dr
 
+from .b_logicx.softm_tracker import SoftMConfig
 from .const import (
     ADDRESS_TYPE_EXU,
     ADDRESS_TYPE_LDM,
@@ -22,8 +23,12 @@ from .const import (
     ADDRESS_TYPE_SHUTTER,
     ADDRESS_TYPE_TSM,
     CONF_ADDRESSES,
+    CONF_BUS_REPEATER_ENABLED,
+    CONF_BUS_REPEATER_PORT,
     CONF_HOST,
     CONF_PORT,
+    CONF_SOFTM_TRACKING_ENABLED,
+    DEFAULT_BUS_REPEATER_PORT,
     DEFAULT_CLOSE_TIME,
     DEFAULT_OFF_COMMAND,
     DEFAULT_ON_COMMAND,
@@ -265,12 +270,52 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.error("Failed to connect to B-Logicx gateway at %s: %s", host, err)
         raise ConfigEntryNotReady(f"Could not connect to {host}") from err
 
+    # SoftM virtual status tracking (master option + per-address flags)
+    softm_on = bool(entry.options.get(CONF_SOFTM_TRACKING_ENABLED, False))
+    softm_cfgs: list[SoftMConfig] = []
+    if softm_on:
+        for a in entry.data.get(CONF_ADDRESSES, []):
+            if a.get("type", ADDRESS_TYPE_NORMAL) != ADDRESS_TYPE_NORMAL:
+                continue
+            if not a.get("enable_softm_status_tracking"):
+                continue
+            timer = a.get("softm_timer")
+            softm_cfgs.append(
+                SoftMConfig(
+                    group=int(a["group"]),
+                    address=int(a["address"]),
+                    timer_seconds=float(timer) if timer not in (None, "", 0) else None,
+                    persist=bool(a.get("persist_state", True)),
+                    default_state=bool(a.get("default_state", False)),
+                )
+            )
+    hub.configure_softm_tracking(softm_on, softm_cfgs)
+    if softm_on and softm_cfgs:
+        _LOGGER.info(
+            "SoftM status tracking enabled for %d address(es)", len(softm_cfgs)
+        )
+
+    # TCP bus repeater (optional)
+    if entry.options.get(CONF_BUS_REPEATER_ENABLED, False):
+        rport = int(
+            entry.options.get(CONF_BUS_REPEATER_PORT, DEFAULT_BUS_REPEATER_PORT)
+        )
+        try:
+            await hub.async_start_repeater(port=rport)
+        except OSError as err:
+            _LOGGER.error("Bus repeater failed to start on port %s: %s", rport, err)
+
     async def _close_on_ha_stop(_event) -> None:
         await hub.async_close()
 
     entry.async_on_unload(
         hass.bus.async_listen_once("homeassistant_stop", _close_on_ha_stop)
     )
+
+    async def _options_updated(_hass: HomeAssistant, updated: ConfigEntry) -> None:
+        await _hass.config_entries.async_reload(updated.entry_id)
+
+    entry.async_on_unload(entry.add_update_listener(_options_updated))
 
     device_registry = dr.async_get(hass)
     addresses = entry.data.get(CONF_ADDRESSES, [])

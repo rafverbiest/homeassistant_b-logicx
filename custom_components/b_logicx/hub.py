@@ -17,6 +17,8 @@ from .b_logicx.measure import (
     MeasureBusState,
     TsmReading,
 )
+from .b_logicx.softm_tracker import SoftMConfig, SoftMTracker
+from .bus_repeater import BusRepeater
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -59,6 +61,26 @@ class BLogicxHub:
         ] = {}
         self._pending_ldm: dict[tuple[int, int], asyncio.Future] = {}
         self._pending_tsm: dict[tuple[int, int], asyncio.Future] = {}
+        # SoftM virtual status tracking
+        self._softm = SoftMTracker()
+        self._softm_enabled = False
+        self._softm_timer_tasks: dict[tuple[int, int], asyncio.Task] = {}
+        self._repeater: BusRepeater | None = None
+
+    def configure_softm_tracking(
+        self, enabled: bool, configs: list[SoftMConfig]
+    ) -> None:
+        self._softm_enabled = enabled
+        if enabled:
+            self._softm.configure(configs)
+        else:
+            self._softm.configure([])
+
+    def softm_seed(self, group: int, address: int, is_on: bool) -> None:
+        self._softm.seed(group, address, is_on)
+
+    def softm_get_state(self, group: int, address: int) -> bool | None:
+        return self._softm.get_state(group, address)
 
     def register_listener(
         self, callback: Callable[[BLXEvent], None], group: int, address: int
@@ -163,6 +185,10 @@ class BLogicxHub:
                             event.address,
                         )
 
+                # SoftM VSM before measure (may emit Set/Reset)
+                if self._softm_enabled:
+                    await self._handle_softm_event(event)
+
                 self._handle_measure_event(event, now)
 
                 if key in self._listeners:
@@ -175,6 +201,67 @@ class BLogicxHub:
             raise
         except Exception as err:  # noqa: BLE001
             _LOGGER.error("B-Logicx listener error: %s", err)
+
+    async def _handle_softm_event(self, event: BLXEvent) -> None:
+        """Virtual SoftM status tracking (Toggle/Status/Timer/Set/Reset)."""
+        g, a = event.group, event.address
+        if not self._softm.is_tracked(g, a):
+            return
+        cmd = event.command
+        key = (g, a)
+
+        if cmd in ("Set", "Reset"):
+            # Absolute state from bus / HA: cancel SoftM timer and update memory
+            task = self._softm_timer_tasks.pop(key, None)
+            if task is not None and not task.done():
+                task.cancel()
+            self._softm.cancel_timer(g, a)
+            self._softm.on_set_reset(g, a, cmd == "Set")
+            return
+
+        if cmd == "Toggle":
+            # Cancel timer task
+            task = self._softm_timer_tasks.pop(key, None)
+            if task is not None and not task.done():
+                task.cancel()
+            self._softm.cancel_timer(g, a)
+            action = self._softm.on_toggle(g, a)
+            if action is not None:
+                await self.async_send(action.command, action.group, action.address)
+            return
+
+        if cmd == "Status":
+            action = self._softm.on_status(g, a)
+            if action is not None:
+                await self.async_send(action.command, action.group, action.address)
+            return
+
+        if cmd == "Timer":
+            result = self._softm.on_timer(g, a)
+            if result is None:
+                return
+            action, secs = result
+            old = self._softm_timer_tasks.pop(key, None)
+            if old is not None and not old.done():
+                old.cancel()
+            await self.async_send(action.command, action.group, action.address)
+            self._softm_timer_tasks[key] = asyncio.create_task(
+                self._softm_timer_fire(g, a, secs),
+                name=f"softm_timer_{g}_{a}",
+            )
+
+    async def _softm_timer_fire(self, group: int, address: int, secs: float) -> None:
+        try:
+            await asyncio.sleep(secs)
+        except asyncio.CancelledError:
+            return
+        action = self._softm.timer_expired(group, address)
+        self._softm_timer_tasks.pop((group, address), None)
+        if action is not None:
+            try:
+                await self.async_send(action.command, action.group, action.address)
+            except Exception:
+                _LOGGER.exception("SoftM timer Reset failed for %s.%s", group, address)
 
     def _handle_measure_event(self, event: BLXEvent, now: float) -> None:
         """LDM: Value(≠11)+System. TSM: Value 11 + Settings + System only."""
@@ -221,7 +308,6 @@ class BLogicxHub:
                 )
                 self._dispatch_tsm(key, reading)
             return
-
     def _dispatch_ldm(self, key: tuple[int, int], reading: LdmReading) -> None:
         fut = self._pending_ldm.get(key)
         if fut is not None and not fut.done():
@@ -276,6 +362,28 @@ class BLogicxHub:
         self._tsm_callbacks.clear()
         self._ldm_keys.clear()
         self._tsm_keys.clear()
+        for task in list(self._softm_timer_tasks.values()):
+            if not task.done():
+                task.cancel()
+        self._softm_timer_tasks.clear()
+        await self.async_stop_repeater()
+
+    async def async_start_repeater(self, *, port: int = 10001) -> None:
+        if self._conn is None:
+            raise RuntimeError("Not connected")
+        await self.async_stop_repeater()
+        self._repeater = BusRepeater(
+            self._conn,
+            self.host,
+            port=port,
+            request_lock=self._request_lock,
+        )
+        await self._repeater.start()
+
+    async def async_stop_repeater(self) -> None:
+        if self._repeater is not None:
+            await self._repeater.stop()
+            self._repeater = None
 
     async def async_close(self) -> None:
         """Fully tear down the connection. Use only on integration removal or shutdown."""

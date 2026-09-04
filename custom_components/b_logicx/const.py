@@ -7,6 +7,12 @@ CONF_HOST = "host"
 CONF_PORT = "port"
 CONF_ADDRESSES = "addresses"
 
+# Entry options (integration-level)
+CONF_SOFTM_TRACKING_ENABLED = "softm_tracking_enabled"
+CONF_BUS_REPEATER_ENABLED = "bus_repeater_enabled"
+CONF_BUS_REPEATER_PORT = "bus_repeater_port"
+DEFAULT_BUS_REPEATER_PORT = 10001
+
 # The default port is defined in the library (single source of truth)
 try:
     from .b_logicx.const import BLX_TCP_PORT as DEFAULT_PORT
