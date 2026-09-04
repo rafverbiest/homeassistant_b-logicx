@@ -124,3 +124,18 @@ addresses:
     on_command: Toggle
     off_command: Reset
     check_status: false
+
+  # SoftM with virtual status tracking (HA answers Toggle/Status/Timer).
+  # Also enable Integration settings → SoftM status tracking.
+  # on/off must be Set/Reset (Toggle is rejected with SoftM tracking).
+  - type: normal
+    name: Software member example, status tracked by this integration (virtual BL-STA)
+    group: 10
+    address: 201
+    on_command: Set
+    off_command: Reset
+    enable_softm_status_tracking: true
+    softm_timer: 120
+    persist_state: true
+    default_state: false
+
