@@ -2,6 +2,8 @@
 
 Custom integration for the **B-Logicx (BL-NWM)** bus gateway: switches, covers, Sfeer, read-only addresses, RTC clock sync, LDM light sensors, TSM thermostat telemetry, SoftM virtual status tracking, and an optional TCP bus repeater.
 
+**0.9.5.2:** `blxmonitor` `-l`/`--log-file` appends every on-screen TX/RX line (with timestamps) for rare-event debugging under `screen`/`tmux` via the TCP bus repeater.
+
 **0.9.5.1:** Same as 0.9.5 content; new version so HACS can upgrade past the earlier 0.9.5 tag.
 
 **0.9.5:** Options UX polish (menu list, Dutch/EN strings, address-first edit/remove), YAML export, working YAML download links (signed API; `data:` URLs never worked in HA markdown). See `TRANSLATIONS.md`.
@@ -71,6 +73,14 @@ python3 /config/custom_components/b_logicx/blxmonitor.py -i <ha-or-gateway-ip> -
 ```
 
 Program traffic is shown by default; use `--hide-program` to filter it. With the bus repeater enabled, use the Home Assistant host as `-i`.
+
+To capture every on-screen TX/RX line (with timestamps) for rare-event debugging:
+
+```bash
+python3 /config/custom_components/b_logicx/blxmonitor.py -i <ha-or-gateway-ip> -p 10001 -l /config/blxbus.log
+```
+
+Lines are appended (same format as the terminal). Useful when leaving `blxmonitor` running under `screen`/`tmux` via the TCP bus repeater.
 
 Using normal B-Logicx gateways like BL-NWM/NWX you can only open a single connection!
 While the integration is running, blxmonitor or the official BLConfig windows software needs a second connection, only available if you have BL-NWM2

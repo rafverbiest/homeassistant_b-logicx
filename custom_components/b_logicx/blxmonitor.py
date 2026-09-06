@@ -20,6 +20,10 @@ To hide them:  --hide-program
 
   python3 .../blxmonitor.py -i 192.168.50.150 -p 10001
 
+Log every on-screen bus line (RX + [SENT], with timestamps) to a file:
+
+  python3 .../blxmonitor.py -i 192.168.50.150 -l /var/log/blxbus.log
+
 This is useful to test if asyncio.open_connection works from the same
 environment where the integration runs.
 """
@@ -32,6 +36,7 @@ import re
 import sys
 import threading
 from pathlib import Path
+from typing import Optional, TextIO
 
 # Enable readline for command history (up/down arrows) and editing.
 # This is stdlib and works on Linux/macOS. Gracefully ignored elsewhere.
@@ -51,6 +56,9 @@ except ImportError:
 # Lock to serialize access to readline between the input thread and event printing.
 _print_lock = threading.Lock()
 
+# Optional append-only log of the same lines shown on screen (TX + RX).
+_log_fp: Optional[TextIO] = None
+
 
 # Make the library importable when running from this directory during development
 sys.path.insert(0, str(Path(__file__).parent))
@@ -62,6 +70,17 @@ from b_logicx.const import BLX_TCP_PORT
 PROMPT = "blx> "
 
 
+def _log_line(text: str) -> None:
+    """Append one display line to the log file (if enabled)."""
+    if _log_fp is None:
+        return
+    try:
+        _log_fp.write(text + "\n")
+        _log_fp.flush()
+    except Exception:
+        pass
+
+
 def _print_live(text: str) -> None:
     """Print output while keeping the prompt at the bottom of the terminal.
 
@@ -69,6 +88,7 @@ def _print_live(text: str) -> None:
     repeated on every line.
     """
     with _print_lock:
+        _log_line(text)
         if readline:
             try:
                 buf = readline.get_line_buffer()
@@ -123,6 +143,13 @@ def parse_args() -> argparse.Namespace:
         help="Hide 'Program' commands and the two following datagrams "
              "(programming payload). By default these are shown.",
     )
+    parser.add_argument(
+        "-l",
+        "--log-file",
+        dest="log_file",
+        metavar="PATH",
+        help="Append every on-screen TX/RX line (with timestamps) to this file",
+    )
     return parser.parse_args()
 
 
@@ -152,7 +179,7 @@ async def command_sender(conn: BLXConnection, line: str) -> None:
 
     try:
         await conn.send(cmd, group, address)
-        print(format_sent(f"{cmd} {group}.{address}"))
+        _print_live(format_sent(f"{cmd} {group}.{address}"))
     except ValueError as exc:
         # Unknown command name
         print(f"Unknown command '{cmd}': {exc}")
@@ -173,41 +200,60 @@ async def receive_loop(conn: BLXConnection) -> None:
         _print_live(f"Receive loop ended: {exc}")
 
 
-async def run_monitor(ip: str, port: int, skip_programming: bool = False) -> None:
-    print(f"Connecting to {ip}:{port} ...")
-    conn = BLXConnection(ip, port, skip_programming=skip_programming)
+async def run_monitor(
+    ip: str,
+    port: int,
+    skip_programming: bool = False,
+    log_file: Optional[str] = None,
+) -> None:
+    global _log_fp
 
-    async with conn:
-        print("Connected.")
-        print("Type commands like 'Toggle 2 3' or 'Set 2.80' (dots or spaces are fine).")
-        print("Type 'quit', 'q' or 'help' for more info.\n")
-        if skip_programming:
-            print("Program + 2 payload frames are hidden (--hide-program).\n")
-        else:
-            print("Program traffic is shown (use --hide-program to filter it).\n")
+    if log_file:
+        _log_fp = open(log_file, "a", encoding="utf-8")
+        print(f"Logging bus lines to {log_file}")
 
-        print("Listening for events from the bus...")
-        receiver = asyncio.create_task(receive_loop(conn))
+    try:
+        print(f"Connecting to {ip}:{port} ...")
+        conn = BLXConnection(ip, port, skip_programming=skip_programming)
 
-        try:
-            while True:
-                line = await asyncio.to_thread(input, PROMPT)
-                if line.strip().lower() in ("quit", "q", "exit"):
-                    break
-                if line.strip().lower() == "help":
-                    print("Commands: Toggle / Set / Reset / ...   group address  (e.g. Set 2.80)")
-                    continue
-                await command_sender(conn, line)
-        except (EOFError, KeyboardInterrupt):
-            print("\nExiting...")
-        finally:
-            receiver.cancel()
+        async with conn:
+            print("Connected.")
+            print("Type commands like 'Toggle 2 3' or 'Set 2.80' (dots or spaces are fine).")
+            print("Type 'quit', 'q' or 'help' for more info.\n")
+            if skip_programming:
+                print("Program + 2 payload frames are hidden (--hide-program).\n")
+            else:
+                print("Program traffic is shown (use --hide-program to filter it).\n")
+
+            print("Listening for events from the bus...")
+            receiver = asyncio.create_task(receive_loop(conn))
+
             try:
-                await receiver
-            except asyncio.CancelledError:
-                pass
+                while True:
+                    line = await asyncio.to_thread(input, PROMPT)
+                    if line.strip().lower() in ("quit", "q", "exit"):
+                        break
+                    if line.strip().lower() == "help":
+                        print("Commands: Toggle / Set / Reset / ...   group address  (e.g. Set 2.80)")
+                        continue
+                    await command_sender(conn, line)
+            except (EOFError, KeyboardInterrupt):
+                print("\nExiting...")
+            finally:
+                receiver.cancel()
+                try:
+                    await receiver
+                except asyncio.CancelledError:
+                    pass
 
-    print("Disconnected.")
+        print("Disconnected.")
+    finally:
+        if _log_fp is not None:
+            try:
+                _log_fp.close()
+            except Exception:
+                pass
+            _log_fp = None
 
 
 def main() -> None:
@@ -215,7 +261,10 @@ def main() -> None:
     try:
         asyncio.run(
             run_monitor(
-                args.ip, args.port, skip_programming=args.hide_program
+                args.ip,
+                args.port,
+                skip_programming=args.hide_program,
+                log_file=args.log_file,
             )
         )
     except KeyboardInterrupt:
