@@ -20,15 +20,8 @@
       "init": {
         "title": "B-Logicx",
         "description": "Configured bus entries: {entry_count}.\n\nAdd or change bus members below. Use Edit or Remove to pick an existing entry. YAML import replaces all entries.",
-        "menu_options": {
-          "add_address": "Add bus address",
-          "add_sfeer_room": "Add Sfeer room",
-          "add_sfeer_mood": "Add Sfeer",
-          "edit_select": "Edit entry",
-          "remove_select": "Remove entry",
-          "integration_settings": "Integration settings",
-          "download_yaml_template": "Download YAML template",
-          "import_yaml": "Import from YAML"
+        "data": {
+          "next_step_id": "Action"
         }
       },
       "add_address": {
@@ -198,6 +191,18 @@
         "rtc": "RTC (bus clock)",
         "ldm": "LDM (light sensor)",
         "tsm": "TSM (temperature / thermostat)"
+      }
+    },
+    "options_menu": {
+      "options": {
+        "add_address": "Add bus address",
+        "add_sfeer_room": "Add Sfeer room",
+        "add_sfeer_mood": "Add Sfeer",
+        "edit_select": "Edit entry",
+        "remove_select": "Remove entry",
+        "integration_settings": "Integration settings",
+        "download_yaml_template": "Download YAML template",
+        "import_yaml": "Import from YAML"
       }
     }
   },

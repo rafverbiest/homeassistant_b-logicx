@@ -20,15 +20,8 @@
       "init": {
         "title": "B-Logicx",
         "description": "Geconfigureerde bus-items: {entry_count}.\n\nVoeg busleden toe of wijzig ze hieronder. Gebruik Bewerken of Verwijderen om een bestaand item te kiezen. YAML-import vervangt alle items.",
-        "menu_options": {
-          "add_address": "Busadres toevoegen",
-          "add_sfeer_room": "Sfeer-ruimte toevoegen",
-          "add_sfeer_mood": "Sfeer toevoegen",
-          "edit_select": "Item bewerken",
-          "remove_select": "Item verwijderen",
-          "integration_settings": "Integratie-instellingen",
-          "download_yaml_template": "YAML-sjabloon downloaden",
-          "import_yaml": "Importeren uit YAML"
+        "data": {
+          "next_step_id": "Actie"
         }
       },
       "add_address": {
@@ -198,6 +191,18 @@
         "rtc": "RTC (busklok)",
         "ldm": "LDM (lichtsensor)",
         "tsm": "TSM (temperatuur / thermostaat)"
+      }
+    },
+    "options_menu": {
+      "options": {
+        "add_address": "Busadres toevoegen",
+        "add_sfeer_room": "Sfeer-ruimte toevoegen",
+        "add_sfeer_mood": "Sfeer toevoegen",
+        "edit_select": "Item bewerken",
+        "remove_select": "Item verwijderen",
+        "integration_settings": "Integratie-instellingen",
+        "download_yaml_template": "YAML-sjabloon downloaden",
+        "import_yaml": "Importeren uit YAML"
       }
     }
   },
