@@ -238,9 +238,10 @@
     "select": {
       "sfeer": {
         "state": {
-          "Off": "Off"
+          "off": "Off"
         }
       }
     }
-  }
+  },
+  "version_note": null
 }

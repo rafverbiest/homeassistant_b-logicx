@@ -38,7 +38,7 @@ TSM_PRESET_LABELS = ("Night", "Day", "Away", "Holiday")
 # One room = one bus group (typically 5, then 6, 7…); moods = 221, 222… in that group.
 DEFAULT_SFEER_GROUP = 5
 DEFAULT_SFEER_ADDRESS = 221  # first scene in a room; 222, 223, …
-SFEER_OPTION_OFF = "Off"  # select option to clear active mood
+SFEER_OPTION_OFF = "off"  # select option to clear active mood (HA translation keys must be lowercase)
 # Groups 10+ are for software members / other roles — not Sfeer rooms
 SFEER_AVOID_GROUPS = frozenset(range(10, 16))
 

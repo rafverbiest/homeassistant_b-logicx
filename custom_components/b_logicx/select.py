@@ -120,6 +120,7 @@ class BLogicxSfeerSelect(SelectEntity):
         self._attr_unique_id = get_sfeer_unique_id(host, room_name)
         self._attr_options = [SFEER_OPTION_OFF] + list(self._mood_map.keys())
         self._attr_current_option: str | None = SFEER_OPTION_OFF
+        # Legacy HA state used "Off"; translation keys require lowercase "off".
 
         self._unsubs: list[Callable[[], None]] = []
 
@@ -194,9 +195,9 @@ class BLogicxSfeerSelect(SelectEntity):
             )
             return
 
-        if option == SFEER_OPTION_OFF:
+        if option in (SFEER_OPTION_OFF, "Off"):
             current = self._attr_current_option
-            if current is None or current == SFEER_OPTION_OFF:
+            if current is None or current in (SFEER_OPTION_OFF, "Off"):
                 return
             ga = self._mood_map.get(current)
             if ga is None:

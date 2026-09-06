@@ -12,5 +12,5 @@
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/rafverbiest/homeassistant_b-logicx/issues",
   "requirements": [],
-  "version": "0.9.3b"
+  "version": "0.9.4"
 }
