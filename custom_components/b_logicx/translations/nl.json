@@ -19,10 +19,7 @@
     "step": {
       "init": {
         "title": "B-Logicx",
-        "description": "Geconfigureerde bus-items: {entry_count}.\n\nVoeg busleden toe of wijzig ze hieronder. Gebruik Bewerken of Verwijderen om een bestaand item te kiezen. YAML-import vervangt alle items.",
-        "data": {
-          "next_step_id": "Actie"
-        }
+        "description": "Kies hieronder een actie. YAML-import overschrijft alle bestaande items."
       },
       "add_address": {
         "title": "Wat wil je toevoegen?",
@@ -149,7 +146,7 @@
       },
       "download_yaml_template": {
         "title": "YAML-sjabloon downloaden",
-        "description": "Kopieer het sjabloon hieronder naar een bestand (bijvoorbeeld `addresses.yaml`), pas het aan, en gebruik daarna Importeren uit YAML.\n\n{template}",
+        "description": "Kopieer het sjabloon hieronder, of gebruik de downloadlink (opent een bestandsdownload). Pas het bestand aan en gebruik daarna Importeren uit YAML.\n\n[Sjabloon-bestand downloaden]({download_url})",
         "data": {
           "template": "Sjabloon (kopieer alles hieronder)"
         }
@@ -171,6 +168,13 @@
           "group": "Groep (standaard 1)",
           "address": "Adres",
           "check_status": "Vraag de bus naar de huidige aan/uit-stand wanneer Home Assistant start"
+        }
+      },
+      "export_yaml": {
+        "title": "YAML exporteren",
+        "description": "Kopieer de YAML hieronder, of gebruik de downloadlink (opent een bestandsdownload). Opnieuw laden via Importeren uit YAML (vervangt alle adressen).\n\n[YAML-bestand downloaden]({download_url})",
+        "data": {
+          "export": "Huidige configuratie (YAML)"
         }
       }
     },
@@ -202,7 +206,8 @@
         "remove_select": "Item verwijderen",
         "integration_settings": "Integratie-instellingen",
         "download_yaml_template": "YAML-sjabloon downloaden",
-        "import_yaml": "Importeren uit YAML"
+        "import_yaml": "Importeren uit YAML",
+        "export_yaml": "YAML exporteren"
       }
     }
   },

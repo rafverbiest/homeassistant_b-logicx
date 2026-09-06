@@ -22,7 +22,12 @@ from homeassistant.helpers import selector
 
 import ipaddress
 
-from .address_config import entries_sorted_for_picker, parse_addresses_yaml
+from .address_config import (
+    dump_addresses_yaml,
+    entries_sorted_for_picker,
+    entry_label,
+    parse_addresses_yaml,
+)
 from .const import (
     ADDRESS_TYPE_READONLY,
     ADDRESS_TYPE_LDM,
@@ -62,6 +67,98 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+# Explicit labels for async_show_menu (dict form). Selector translation_key is
+# unreliable in the options dialog and showed raw keys like add_address.
+_MENU_LABELS_EN: dict[str, str] = {
+    "add_address": "Add bus address",
+    "add_sfeer_room": "Add Sfeer room",
+    "add_sfeer_mood": "Add Sfeer",
+    "edit_select": "Edit entry",
+    "remove_select": "Remove entry",
+    "integration_settings": "Integration settings",
+    "export_yaml": "Export YAML",
+    "download_yaml_template": "Download YAML template",
+    "import_yaml": "Import from YAML",
+}
+_MENU_LABELS_NL: dict[str, str] = {
+    "add_address": "Busadres toevoegen",
+    "add_sfeer_room": "Sfeer-ruimte toevoegen",
+    "add_sfeer_mood": "Sfeer toevoegen",
+    "edit_select": "Item bewerken",
+    "remove_select": "Item verwijderen",
+    "integration_settings": "Integratie-instellingen",
+    "export_yaml": "YAML exporteren",
+    "download_yaml_template": "YAML-sjabloon downloaden",
+    "import_yaml": "Importeren uit YAML",
+}
+
+# Empty defaults so FormatJS never throws MISSING_VALUE for cached templates
+# that still reference old placeholders ({addresses}, {example}, {step_title}, …).
+_SAFE_PLACEHOLDERS: dict[str, str] = {
+    "addresses": "",
+    "entry_count": "",
+    "example": "",
+    "warning": "",
+    "moods": "",
+    "room_name": "",
+    "group": "",
+    "template": "",
+    "export_link": "",
+    "download_url": "",
+    "entry": "",
+    "intro": "",
+    "step_title": "",
+    "step_body": "",
+}
+
+_ADDRESS_TYPE_LABELS_EN: dict[str, str] = {
+    ADDRESS_TYPE_NORMAL: "Switch / SoftM (normal address)",
+    ADDRESS_TYPE_READONLY: "Read-only address (observe only, no control)",
+    ADDRESS_TYPE_SHUTTER: "Cover / roller / shutter (open + close addresses)",
+    ADDRESS_TYPE_RTC: "RTC (bus clock)",
+    ADDRESS_TYPE_LDM: "LDM (light sensor)",
+    ADDRESS_TYPE_TSM: "TSM (temperature / thermostat)",
+}
+_ADDRESS_TYPE_LABELS_NL: dict[str, str] = {
+    ADDRESS_TYPE_NORMAL: "Schakelaar / SoftM (normaal adres)",
+    ADDRESS_TYPE_READONLY: "Alleen-lezen adres (alleen volgen, geen bediening)",
+    ADDRESS_TYPE_SHUTTER: "Rolluik (open- + sluitadres)",
+    ADDRESS_TYPE_RTC: "RTC (busklok)",
+    ADDRESS_TYPE_LDM: "LDM (lichtsensor)",
+    ADDRESS_TYPE_TSM: "TSM (temperatuur / thermostaat)",
+}
+
+
+def _flow_lang(hass: Any) -> str:
+    return (getattr(getattr(hass, "config", None), "language", None) or "en")[:2]
+
+
+def _placeholders(**kwargs: Any) -> dict[str, str]:
+    """Merge safe empty defaults with real dynamic values for a form/menu."""
+    data = dict(_SAFE_PLACEHOLDERS)
+    # Also clear any lbl_* leftovers from the reverted placeholder-title hack
+    data.update({k: str(v) for k, v in kwargs.items()})
+    return data
+
+
+def _address_type_options(hass: Any) -> list[selector.SelectOptionDict]:
+    labels = (
+        _ADDRESS_TYPE_LABELS_NL
+        if _flow_lang(hass) == "nl"
+        else _ADDRESS_TYPE_LABELS_EN
+    )
+    order = [
+        ADDRESS_TYPE_NORMAL,
+        ADDRESS_TYPE_READONLY,
+        ADDRESS_TYPE_SHUTTER,
+        ADDRESS_TYPE_RTC,
+        ADDRESS_TYPE_LDM,
+        ADDRESS_TYPE_TSM,
+    ]
+    return [
+        selector.SelectOptionDict(value=v, label=labels.get(v, v)) for v in order
+    ]
+
 
 def _command_selector(options: list[str], default: str) -> Any:
     return selector.SelectSelector(
@@ -70,6 +167,19 @@ def _command_selector(options: list[str], default: str) -> Any:
             mode=selector.SelectSelectorMode.DROPDOWN,
         )
     )
+
+
+def _menu_label(hass: Any, key: str) -> str:
+    """Human label for a main-menu action (NL/EN), never the raw step id."""
+    loc_key = f"component.{DOMAIN}.selector.options_menu.options.{key}"
+    try:
+        text = hass.localize(loc_key)
+        if text and text not in (loc_key, key) and f".{key}" not in text:
+            return text
+    except Exception:  # noqa: BLE001
+        pass
+    table = _MENU_LABELS_NL if _flow_lang(hass) == "nl" else _MENU_LABELS_EN
+    return table.get(key, _MENU_LABELS_EN.get(key, key))
 
 
 def _entry_key(entry: dict) -> str:
@@ -86,48 +196,8 @@ def _entry_key(entry: dict) -> str:
 
 
 def _entry_label(entry: dict) -> str:
-    t = entry.get("type", ADDRESS_TYPE_NORMAL)
-    if t == ADDRESS_TYPE_SHUTTER:
-        return (
-            f"{entry.get('name', 'Cover')} "
-            f"(open {entry['open_group']}.{entry['open_address']} / "
-            f"close {entry['close_group']}.{entry['close_address']})"
-        )
-    if t == ADDRESS_TYPE_SFEER:
-        g = sfeer_room_group(entry)
-        moods = entry.get("moods") or []
-        mood_bits = ", ".join(
-            f"{m.get('name')} {g}.{m.get('address')}" for m in moods
-        )
-        return (
-            f"Sfeer: {entry.get('name', 'Room')} (group {g}) "
-            f"[{mood_bits or 'no moods yet'}]"
-        )
-    if t == ADDRESS_TYPE_READONLY:
-        return (
-            f"Read-only {entry.get('group')}.{entry.get('address')} - "
-            f"{entry.get('name', 'Unnamed')}"
-        )
-    if t == ADDRESS_TYPE_RTC:
-        return (
-            f"RTC {entry.get('group')}.{entry.get('address')} — "
-            f"{entry.get('name', 'Bus clock')} "
-            f"(every {entry.get('sync_interval_hours', 12)}h @ :{int(entry.get('sync_minute', 17)):02d})"
-        )
-    if t == ADDRESS_TYPE_LDM:
-        return (
-            f"LDM {entry.get('group')}.{entry.get('address')} — "
-            f"{entry.get('name', 'Light sensor')}"
-        )
-    if t == ADDRESS_TYPE_TSM:
-        return (
-            f"TSM {entry.get('group')}.{entry.get('address')} — "
-            f"{entry.get('name', 'Temperature')}"
-        )
-    return (
-        f"{entry.get('group')}.{entry.get('address')} - "
-        f"{entry.get('name', 'Unnamed')}"
-    )
+    """Picker label: bus address first (matches sort), then name."""
+    return entry_label(entry)
 
 
 def _find_entry(addresses: list[dict], key: str) -> dict | None:
@@ -352,52 +422,31 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Main options screen: one DROPDOWN (not menu / not LIST select).
-
-        ``async_show_menu`` and ``SelectSelectorMode.LIST`` both produced a
-        duplicated English action wall under the translated control in the HA
-        frontend. A single DROPDOWN keeps one clear choice.
-        """
+        """Main options screen: polished action list (async_show_menu dict)."""
         current = self.config_entry.data.get(CONF_ADDRESSES, [])
-        menu_options: list[str] = [
+        keys: list[str] = [
             "add_address",
             "add_sfeer_room",
         ]
         if any(a.get("type") == ADDRESS_TYPE_SFEER for a in current):
-            menu_options.append("add_sfeer_mood")
+            keys.append("add_sfeer_mood")
         if current:
-            menu_options.extend(["edit_select", "remove_select"])
-        menu_options.extend(
+            keys.extend(["edit_select", "remove_select"])
+        keys.extend(
             [
                 "integration_settings",
+                "export_yaml",
                 "download_yaml_template",
                 "import_yaml",
             ]
         )
+        # Dict form → human labels in the list (never raw add_address keys)
+        menu_options = {k: _menu_label(self.hass, k) for k in keys}
 
-        if user_input is not None:
-            next_id = user_input.get("next_step_id")
-            method = getattr(self, f"async_step_{next_id}", None)
-            if callable(method):
-                return await method()
-            return await self.async_step_init()
-
-        return self.async_show_form(
+        return self.async_show_menu(
             step_id="init",
-            data_schema=vol.Schema(
-                {
-                    vol.Required("next_step_id"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=menu_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            translation_key="options_menu",
-                        )
-                    ),
-                }
-            ),
-            description_placeholders={
-                "entry_count": str(len(current)),
-            },
+            menu_options=menu_options,
+            description_placeholders=_placeholders(),
         )
 
     async def async_step_integration_settings(
@@ -443,7 +492,8 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                         ),
                     ): int,
                 }
-            )
+            ),
+            description_placeholders=_placeholders(),
         )
 
     async def async_step_add_address(
@@ -471,20 +521,13 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                         "address_type", default=ADDRESS_TYPE_NORMAL
                     ): selector.SelectSelector(
                         selector.SelectSelectorConfig(
-                            options=[
-                                ADDRESS_TYPE_NORMAL,
-                                ADDRESS_TYPE_READONLY,
-                                ADDRESS_TYPE_SHUTTER,
-                                ADDRESS_TYPE_RTC,
-                                ADDRESS_TYPE_LDM,
-                                ADDRESS_TYPE_TSM,
-                            ],
+                            options=_address_type_options(self.hass),
                             mode=selector.SelectSelectorMode.DROPDOWN,
-                            translation_key="address_type",
                         )
                     ),
                 }
             ),
+            description_placeholders=_placeholders(),
         )
 
     async def async_step_add_normal(
@@ -595,7 +638,8 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                     ): selector.BooleanSelector(),
                 }
             ),
-            errors=errors
+            errors=errors,
+            description_placeholders=_placeholders(),
         )
 
     async def async_step_add_readonly(
@@ -638,7 +682,8 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                         default=defaults.get("check_status", False),
                     ): selector.BooleanSelector(),
                 }
-            )
+            ),
+            description_placeholders=_placeholders(),
         )
 
     async def async_step_add_ldm(
@@ -683,7 +728,8 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                         default=defaults.get("check_status", False),
                     ): selector.BooleanSelector(),
                 }
-            )
+            ),
+            description_placeholders=_placeholders(),
         )
 
     async def async_step_add_tsm(
@@ -728,7 +774,8 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                         default=defaults.get("check_status", False),
                     ): selector.BooleanSelector(),
                 }
-            )
+            ),
+            description_placeholders=_placeholders(),
         )
 
     async def async_step_add_rtc(
@@ -852,7 +899,8 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                         )
                     ),
                 }
-            )
+            ),
+            description_placeholders=_placeholders(),
         )
 
     async def async_step_add_shutter(
@@ -938,6 +986,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                     ): selector.BooleanSelector(),
                 }
             ),
+            description_placeholders=_placeholders(),
         )
 
     async def async_step_add_sfeer_room(
@@ -997,13 +1046,21 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
             moods = defaults.get("moods") or []
             mood_desc = (
                 ", ".join(f"{m.get('name')} → {m.get('address')}" for m in moods)
-                or "(none yet — use Add Sfeer)"
+                or (
+                    "(nog geen — gebruik Sfeer toevoegen)"
+                    if _flow_lang(self.hass) == "nl"
+                    else "(none yet — use Add Sfeer)"
+                )
             )
         else:
             def_group = next_sfeer_group(used)
             def_name = ""
             def_check = False
-            mood_desc = "(none yet — use Add Sfeer after creating the room)"
+            mood_desc = (
+                "(nog geen — gebruik Sfeer toevoegen na het aanmaken van de ruimte)"
+                if _flow_lang(self.hass) == "nl"
+                else "(none yet — use Add Sfeer after creating the room)"
+            )
             self._edit_defaults = None
 
         return self.async_show_form(
@@ -1017,7 +1074,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                     ): selector.BooleanSelector(),
                 }
             ),
-            description_placeholders={"moods": mood_desc},
+            description_placeholders=_placeholders(moods=mood_desc),
         )
 
     async def async_step_add_sfeer_mood(
@@ -1036,10 +1093,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
         room_options = [
             selector.SelectOptionDict(
                 value=_entry_key(r),
-                label=(
-                    f"{r.get('name', 'Room')} "
-                    f"(group {sfeer_room_group(r)})"
-                ),
+                label=_entry_label(r),
             )
             for r in entries_sorted_for_picker(rooms)
         ]
@@ -1054,7 +1108,8 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                         )
                     ),
                 }
-            )
+            ),
+            description_placeholders=_placeholders(),
         )
 
     async def async_step_add_sfeer_mood_details(
@@ -1103,10 +1158,9 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                     vol.Required("address", default=def_addr): int,
                 }
             ),
-            description_placeholders={
-                "room_name": str(room.get("name", "")),
-                "group": str(room_group),
-            },
+            description_placeholders=_placeholders(room_name=str(room.get("name", "")),
+                group=str(room_group),
+            ),
         )
 
     async def async_step_edit_select(
@@ -1145,6 +1199,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                     )
                 }
             ),
+            description_placeholders=_placeholders(),
         )
 
     async def async_step_remove_select(
@@ -1167,6 +1222,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                     )
                 }
             ),
+            description_placeholders=_placeholders(),
         )
 
     async def async_step_remove_confirm(
@@ -1191,7 +1247,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                     vol.Required("confirm", default=False): selector.BooleanSelector(),
                 }
             ),
-            description_placeholders={"entry": label},
+            description_placeholders=_placeholders(entry=label),
         )
 
     async def async_step_import_yaml(
@@ -1231,6 +1287,44 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                 }
             ),
             errors=errors,
+            description_placeholders=_placeholders(),
+        )
+
+    async def async_step_export_yaml(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Show current addresses as YAML (same format as import)."""
+        if user_input is not None:
+            return await self.async_step_init()
+
+        from .yaml_download import async_yaml_download_url
+
+        addresses = list(self.config_entry.data.get(CONF_ADDRESSES, []))
+        export_text = dump_addresses_yaml(
+            addresses, options=dict(self.config_entry.options)
+        )
+        download_url = async_yaml_download_url(
+            self.hass,
+            filename="b_logicx_addresses.yaml",
+            content=export_text,
+        )
+        return self.async_show_form(
+            step_id="export_yaml",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        "export",
+                        default=export_text,
+                    ): selector.TextSelector(
+                        selector.TextSelectorConfig(
+                            multiline=True,
+                            type=selector.TextSelectorType.TEXT,
+                        )
+                    ),
+                }
+            ),
+            # Link label lives in strings/nl.json; only the signed URL is dynamic.
+            description_placeholders=_placeholders(download_url=download_url),
         )
 
     async def async_step_download_yaml_template(
@@ -1239,11 +1333,13 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
         if user_input is not None:
             return await self.async_step_init()
 
+        from .yaml_download import async_yaml_download_url
+
         template = _yaml_template()
-        template_b64 = base64.b64encode(template.encode("utf-8")).decode("ascii")
-        template_link = (
-            f"[Download YAML template]"
-            f"(data:text/yaml;base64,{template_b64})"
+        download_url = async_yaml_download_url(
+            self.hass,
+            filename="b_logicx_template.yaml",
+            content=template,
         )
         return self.async_show_form(
             step_id="download_yaml_template",
@@ -1260,7 +1356,5 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                     ),
                 }
             ),
-            description_placeholders={
-                "template": template_link,
-            },
+            description_placeholders=_placeholders(download_url=download_url),
         )

@@ -126,3 +126,51 @@ addresses:
 """
     entries, err = parse_addresses_yaml(content)
     assert err == "invalid_format"
+
+
+def test_dump_addresses_yaml_roundtrip():
+    from address_config import dump_addresses_yaml, parse_addresses_yaml
+
+    original = """
+addresses:
+  - type: normal
+    name: Lamp
+    group: 2
+    address: 41
+    on_command: Set
+    off_command: Reset
+    check_status: true
+  - type: shutter
+    name: Rol
+    open_group: 3
+    open_address: 5
+    close_group: 3
+    close_address: 6
+    open_time: 30
+    close_time: 30
+    check_status: false
+  - type: sfeer
+    name: Living
+    group: 5
+    check_status: true
+    moods:
+      - name: TV
+        group: 5
+        address: 221
+"""
+    entries, err = parse_addresses_yaml(original)
+    assert err is None
+    dumped = dump_addresses_yaml(
+        entries,
+        options={
+            "softm_tracking_enabled": True,
+            "bus_repeater_enabled": False,
+            "bus_repeater_port": 10001,
+        },
+    )
+    assert "softm_tracking_enabled: true" in dumped
+    assert dumped.strip().startswith("#")
+    again, err2 = parse_addresses_yaml(dumped)
+    assert err2 is None
+    assert len(again) == len(entries)
+    assert {e["name"] for e in again} == {e["name"] for e in entries}

@@ -5,7 +5,40 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from address_config import entries_sorted_for_picker
+from address_config import entries_sorted_for_picker, entry_label
+
+
+def test_entry_label_address_first():
+    assert (
+        entry_label(
+            {"type": "normal", "name": "Lamp", "group": 2, "address": 41}
+        )
+        == "2.41 — Lamp"
+    )
+    assert (
+        entry_label(
+            {
+                "type": "shutter",
+                "name": "Rol",
+                "open_group": 3,
+                "open_address": 5,
+                "close_group": 3,
+                "close_address": 6,
+            }
+        )
+        == "3.5/3.6 — Rol"
+    )
+    assert (
+        entry_label(
+            {
+                "type": "sfeer",
+                "name": "Living",
+                "group": 5,
+                "moods": [{"name": "TV", "group": 5, "address": 221}],
+            }
+        )
+        == "5 — Living"
+    )
 
 
 def test_entries_sorted_group_then_address():
@@ -50,4 +83,4 @@ def test_translation_files_key_parity():
     assert set(leaves(en)) == set(leaves(nl))
     assert "selector.options_menu.options.add_sfeer_room" in set(leaves(en))
     assert "selector.address_type.options.shutter" in set(leaves(nl))
-    assert "options.step.init.data.next_step_id" in set(leaves(en))
+    

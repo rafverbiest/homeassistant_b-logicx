@@ -19,10 +19,7 @@
     "step": {
       "init": {
         "title": "B-Logicx",
-        "description": "Configured bus entries: {entry_count}.\n\nAdd or change bus members below. Use Edit or Remove to pick an existing entry. YAML import replaces all entries.",
-        "data": {
-          "next_step_id": "Action"
-        }
+        "description": "Choose an action below. YAML import overwrites all existing entries."
       },
       "add_address": {
         "title": "What do you want to add?",
@@ -149,7 +146,7 @@
       },
       "download_yaml_template": {
         "title": "Download YAML template",
-        "description": "Copy the template below into a file (for example `addresses.yaml`), edit it, then use Import from YAML.\n\n{template}",
+        "description": "Copy the template below, or use the download link (opens a file download). Edit the file, then use Import from YAML.\n\n[Download template file]({download_url})",
         "data": {
           "template": "Template (copy everything below)"
         }
@@ -171,6 +168,13 @@
           "group": "Group (default 1)",
           "address": "Address",
           "check_status": "Ask the bus for current on/off when Home Assistant starts"
+        }
+      },
+      "export_yaml": {
+        "title": "Export YAML",
+        "description": "Copy the YAML below, or use the download link (opens a file download). Re-import with Import from YAML (that replaces all addresses).\n\n[Download YAML file]({download_url})",
+        "data": {
+          "export": "Current configuration (YAML)"
         }
       }
     },
@@ -202,7 +206,8 @@
         "remove_select": "Remove entry",
         "integration_settings": "Integration settings",
         "download_yaml_template": "Download YAML template",
-        "import_yaml": "Import from YAML"
+        "import_yaml": "Import from YAML",
+        "export_yaml": "Export YAML"
       }
     }
   },

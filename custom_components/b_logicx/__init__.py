@@ -255,6 +255,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up B-Logicx from a config entry."""
     hass.data.setdefault(DOMAIN, {})
 
+    from .yaml_download import async_setup_yaml_downloads
+
+    async_setup_yaml_downloads(hass)
+
     host = entry.data[CONF_HOST]
     port = entry.data.get(CONF_PORT, DEFAULT_PORT)
 

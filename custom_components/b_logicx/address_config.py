@@ -88,6 +88,83 @@ def entries_sorted_for_picker(addresses: list[dict]) -> list[dict]:
     return sorted(addresses, key=entry_sort_key)
 
 
+def entry_label(entry: dict) -> str:
+    """Picker label: bus address first (matches sort), then name."""
+    t = entry.get("type", ADDRESS_TYPE_NORMAL)
+    name = entry.get("name") or "Unnamed"
+    if t == ADDRESS_TYPE_SHUTTER:
+        return (
+            f"{entry['open_group']}.{entry['open_address']}/"
+            f"{entry['close_group']}.{entry['close_address']} — {name}"
+        )
+    if t == ADDRESS_TYPE_SFEER:
+        return f"{sfeer_room_group(entry)} — {name}"
+    return f"{entry.get('group')}.{entry.get('address')} — {name}"
+
+
+def _yaml_ready_value(value: Any) -> Any:
+    """Normalize values for a clean round-trip dump."""
+    if isinstance(value, dict):
+        return {
+            k: _yaml_ready_value(v)
+            for k, v in value.items()
+            if v is not None
+        }
+    if isinstance(value, list):
+        return [_yaml_ready_value(v) for v in value]
+    if isinstance(value, bool):
+        return bool(value)
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    return value
+
+
+def dump_addresses_yaml(
+    addresses: list[dict],
+    *,
+    options: dict[str, Any] | None = None,
+) -> str:
+    """Serialize addresses to YAML that ``parse_addresses_yaml`` can import.
+
+    Integration options (SoftM master switch, bus repeater) are added as
+    comments only — YAML import still replaces the addresses list alone.
+    """
+    cleaned = [_yaml_ready_value(dict(a)) for a in addresses]
+    # Stable-ish order: same as edit/remove picker
+    cleaned = sorted(cleaned, key=entry_sort_key)
+    body = yaml.safe_dump(
+        {"addresses": cleaned},
+        sort_keys=False,
+        allow_unicode=True,
+        default_flow_style=False,
+    )
+    header = (
+        "# B-Logicx export — use Import from YAML to load (replaces all addresses)\n"
+        "# Types: normal | shutter | sfeer | readonly | rtc | ldm | tsm\n"
+    )
+    if options:
+        header += (
+            "#\n"
+            "# Integration settings (not applied by YAML import — use "
+            "Integration settings in the UI):\n"
+        )
+        for key in (
+            "softm_tracking_enabled",
+            "bus_repeater_enabled",
+            "bus_repeater_port",
+        ):
+            if key not in options:
+                continue
+            val = options[key]
+            if isinstance(val, bool):
+                val_s = "true" if val else "false"
+            else:
+                val_s = str(val)
+            header += f"#   {key}: {val_s}\n"
+        header += "#\n"
+    return header + body
+
+
 def parse_addresses_yaml(content: str) -> tuple[list[dict], str | None]:
     """Parse YAML into address list. Returns (entries, error_key)."""
     try:
