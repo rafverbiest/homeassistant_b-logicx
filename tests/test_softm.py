@@ -172,3 +172,7 @@ def test_same_subnet_filter():
     assert _same_subnet("10.0.0.5", "192.168.1.10") is False
     # Invalid IP → reject
     assert _same_subnet("not-an-ip", "192.168.1.10") is False
+    # Loopback on the HA host → accept (not on the NWM LAN subnet)
+    assert _same_subnet("127.0.0.1", "192.168.1.10") is True
+    assert _same_subnet("::1", "192.168.1.10") is True
+    assert _same_subnet("127.0.0.42", "10.0.0.1") is True

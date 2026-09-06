@@ -51,9 +51,9 @@ FakeGateway records a chronological transcript in the same format as
 `blxmonitor.py`:
 
 ```text
-[16:29:23.660] [SENT] Status 2.80   # client → gateway
-[16:29:23.660] Set 9.99             # gateway → client
-[16:29:23.681] Set 2.80
+[2026-04-06 16:29:23.660] [SENT] Status 2.80   # client → gateway
+[2026-04-06 16:29:23.660] Set 9.99             # gateway → client
+[2026-04-06 16:29:23.681] Set 2.80
 ```
 
 | Mode | How |

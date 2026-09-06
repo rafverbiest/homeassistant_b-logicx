@@ -2,8 +2,8 @@
 
 Format matches blxmonitor.py:
 
-  [HH:MM:SS.mmm] Set 2.80
-  [HH:MM:SS.mmm] [SENT] Status 2.17
+  [YYYY-MM-DD HH:MM:SS.mmm] Set 2.80
+  [YYYY-MM-DD HH:MM:SS.mmm] [SENT] Status 2.17
 """
 
 from __future__ import annotations
@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 
 
 def timestamp() -> str:
-    """Return current wall time as HH:MM:SS.mmm."""
-    return datetime.now().strftime("%H:%M:%S.%f")[:-3]
+    """Return current wall date+time as YYYY-MM-DD HH:MM:SS.mmm."""
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
 
 
 def format_event(event: BLXEvent | str) -> str:

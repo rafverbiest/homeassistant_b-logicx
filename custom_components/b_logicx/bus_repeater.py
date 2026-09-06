@@ -1,8 +1,9 @@
 """TCP bus repeater — share the single NWM connection with BLConfig / blxmonitor.
 
 Listens on HA (default port 10001). Accepts clients on the same subnet as the
-configured NWM. Forwards raw 2-byte RX from the gateway (pre Program-skip) and
-forwards complete 2-byte client TX to the gateway.
+configured NWM, plus loopback (localhost / 127.0.0.1 / ::1) so tools on the HA
+host itself can connect. Forwards raw 2-byte RX from the gateway (pre
+Program-skip) and forwards complete 2-byte client TX to the gateway.
 """
 
 from __future__ import annotations
@@ -20,19 +21,21 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def _same_subnet(client_ip: str, gateway_ip: str) -> bool:
-    """Return True if client and gateway share a common interface subnet on this host."""
+    """Return True if the client may use the repeater.
+
+    Allowed:
+    - Loopback (127.0.0.0/8, ::1) — blxmonitor / tools on the HA host
+    - Same /24 as the configured NWM gateway (LAN clients)
+    """
     try:
         client = ipaddress.ip_address(client_ip)
         gateway = ipaddress.ip_address(gateway_ip)
     except ValueError:
         return False
 
-    # Enumerate local interfaces; require client and gateway in same network
-    try:
-        for info in socket.getaddrinfo(socket.gethostname(), None):
-            pass
-    except OSError:
-        pass
+    # Local tools on the HA host (screen + blxmonitor, HA SSH add-on, etc.)
+    if client.is_loopback:
+        return True
 
     # Prefer: find a local address that shares a /24 with the gateway, then
     # require the client on that same /24. Fallback: same /24 as gateway alone.
