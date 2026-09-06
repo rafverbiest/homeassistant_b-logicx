@@ -2,6 +2,8 @@
 
 Custom integration for the **B-Logicx (BL-NWM)** bus gateway: switches, covers, Sfeer, read-only addresses, RTC clock sync, LDM light sensors, TSM thermostat telemetry, SoftM virtual status tracking, and an optional TCP bus repeater.
 
+**0.9.5.1:** Same as 0.9.5 content; new version so HACS can upgrade past the earlier 0.9.5 tag.
+
 **0.9.5:** Options UX polish (menu list, Dutch/EN strings, address-first edit/remove), YAML export, working YAML download links (signed API; `data:` URLs never worked in HA markdown). See `TRANSLATIONS.md`.
 
 **0.9.4:** Options main-menu fix (single action list). Valid semver for HA/HACS (`0.9.3b` was rejected by hassfest). Sfeer option key `off` (was invalid `Off`).
