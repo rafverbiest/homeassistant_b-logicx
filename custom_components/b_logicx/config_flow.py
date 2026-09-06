@@ -352,11 +352,11 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Main options screen: one translated action list (not async_show_menu).
+        """Main options screen: one DROPDOWN (not menu / not LIST select).
 
-        ``async_show_menu`` was rendering twice in the HA frontend (translated
-        radio group + English list items, each duplicated). A LIST select is
-        a single clear control and still uses ``selector.options_menu``.
+        ``async_show_menu`` and ``SelectSelectorMode.LIST`` both produced a
+        duplicated English action wall under the translated control in the HA
+        frontend. A single DROPDOWN keeps one clear choice.
         """
         current = self.config_entry.data.get(CONF_ADDRESSES, [])
         menu_options: list[str] = [
@@ -389,7 +389,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                     vol.Required("next_step_id"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=menu_options,
-                            mode=selector.SelectSelectorMode.LIST,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
                             translation_key="options_menu",
                         )
                     ),
