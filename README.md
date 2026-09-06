@@ -1,6 +1,8 @@
 # B-Logicx for Home Assistant
 
-Custom integration for the **B-Logicx (BL-NWM)** bus gateway: switches, covers, Sfeer moods, EXU inputs, RTC clock sync, LDM light sensors, TSM thermostat telemetry, SoftM virtual status tracking, and an optional TCP bus repeater.
+Custom integration for the **B-Logicx (BL-NWM)** bus gateway: switches, covers, Sfeer, read-only addresses, RTC clock sync, LDM light sensors, TSM thermostat telemetry, SoftM virtual status tracking, and an optional TCP bus repeater.
+
+**0.9.3:** Dutch UI (`nl.json`), clearer options flow (no long member list on the main screen; edit/remove sorted by group then address), and newbie-friendly labels for status-on-startup / SoftM. See `TRANSLATIONS.md`.
 
 **0.9.1:** Config changes reload once (Status probes no longer run twice). SoftM / bus-repeater integration options are preserved when editing addresses.
 
@@ -76,7 +78,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-See `TESTS.md` and `RELEASING.md`. Design history: `DESIGN.md`.
+See `TESTS.md`, `RELEASING.md`, and `TRANSLATIONS.md`.
 
 ## License
 

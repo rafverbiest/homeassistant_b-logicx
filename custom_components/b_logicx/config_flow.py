@@ -22,9 +22,9 @@ from homeassistant.helpers import selector
 
 import ipaddress
 
-from .address_config import parse_addresses_yaml
+from .address_config import entries_sorted_for_picker, parse_addresses_yaml
 from .const import (
-    ADDRESS_TYPE_EXU,
+    ADDRESS_TYPE_READONLY,
     ADDRESS_TYPE_LDM,
     ADDRESS_TYPE_NORMAL,
     ADDRESS_TYPE_RTC,
@@ -38,7 +38,7 @@ from .const import (
     CONF_SOFTM_TRACKING_ENABLED,
     DEFAULT_BUS_REPEATER_PORT,
     DEFAULT_CLOSE_TIME,
-    DEFAULT_EXU_GROUP,
+    DEFAULT_READONLY_GROUP,
     DEFAULT_LDM_GROUP,
     DEFAULT_OFF_COMMAND,
     DEFAULT_ON_COMMAND,
@@ -103,9 +103,9 @@ def _entry_label(entry: dict) -> str:
             f"Sfeer: {entry.get('name', 'Room')} (group {g}) "
             f"[{mood_bits or 'no moods yet'}]"
         )
-    if t == ADDRESS_TYPE_EXU:
+    if t == ADDRESS_TYPE_READONLY:
         return (
-            f"EXU {entry.get('group')}.{entry.get('address')} - "
+            f"Read-only {entry.get('group')}.{entry.get('address')} - "
             f"{entry.get('name', 'Unnamed')}"
         )
     if t == ADDRESS_TYPE_RTC:
@@ -144,11 +144,11 @@ def _upsert_by_key(addresses: list[dict], new_entry: dict) -> list[dict]:
         if _entry_key(addr) == key:
             addresses[i] = new_entry
             return addresses
-    # Normal/EXU: also match by group+address across type changes
+    # Normal/read-only: also match by group+address across type changes
     t = new_entry.get("type")
-    if t in (ADDRESS_TYPE_NORMAL, ADDRESS_TYPE_EXU):
+    if t in (ADDRESS_TYPE_NORMAL, ADDRESS_TYPE_READONLY):
         for i, addr in enumerate(addresses):
-            if addr.get("type") in (ADDRESS_TYPE_NORMAL, ADDRESS_TYPE_EXU, None):
+            if addr.get("type") in (ADDRESS_TYPE_NORMAL, ADDRESS_TYPE_READONLY, None):
                 if (
                     addr.get("group") == new_entry["group"]
                     and addr.get("address") == new_entry["address"]
@@ -178,37 +178,12 @@ def _upsert_by_key(addresses: list[dict], new_entry: dict) -> list[dict]:
     return addresses
 
 
-def _format_address_list(addresses: list[dict]) -> str:
-    if not addresses:
-        return "None yet."
-    lines = []
-    for a in addresses:
-        t = a.get("type", ADDRESS_TYPE_NORMAL)
-        if t == ADDRESS_TYPE_SHUTTER:
-            lines.append(
-                f"• {_entry_label(a)} "
-                f"[open_time:{a.get('open_time', DEFAULT_OPEN_TIME)}s, "
-                f"close_time:{a.get('close_time', DEFAULT_CLOSE_TIME)}s, "
-                f"check_status:{a.get('check_status', False)}]"
-            )
-        elif t == ADDRESS_TYPE_SFEER:
-            lines.append(
-                f"• {_entry_label(a)} "
-                f"[check_status:{a.get('check_status', False)}]"
-            )
-        elif t == ADDRESS_TYPE_EXU:
-            lines.append(
-                f"• {_entry_label(a)} "
-                f"[listen-only, check_status:{a.get('check_status', False)}]"
-            )
-        else:
-            lines.append(
-                f"• {_entry_label(a)} "
-                f"[on:{a.get('on_command', DEFAULT_ON_COMMAND)}, "
-                f"off:{a.get('off_command', DEFAULT_OFF_COMMAND)}, "
-                f"check_status:{a.get('check_status', False)}]"
-            )
-    return "\n".join(lines)
+def _picker_options(addresses: list[dict]) -> list[selector.SelectOptionDict]:
+    """Dropdown options for edit/remove, sorted group → address."""
+    return [
+        selector.SelectOptionDict(value=_entry_key(a), label=_entry_label(a))
+        for a in entries_sorted_for_picker(addresses)
+    ]
 
 
 def _read_uploaded_text(hass, file_id: str) -> str:
@@ -232,7 +207,7 @@ def _yaml_template() -> str:
         return path.read_text(encoding="utf-8")
     except OSError:
         return """# B-Logicx addresses (full replace on import)
-# Types: normal | shutter | sfeer | exu | rtc
+# Types: normal | shutter | sfeer | readonly | rtc
 
 addresses:
   - type: normal
@@ -264,8 +239,8 @@ addresses:
         group: 5
         address: 222
 
-  - type: exu
-    name: Example EXU input
+  - type: readonly
+    name: Example read-only input
     group: 1
     address: 30
     check_status: false
@@ -378,25 +353,28 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         current = self.config_entry.data.get(CONF_ADDRESSES, [])
-        # Ordered menu (Python 3.7+ insertion order)
-        menu_options: dict[str, str] = {
-            "add_address": "Add bus address",
-            "add_sfeer_room": "Add room for Sfeer",
-        }
+        # List form → labels come from translations (options.step.init.menu_options.*)
+        menu_options: list[str] = [
+            "add_address",
+            "add_sfeer_room",
+        ]
         if any(a.get("type") == ADDRESS_TYPE_SFEER for a in current):
-            menu_options["add_sfeer_mood"] = "Add Sfeer"
+            menu_options.append("add_sfeer_mood")
         if current:
-            menu_options["edit_select"] = "Edit entry"
-            menu_options["remove_select"] = "Remove entry"
-        menu_options["integration_settings"] = "Integration settings"
-        menu_options["download_yaml_template"] = "Download YAML template"
-        menu_options["import_yaml"] = "Import from YAML"
+            menu_options.extend(["edit_select", "remove_select"])
+        menu_options.extend(
+            [
+                "integration_settings",
+                "download_yaml_template",
+                "import_yaml",
+            ]
+        )
 
         return self.async_show_menu(
             step_id="init",
             menu_options=menu_options,
             description_placeholders={
-                "addresses": _format_address_list(current),
+                "entry_count": str(len(current)),
             },
         )
 
@@ -443,16 +421,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                         ),
                     ): int,
                 }
-            ),
-            description_placeholders={
-                "example": (
-                    "SoftM tracking: answer Toggle/Status for SoftMs with "
-                    "enable_softm_status_tracking (do not also use a hardware "
-                    "Status Module on those addresses). "
-                    "Bus repeater: listen on HA:port (default 10001) for "
-                    "BLConfig/blxmonitor; same-subnet clients only."
-                ),
-            },
+            )
         )
 
     async def async_step_add_address(
@@ -462,8 +431,8 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
             t = user_input.get("address_type", ADDRESS_TYPE_NORMAL)
             if t == ADDRESS_TYPE_SHUTTER:
                 return await self.async_step_add_shutter()
-            if t == ADDRESS_TYPE_EXU:
-                return await self.async_step_add_exu()
+            if t == ADDRESS_TYPE_READONLY:
+                return await self.async_step_add_readonly()
             if t == ADDRESS_TYPE_RTC:
                 return await self.async_step_add_rtc()
             if t == ADDRESS_TYPE_LDM:
@@ -481,41 +450,19 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                     ): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=[
-                                selector.SelectOptionDict(
-                                    value=ADDRESS_TYPE_NORMAL,
-                                    label="Normal address (RLM, SoftM, …)",
-                                ),
-                                selector.SelectOptionDict(
-                                    value=ADDRESS_TYPE_SHUTTER,
-                                    label="Roller / shutter / blind (Cover)",
-                                ),
-                                selector.SelectOptionDict(
-                                    value=ADDRESS_TYPE_EXU,
-                                    label="EXU (input / listen-only)",
-                                ),
-                                selector.SelectOptionDict(
-                                    value=ADDRESS_TYPE_RTC,
-                                    label="RTC (bus clock)",
-                                ),
-                                selector.SelectOptionDict(
-                                    value=ADDRESS_TYPE_LDM,
-                                    label="LDM (light sensor)",
-                                ),
-                                selector.SelectOptionDict(
-                                    value=ADDRESS_TYPE_TSM,
-                                    label="TSM (temperature / thermostat)",
-                                ),
+                                ADDRESS_TYPE_NORMAL,
+                                ADDRESS_TYPE_READONLY,
+                                ADDRESS_TYPE_SHUTTER,
+                                ADDRESS_TYPE_RTC,
+                                ADDRESS_TYPE_LDM,
+                                ADDRESS_TYPE_TSM,
                             ],
                             mode=selector.SelectSelectorMode.DROPDOWN,
+                            translation_key="address_type",
                         )
                     ),
                 }
             ),
-            description_placeholders={
-                "addresses": _format_address_list(
-                    self.config_entry.data.get(CONF_ADDRESSES, [])
-                ),
-            },
         )
 
     async def async_step_add_normal(
@@ -626,25 +573,17 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                     ): selector.BooleanSelector(),
                 }
             ),
-            errors=errors,
-            description_placeholders={
-                "example": (
-                    "Normal switch or SoftM. SoftM tracking answers bus "
-                    "Toggle/Status/Timer — on/off commands must stay Set/Reset "
-                    "(Toggle is rejected). Do not combine with check_status. "
-                    "softm_timer>0 enables Timer pulses."
-                ),
-            },
+            errors=errors
         )
 
-    async def async_step_add_exu(
+    async def async_step_add_readonly(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Add listen-only EXU binary sensor."""
+        """Add read-only (listen-only) binary sensor."""
         if user_input is not None:
             new_addr = {
                 "name": user_input["name"].strip(),
-                "type": ADDRESS_TYPE_EXU,
+                "type": ADDRESS_TYPE_READONLY,
                 "group": int(user_input["group"]),
                 "address": int(user_input["address"]),
                 "check_status": user_input.get("check_status", False),
@@ -661,13 +600,13 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
         defaults = getattr(self, "_edit_defaults", {}) or {}
         self._edit_defaults = None
         return self.async_show_form(
-            step_id="add_exu",
+            step_id="add_readonly",
             data_schema=vol.Schema(
                 {
                     vol.Required("name", default=defaults.get("name", "")): str,
                     vol.Required(
                         "group",
-                        default=int(defaults.get("group", DEFAULT_EXU_GROUP)),
+                        default=int(defaults.get("group", DEFAULT_READONLY_GROUP)),
                     ): int,
                     vol.Required(
                         "address", default=int(defaults.get("address", 0))
@@ -677,13 +616,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                         default=defaults.get("check_status", False),
                     ): selector.BooleanSelector(),
                 }
-            ),
-            description_placeholders={
-                "example": (
-                    "Listen-only input (default group 1). HA never sends "
-                    "control commands — only optional Status on startup."
-                ),
-            },
+            )
         )
 
     async def async_step_add_ldm(
@@ -728,14 +661,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                         default=defaults.get("check_status", False),
                     ): selector.BooleanSelector(),
                 }
-            ),
-            description_placeholders={
-                "example": (
-                    "Light sensor (System address). Unsolicited Value+System. "
-                    "If check status is on: request on startup (Data 0.2 + Select) "
-                    "and a Refresh button."
-                ),
-            },
+            )
         )
 
     async def async_step_add_tsm(
@@ -780,14 +706,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                         default=defaults.get("check_status", False),
                     ): selector.BooleanSelector(),
                 }
-            ),
-            description_placeholders={
-                "example": (
-                    "Thermostat sensor (device System address). Burst includes "
-                    "temperature, preset, offset, heat requested. "
-                    "Check status = Status request on startup + Refresh button."
-                ),
-            },
+            )
         )
 
     async def async_step_add_rtc(
@@ -911,14 +830,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                         )
                     ),
                 }
-            ),
-            description_placeholders={
-                "example": (
-                    "Bus clock (default 1.1). Writes time via Program sequences. "
-                    "Default every 12h at :17 (not on the hour). Startup sync "
-                    "runs after Status probes. DST sync ~1 min after clock change."
-                ),
-            },
+            )
         )
 
     async def async_step_add_shutter(
@@ -1004,12 +916,6 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                     ): selector.BooleanSelector(),
                 }
             ),
-            description_placeholders={
-                "example": (
-                    "Two bus addresses: open + close. Travel times estimate "
-                    "when HA reports open/closed."
-                ),
-            },
         )
 
     async def async_step_add_sfeer_room(
@@ -1089,13 +995,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                     ): selector.BooleanSelector(),
                 }
             ),
-            description_placeholders={
-                "example": (
-                    "One bus group per room (first usually 5, then 6…). "
-                    f"Moods: {mood_desc}. "
-                    "Add moods with menu item Add Sfeer."
-                ),
-            },
+            description_placeholders={"moods": mood_desc},
         )
 
     async def async_step_add_sfeer_mood(
@@ -1119,7 +1019,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                     f"(group {sfeer_room_group(r)})"
                 ),
             )
-            for r in rooms
+            for r in entries_sorted_for_picker(rooms)
         ]
         return self.async_show_form(
             step_id="add_sfeer_mood",
@@ -1132,13 +1032,7 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                         )
                     ),
                 }
-            ),
-            description_placeholders={
-                "example": (
-                    "Choose the room (bus group). Next step: mood name and "
-                    "address (221, 222, …)."
-                ),
-            },
+            )
         )
 
     async def async_step_add_sfeer_mood_details(
@@ -1188,11 +1082,8 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                 }
             ),
             description_placeholders={
-                "example": (
-                    f"Room “{room.get('name')}” uses bus group {room_group}. "
-                    f"Moods share that group; addresses are usually "
-                    f"{DEFAULT_SFEER_ADDRESS}, {DEFAULT_SFEER_ADDRESS + 1}, …"
-                ),
+                "room_name": str(room.get("name", "")),
+                "group": str(room_group),
             },
         )
 
@@ -1209,8 +1100,8 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                 return await self.async_step_add_shutter()
             if t == ADDRESS_TYPE_SFEER:
                 return await self.async_step_add_sfeer_room()
-            if t == ADDRESS_TYPE_EXU:
-                return await self.async_step_add_exu()
+            if t == ADDRESS_TYPE_READONLY:
+                return await self.async_step_add_readonly()
             if t == ADDRESS_TYPE_RTC:
                 return await self.async_step_add_rtc()
             if t == ADDRESS_TYPE_LDM:
@@ -1220,36 +1111,13 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
             return await self.async_step_add_normal()
 
         current = self.config_entry.data.get(CONF_ADDRESSES, [])
-        items: list[tuple[tuple, selector.SelectOptionDict]] = []
-        for addr in current:
-            key = _entry_key(addr)
-            label = _entry_label(addr)
-            t = addr.get("type", ADDRESS_TYPE_NORMAL)
-            if t == ADDRESS_TYPE_SHUTTER:
-                sort_key = (1, addr.get("open_group", 0), addr.get("open_address", 0))
-            elif t == ADDRESS_TYPE_SFEER:
-                sort_key = (2, sfeer_room_group(addr), addr.get("name", ""))
-            elif t == ADDRESS_TYPE_EXU:
-                sort_key = (3, addr.get("group", 0), addr.get("address", 0))
-            elif t == ADDRESS_TYPE_RTC:
-                sort_key = (4, addr.get("group", 0), addr.get("address", 0))
-            elif t == ADDRESS_TYPE_LDM:
-                sort_key = (5, addr.get("group", 0), addr.get("address", 0))
-            elif t == ADDRESS_TYPE_TSM:
-                sort_key = (6, addr.get("group", 0), addr.get("address", 0))
-            else:
-                sort_key = (0, addr.get("group", 0), addr.get("address", 0))
-            items.append(
-                (sort_key, selector.SelectOptionDict(value=key, label=label))
-            )
-        items.sort(key=lambda t: t[0])
         return self.async_show_form(
             step_id="edit_select",
             data_schema=vol.Schema(
                 {
                     vol.Required("entry_to_edit"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
-                            options=[i[1] for i in items],
+                            options=_picker_options(current),
                             mode=selector.SelectSelectorMode.DROPDOWN,
                         )
                     )
@@ -1265,19 +1133,13 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
             return await self.async_step_remove_confirm()
 
         current = self.config_entry.data.get(CONF_ADDRESSES, [])
-        options = [
-            selector.SelectOptionDict(
-                value=_entry_key(a), label=_entry_label(a)
-            )
-            for a in current
-        ]
         return self.async_show_form(
             step_id="remove_select",
             data_schema=vol.Schema(
                 {
                     vol.Required("entry_to_remove"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
-                            options=options,
+                            options=_picker_options(current),
                             mode=selector.SelectSelectorMode.DROPDOWN,
                         )
                     )
@@ -1346,11 +1208,6 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                     ),
                 }
             ),
-            description_placeholders={
-                "warning": (
-                    "⚠️ **WARNING**: This will **overwrite ALL** existing addresses."
-                ),
-            },
             errors=errors,
         )
 
@@ -1382,10 +1239,6 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                 }
             ),
             description_placeholders={
-                "warning": (
-                    "⚠️ Copy the template box into a file named e.g. "
-                    "`addresses.yaml`, edit, then use Import from YAML."
-                ),
                 "template": template_link,
             },
         )

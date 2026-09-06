@@ -6,7 +6,7 @@
 #   group 2  — lights / outlets
 #   group 3  — shutters / covers
 #   group 10 — software members
-# Types: normal | shutter | sfeer | exu | rtc
+# Types: normal | shutter | sfeer | readonly | rtc
 
 addresses:
   - type: normal
@@ -83,13 +83,13 @@ addresses:
       - name: Soft
         address: 222
 
-  - type: exu
+  - type: readonly
     name: Front PIR
     group: 1
     address: 30
     check_status: false
 
-  - type: exu
+  - type: readonly
     name: Side door contact
     group: 1
     address: 31

@@ -15,7 +15,7 @@ import homeassistant.helpers.device_registry as dr
 
 from .b_logicx.softm_tracker import SoftMConfig
 from .const import (
-    ADDRESS_TYPE_EXU,
+    ADDRESS_TYPE_READONLY,
     ADDRESS_TYPE_LDM,
     ADDRESS_TYPE_NORMAL,
     ADDRESS_TYPE_RTC,
@@ -327,18 +327,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     n_cover = sum(1 for a in addresses if a.get("type") == ADDRESS_TYPE_SHUTTER)
     n_sfeer = sum(1 for a in addresses if a.get("type") == ADDRESS_TYPE_SFEER)
-    n_exu = sum(1 for a in addresses if a.get("type") == ADDRESS_TYPE_EXU)
+    n_readonly = sum(1 for a in addresses if a.get("type") == ADDRESS_TYPE_READONLY)
     n_rtc = sum(1 for a in addresses if a.get("type") == ADDRESS_TYPE_RTC)
     n_ldm = sum(1 for a in addresses if a.get("type") == ADDRESS_TYPE_LDM)
     n_tsm = sum(1 for a in addresses if a.get("type") == ADDRESS_TYPE_TSM)
     _LOGGER.info(
         "Setting up B-Logicx with %d entries "
-        "(%d normal, %d cover, %d sfeer, %d exu, %d rtc, %d ldm, %d tsm)",
+        "(%d normal, %d cover, %d sfeer, %d readonly, %d rtc, %d ldm, %d tsm)",
         len(addresses),
         n_normal,
         n_cover,
         n_sfeer,
-        n_exu,
+        n_readonly,
         n_rtc,
         n_ldm,
         n_tsm,
@@ -363,12 +363,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             identifiers = get_sfeer_device_identifiers(host, name)
             n_moods = len(addr.get("moods") or [])
             model = f"Sfeer room ({n_moods} moods)"
-        elif addr.get("type") == ADDRESS_TYPE_EXU:
+        elif addr.get("type") == ADDRESS_TYPE_READONLY:
             identifiers = get_device_identifiers(
                 host, addr["group"], addr["address"]
             )
-            name = addr.get("name", f"EXU {addr['group']}.{addr['address']}")
-            model = f"EXU {addr['group']}.{addr['address']}"
+            name = addr.get("name", f"Read-only {addr['group']}.{addr['address']}")
+            model = f"Read-only {addr['group']}.{addr['address']}"
         elif addr.get("type") == ADDRESS_TYPE_RTC:
             identifiers = get_rtc_device_identifiers(
                 host, int(addr["group"]), int(addr["address"])

@@ -26,7 +26,7 @@ def test_edge_cases_fixture():
     entries, err = parse_addresses_yaml(content)
     assert err is None
     types = {e["type"] for e in entries}
-    assert types == {"normal", "shutter", "sfeer", "exu"}
+    assert types == {"normal", "shutter", "sfeer", "readonly"}
     sfeer = next(e for e in entries if e["type"] == "sfeer")
     assert len(sfeer["moods"]) == 2
     cover = next(e for e in entries if e["type"] == "shutter")
@@ -40,7 +40,7 @@ def test_demo_site_yaml():
     assert err is None
     assert len(entries) >= 10
     types = {e["type"] for e in entries}
-    assert {"normal", "shutter", "sfeer", "exu", "rtc"} <= types
+    assert {"normal", "shutter", "sfeer", "readonly", "rtc"} <= types
     # Example group conventions (fictional site layout)
     for e in entries:
         if e["type"] == "normal" and "Software" in e.get("name", ""):

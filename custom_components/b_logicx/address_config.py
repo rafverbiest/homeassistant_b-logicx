@@ -12,7 +12,7 @@ import yaml
 
 try:
     from .const import (
-        ADDRESS_TYPE_EXU,
+        ADDRESS_TYPE_READONLY,
         ADDRESS_TYPE_LDM,
         ADDRESS_TYPE_NORMAL,
         ADDRESS_TYPE_RTC,
@@ -20,7 +20,7 @@ try:
         ADDRESS_TYPE_SHUTTER,
         ADDRESS_TYPE_TSM,
         DEFAULT_CLOSE_TIME,
-        DEFAULT_EXU_GROUP,
+        DEFAULT_READONLY_GROUP,
         DEFAULT_LDM_GROUP,
         DEFAULT_TSM_GROUP,
         DEFAULT_OFF_COMMAND,
@@ -37,7 +37,7 @@ try:
     )
 except ImportError:  # plain `python -m pytest` with ROOT on path
     from const import (
-        ADDRESS_TYPE_EXU,
+        ADDRESS_TYPE_READONLY,
         ADDRESS_TYPE_LDM,
         ADDRESS_TYPE_NORMAL,
         ADDRESS_TYPE_RTC,
@@ -45,7 +45,7 @@ except ImportError:  # plain `python -m pytest` with ROOT on path
         ADDRESS_TYPE_SHUTTER,
         ADDRESS_TYPE_TSM,
         DEFAULT_CLOSE_TIME,
-        DEFAULT_EXU_GROUP,
+        DEFAULT_READONLY_GROUP,
         DEFAULT_LDM_GROUP,
         DEFAULT_TSM_GROUP,
         DEFAULT_OFF_COMMAND,
@@ -62,6 +62,30 @@ except ImportError:  # plain `python -m pytest` with ROOT on path
     )
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def entry_sort_key(entry: dict) -> tuple:
+    """Sort key for edit/remove pickers: group → address → name."""
+    t = entry.get("type", ADDRESS_TYPE_NORMAL)
+    name = str(entry.get("name") or "")
+    if t == ADDRESS_TYPE_SHUTTER:
+        return (
+            int(entry.get("open_group", 0)),
+            int(entry.get("open_address", 0)),
+            name,
+        )
+    if t == ADDRESS_TYPE_SFEER:
+        return (int(sfeer_room_group(entry)), 0, name)
+    return (
+        int(entry.get("group", 0)),
+        int(entry.get("address", 0)),
+        name,
+    )
+
+
+def entries_sorted_for_picker(addresses: list[dict]) -> list[dict]:
+    """Return addresses sorted group → address for edit/remove dropdowns."""
+    return sorted(addresses, key=entry_sort_key)
 
 
 def parse_addresses_yaml(content: str) -> tuple[list[dict], str | None]:
@@ -154,13 +178,13 @@ def normalize_yaml_entry(item: Any) -> dict:
             entry["softm_timer"] = softm_timer_val
         return entry
 
-    if t == ADDRESS_TYPE_EXU:
+    if t == ADDRESS_TYPE_READONLY:
         if not name:
             raise ValueError("name required")
         return {
             "name": name,
-            "type": ADDRESS_TYPE_EXU,
-            "group": int(item.get("group", DEFAULT_EXU_GROUP)),
+            "type": ADDRESS_TYPE_READONLY,
+            "group": int(item.get("group", DEFAULT_READONLY_GROUP)),
             "address": int(item["address"]),
             "check_status": check,
         }

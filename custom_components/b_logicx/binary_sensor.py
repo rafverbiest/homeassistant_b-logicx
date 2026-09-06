@@ -1,7 +1,8 @@
-"""Binary sensor platform for B-Logicx EXU (listen-only inputs).
+"""Binary sensor platform for B-Logicx read-only addresses.
 
-EXU addresses are observed only: Set → on, Reset → off. The integration may
+Read-only addresses are observed only: Set → on, Reset → off. The integration may
 send Status when check_status is enabled, but never Set/Reset/Toggle/Dimmer.
+(Originally modelled on BL-EXU; kept as a general listen-only normal-address mode.)
 """
 
 from __future__ import annotations
@@ -16,7 +17,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .b_logicx.models import BLXEvent
 from .const import (
-    ADDRESS_TYPE_EXU,
+    ADDRESS_TYPE_READONLY,
     CONF_ADDRESSES,
     CONF_HOST,
     DOMAIN,
@@ -33,36 +34,37 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up B-Logicx EXU binary sensors."""
+    """Set up B-Logicx read-only binary sensors."""
     hub: BLogicxHub = hass.data[DOMAIN][entry.entry_id]
     host = entry.data[CONF_HOST]
     addresses: list[dict] = entry.data.get(CONF_ADDRESSES, [])
 
-    entities: list[BLogicxExuSensor] = []
+    entities: list[BLogicxReadonlySensor] = []
     for addr in addresses:
-        if addr.get("type") != ADDRESS_TYPE_EXU:
+        if addr.get("type") != ADDRESS_TYPE_READONLY:
             continue
         try:
             entities.append(
-                BLogicxExuSensor(
+                BLogicxReadonlySensor(
                     hub=hub,
                     host=host,
                     group=int(addr["group"]),
                     address=int(addr["address"]),
                     name=addr.get(
-                        "name", f"EXU {addr['group']}.{addr['address']}"
+                        "name",
+                        f"Read-only {addr['group']}.{addr['address']}",
                     ),
                     check_status=addr.get("check_status", False),
                 )
             )
         except (KeyError, TypeError, ValueError) as err:
-            _LOGGER.error("Skipping invalid EXU entry %s: %s", addr, err)
+            _LOGGER.error("Skipping invalid read-only entry %s: %s", addr, err)
 
     async_add_entities(entities)
 
 
-class BLogicxExuSensor(BinarySensorEntity):
-    """Listen-only bus address (EXU / input)."""
+class BLogicxReadonlySensor(BinarySensorEntity):
+    """Listen-only bus address (read-only / observe Set-Reset)."""
 
     _attr_should_poll = False
 

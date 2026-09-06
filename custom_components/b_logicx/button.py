@@ -90,7 +90,7 @@ class BLogicxRtcSyncButton(ButtonEntity):
 
     _attr_should_poll = False
     _attr_has_entity_name = True
-    _attr_name = "Synchronize clock"
+    _attr_translation_key = "sync_clock"
     _attr_icon = "mdi:clock-check-outline"
 
     def __init__(
@@ -129,7 +129,7 @@ class BLogicxLdmRefreshButton(ButtonEntity):
 
     _attr_should_poll = False
     _attr_has_entity_name = True
-    _attr_name = "Refresh light level"
+    _attr_translation_key = "refresh_light"
     _attr_icon = "mdi:refresh"
 
     def __init__(
@@ -160,7 +160,7 @@ class BLogicxTsmRefreshButton(ButtonEntity):
 
     _attr_should_poll = False
     _attr_has_entity_name = True
-    _attr_name = "Refresh"
+    _attr_translation_key = "refresh_temperature"
     _attr_icon = "mdi:refresh"
 
     def __init__(

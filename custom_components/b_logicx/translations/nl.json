@@ -1,0 +1,241 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "B-Logicx gateway",
+        "description": "Maak verbinding met je BL-NWM (of compatibele) gateway op het lokale netwerk.",
+        "data": {
+          "host": "IP-adres of hostnaam",
+          "port": "TCP-poort (standaard 10001)"
+        }
+      }
+    },
+    "error": {
+      "invalid_host": "Dat lijkt geen geldig IP-adres of hostnaam.",
+      "cannot_connect": "Kan geen verbinding maken met de gateway. Controleer IP, poort, en of Home Assistant het toestel kan bereiken."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "B-Logicx",
+        "description": "Geconfigureerde bus-items: {entry_count}.\n\nVoeg busleden toe of wijzig ze hieronder. Gebruik Bewerken of Verwijderen om een bestaand item te kiezen. YAML-import vervangt alle items.",
+        "menu_options": {
+          "add_address": "Busadres toevoegen",
+          "add_sfeer_room": "Sfeer-ruimte toevoegen",
+          "add_sfeer_mood": "Sfeer toevoegen",
+          "edit_select": "Item bewerken",
+          "remove_select": "Item verwijderen",
+          "integration_settings": "Integratie-instellingen",
+          "download_yaml_template": "YAML-sjabloon downloaden",
+          "import_yaml": "Importeren uit YAML"
+        }
+      },
+      "add_address": {
+        "title": "Wat wil je toevoegen?",
+        "description": "Sfeer-ruimtes voeg je apart toe (menu: Sfeer-ruimte toevoegen).",
+        "data": {
+          "address_type": "Type"
+        }
+      },
+      "add_normal": {
+        "title": "Schakelaar / SoftM toevoegen",
+        "description": "Eén busadres als Home Assistant-schakelaar.\n\nSoftM-tracking: Home Assistant beantwoordt Toggle/Status/Timer op de bus voor dit adres. Gebruik Set/Reset als aan/uit-commando’s (geen Toggle). Zet “vraag bij opstarten” niet aan, en gebruik geen hardware BL-STA op hetzelfde adres.",
+        "data": {
+          "name": "Naam",
+          "group": "Groep",
+          "address": "Adres",
+          "on_command": "Commando om aan te zetten",
+          "off_command": "Commando om uit te zetten",
+          "check_status": "Vraag de bus naar de huidige aan/uit-stand wanneer Home Assistant start",
+          "enable_softm_status_tracking": "SoftM status tracking (Home Assistant beantwoordt Toggle/Status)",
+          "softm_timer": "SoftM-timer (seconden; 0 = uit). Na een Timer-commando: aan, daarna automatisch uit.",
+          "persist_state": "SoftM aan/uit onthouden over herstarts van Home Assistant",
+          "default_state": "Als er niets is onthouden, start SoftM als aan"
+        }
+      },
+      "add_rtc": {
+        "title": "RTC toevoegen (busklok)",
+        "description": "Houdt de busklok synchroon (standaard adres 1.1) door de tijd te schrijven met Program-reeksen.\n\nStandaard: elke 12 uur op minuut :17 (niet op het hele uur). Sync bij opstarten volgt na andere statusvragen. DST-sync wacht even na de tijdsomstelling.",
+        "data": {
+          "name": "Naam",
+          "group": "Groep (standaard 1)",
+          "address": "Adres",
+          "sync_interval_hours": "Hoe vaak synchroniseren (uren)",
+          "sync_minute": "Synchroniseer op deze minuut van het uur (vermijd 0)",
+          "sync_on_startup": "Synchroniseer wanneer de integratie start (na statusvragen)",
+          "sync_on_dst": "Synchroniseer na zomertijd-/wintertijdwissels",
+          "dst_delay_minutes": "Minuten wachten na een DST-wissel vóór sync"
+        }
+      },
+      "add_ldm": {
+        "title": "LDM toevoegen (lichtsensor)",
+        "description": "Lichtsensor op de bus. Niveaus komen ook vanzelf binnen wanneer de sensor bijwerkt.\n\nAls “lezen bij opstarten” aan staat, vraagt Home Assistant bij start een meting en voegt een Vernieuwen-knop toe.",
+        "data": {
+          "name": "Naam",
+          "group": "Groep",
+          "address": "Adres",
+          "check_status": "Lees lichtniveau wanneer Home Assistant start (voegt ook een Vernieuwen-knop toe)"
+        }
+      },
+      "add_tsm": {
+        "title": "TSM toevoegen (temperatuur)",
+        "description": "Thermostaat- / temperatuurmodule. Metingen bevatten gemeten temperatuur, actieve preset en setpoint.\n\nAls “lezen bij opstarten” aan staat, vraagt Home Assistant bij start een meting en voegt een Vernieuwen-knop toe.",
+        "data": {
+          "name": "Naam",
+          "group": "Groep",
+          "address": "Adres",
+          "check_status": "Lees temperatuur wanneer Home Assistant start (voegt ook een Vernieuwen-knop toe)"
+        }
+      },
+      "add_shutter": {
+        "title": "Rolluik toevoegen",
+        "description": "Een rolluik gebruikt twee busadressen: één voor openen, één voor sluiten. De looptijden schatten alleen wanneer Home Assistant open of dicht toont — ze sturen de motoren niet aan.",
+        "data": {
+          "name": "Naam",
+          "open_group": "Openen — groep",
+          "open_address": "Openen — adres",
+          "close_group": "Sluiten — groep",
+          "close_address": "Sluiten — adres",
+          "open_time": "Looptijd openen (seconden)",
+          "close_time": "Looptijd sluiten (seconden)",
+          "check_status": "Vraag de bus welke relais aan staat wanneer Home Assistant start"
+        }
+      },
+      "add_sfeer_room": {
+        "title": "Sfeer-ruimte toevoegen",
+        "description": "Eén busgroep per ruimte (eerste ruimte is meestal groep 5, daarna 6, …).\n\nHuidige Sfeer in deze ruimte: {moods}\n\nVoeg elke Sfeer daarna toe via het menu-item “Sfeer toevoegen”.",
+        "data": {
+          "room_name": "Ruimtenaam",
+          "group": "Busgroep",
+          "check_status": "Vraag de bus welke Sfeer actief is wanneer Home Assistant start"
+        }
+      },
+      "add_sfeer_mood": {
+        "title": "Sfeer toevoegen — kies ruimte",
+        "description": "Kies de ruimte (busgroep). Daarna vul je de Sfeer-naam en het adres in (meestal 221, 222, …).",
+        "data": {
+          "room": "Sfeer-ruimte"
+        }
+      },
+      "add_sfeer_mood_details": {
+        "title": "Sfeer toevoegen",
+        "description": "Ruimte “{room_name}” gebruikt busgroep {group}. Alle Sfeer in die ruimte delen deze groep; adressen zijn meestal 221, 222, …",
+        "data": {
+          "mood_name": "Sfeer-naam",
+          "address": "Adres"
+        }
+      },
+      "edit_select": {
+        "title": "Item bewerken",
+        "description": "Kies welk bus-item je wilt bewerken. De lijst is gesorteerd op groep, daarna adres.",
+        "data": {
+          "entry_to_edit": "Item"
+        }
+      },
+      "remove_select": {
+        "title": "Item verwijderen",
+        "description": "Kies welk bus-item je wilt verwijderen. De lijst is gesorteerd op groep, daarna adres.",
+        "data": {
+          "entry_to_remove": "Item"
+        }
+      },
+      "remove_confirm": {
+        "title": "Verwijderen bevestigen",
+        "description": "Dit item verwijderen?\n\n{entry}",
+        "data": {
+          "confirm": "Ja, dit item verwijderen"
+        }
+      },
+      "import_yaml": {
+        "title": "Importeren uit YAML",
+        "description": "Let op: dit vervangt ALLE bestaande bus-items.\n\nUpload een YAML-bestand dat overeenkomt met het sjabloon (een `addresses:`-lijst).",
+        "data": {
+          "import_yaml": "YAML-bestand"
+        }
+      },
+      "download_yaml_template": {
+        "title": "YAML-sjabloon downloaden",
+        "description": "Kopieer het sjabloon hieronder naar een bestand (bijvoorbeeld `addresses.yaml`), pas het aan, en gebruik daarna Importeren uit YAML.\n\n{template}",
+        "data": {
+          "template": "Sjabloon (kopieer alles hieronder)"
+        }
+      },
+      "integration_settings": {
+        "title": "Integratie-instellingen",
+        "description": "SoftM tracking (hoofdschakelaar): als dit aan staat, kan Home Assistant Toggle/Status beantwoorden voor adressen waar SoftM tracking ook per adres aan staat. Gebruik geen hardware BL-STA op diezelfde adressen.\n\nBus repeater: Home Assistant houdt de ene gateway-verbinding open en luistert op deze host (standaard poort 10001) zodat BLConfig of blxmonitor op hetzelfde LAN-subnet de bus kunnen delen. Richt die tools op het IP van Home Assistant, niet op het gateway-IP.",
+        "data": {
+          "softm_tracking_enabled": "SoftM status tracking inschakelen",
+          "bus_repeater_enabled": "Bus repeater inschakelen",
+          "bus_repeater_port": "Bus repeater-poort (standaard 10001)"
+        }
+      },
+      "add_readonly": {
+        "title": "Alleen-lezen adres toevoegen",
+        "description": "Zoals een normaal busadres, maar Home Assistant stuurt nooit bedieningscommando’s. Het kijkt alleen naar Set/Reset (en kan bij opstarten naar aan/uit vragen). Handig voor ingangen of elk adres dat je wilt volgen zonder te sturen.",
+        "data": {
+          "name": "Naam",
+          "group": "Groep (standaard 1)",
+          "address": "Adres",
+          "check_status": "Vraag de bus naar de huidige aan/uit-stand wanneer Home Assistant start"
+        }
+      }
+    },
+    "error": {
+      "invalid_yaml": "Kan het YAML-bestand niet lezen of verwerken.",
+      "invalid_format": "De YAML-structuur of een of meer items is ongeldig.",
+      "required": "Dit veld is verplicht.",
+      "softm_check_conflict": "SoftM tracking beantwoordt Status al voor dit adres. Zet “Vraag de bus … wanneer Home Assistant start” uit. Sla SoftM tracking hier ook over als een hardware BL-STA deze SoftM al volgt.",
+      "softm_command_conflict": "SoftM tracking beantwoordt Toggle op de bus. Zet “Commando om aan te zetten” op Set en “Commando om uit te zetten” op Reset — andere commando’s (zoals Toggle) zouden de SoftM twee keer omschakelen."
+    }
+  },
+  "selector": {
+    "address_type": {
+      "options": {
+        "normal": "Schakelaar / SoftM (normaal adres)",
+        "readonly": "Alleen-lezen adres (alleen volgen, geen bediening)",
+        "shutter": "Rolluik (open- + sluitadres)",
+        "rtc": "RTC (busklok)",
+        "ldm": "LDM (lichtsensor)",
+        "tsm": "TSM (temperatuur / thermostaat)"
+      }
+    }
+  },
+  "entity": {
+    "button": {
+      "sync_clock": {
+        "name": "Klok synchroniseren"
+      },
+      "refresh_light": {
+        "name": "Lichtniveau vernieuwen"
+      },
+      "refresh_temperature": {
+        "name": "Vernieuwen"
+      }
+    },
+    "sensor": {
+      "last_sync": {
+        "name": "Laatste sync"
+      },
+      "light_level": {
+        "name": "Lichtniveau"
+      },
+      "temperature": {
+        "name": "Temperatuur"
+      },
+      "active_preset": {
+        "name": "Actieve preset"
+      },
+      "active_setpoint": {
+        "name": "Actief setpoint"
+      }
+    },
+    "select": {
+      "sfeer": {
+        "state": {
+          "Off": "Uit"
+        }
+      }
+    }
+  }
+}

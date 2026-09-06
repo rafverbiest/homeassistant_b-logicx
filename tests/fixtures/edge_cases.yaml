@@ -37,8 +37,8 @@ addresses:
       - name: TV
         address: 222
 
-  - type: exu
-    name: Door EXU
+  - type: readonly
+    name: Door contact
     group: 1
     address: 40
     check_status: true

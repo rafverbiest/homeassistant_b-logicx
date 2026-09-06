@@ -121,7 +121,7 @@ class BLogicxRtcLastSyncSensor(SensorEntity):
 
     _attr_should_poll = False
     _attr_has_entity_name = True
-    _attr_name = "Last sync"
+    _attr_translation_key = "last_sync"
     _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_icon = "mdi:clock-outline"
@@ -171,7 +171,7 @@ class BLogicxLdmLightSensor(SensorEntity):
 
     _attr_should_poll = False
     _attr_has_entity_name = True
-    _attr_name = "Light level"
+    _attr_translation_key = "light_level"
     _attr_native_unit_of_measurement = PERCENTAGE
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_icon = "mdi:brightness-6"
@@ -274,7 +274,7 @@ class _TsmEntityBase(SensorEntity):
 class BLogicxTsmTemperatureSensor(_TsmEntityBase):
     """Measured temperature from Value 11.x (address/2 °C, offset included)."""
 
-    _attr_name = "Temperature"
+    _attr_translation_key = "temperature"
     _attr_device_class = SensorDeviceClass.TEMPERATURE
     _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
     _attr_state_class = SensorStateClass.MEASUREMENT
@@ -307,7 +307,7 @@ class BLogicxTsmTemperatureSensor(_TsmEntityBase):
 
 
 class BLogicxTsmActivePresetSensor(_TsmEntityBase):
-    _attr_name = "Active preset"
+    _attr_translation_key = "active_preset"
     _attr_icon = "mdi:calendar-clock"
 
     def __init__(self, hub, host, group, address, name):
@@ -320,7 +320,7 @@ class BLogicxTsmActivePresetSensor(_TsmEntityBase):
 
 
 class BLogicxTsmActiveSetpointSensor(_TsmEntityBase):
-    _attr_name = "Active setpoint"
+    _attr_translation_key = "active_setpoint"
     _attr_device_class = SensorDeviceClass.TEMPERATURE
     _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
 

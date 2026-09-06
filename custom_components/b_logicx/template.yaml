@@ -1,5 +1,5 @@
 # B-Logicx addresses (full replace on import)
-# Types: normal | shutter | sfeer | exu | rtc
+# Types: normal | shutter | sfeer | readonly | rtc
 # Fictional example values only — replace with your bus map.
 #
 # Example conventions: lights/outlets group 2, covers group 3,
@@ -34,8 +34,8 @@ addresses:
       - name: Cinema
         address: 222
 
-  - type: exu
-    name: Example EXU input
+  - type: readonly
+    name: Example read-only input
     group: 1
     address: 30
     check_status: false

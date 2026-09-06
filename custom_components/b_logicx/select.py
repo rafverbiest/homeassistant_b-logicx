@@ -115,6 +115,8 @@ class BLogicxSfeerSelect(SelectEntity):
 
         # Empty moods allowed (room created before moods); options = Off only
         self._attr_name = room_name
+        self._attr_has_entity_name = False  # room name is the entity name
+        self._attr_translation_key = "sfeer"
         self._attr_unique_id = get_sfeer_unique_id(host, room_name)
         self._attr_options = [SFEER_OPTION_OFF] + list(self._mood_map.keys())
         self._attr_current_option: str | None = SFEER_OPTION_OFF

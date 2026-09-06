@@ -25,7 +25,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
-    ADDRESS_TYPE_EXU,
+    ADDRESS_TYPE_READONLY,
     ADDRESS_TYPE_NORMAL,
     ADDRESS_TYPE_SFEER,
     ADDRESS_TYPE_SHUTTER,
@@ -57,7 +57,7 @@ async def async_setup_entry(
         if addr.get("type") in (
             ADDRESS_TYPE_SHUTTER,
             ADDRESS_TYPE_SFEER,
-            ADDRESS_TYPE_EXU,
+            ADDRESS_TYPE_READONLY,
         ):
             continue
         if addr.get("type", ADDRESS_TYPE_NORMAL) != ADDRESS_TYPE_NORMAL:

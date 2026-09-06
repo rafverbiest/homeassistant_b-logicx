@@ -23,7 +23,7 @@ except ImportError:  # offline tests with flat sys.path
 ADDRESS_TYPE_NORMAL = "normal"
 ADDRESS_TYPE_SHUTTER = "shutter"
 ADDRESS_TYPE_SFEER = "sfeer"
-ADDRESS_TYPE_EXU = "exu"
+ADDRESS_TYPE_READONLY = "readonly"
 ADDRESS_TYPE_RTC = "rtc"
 ADDRESS_TYPE_LDM = "ldm"
 ADDRESS_TYPE_TSM = "tsm"
@@ -63,8 +63,8 @@ def sfeer_room_group(entry: dict) -> int:
         return int(moods[0].get("group", DEFAULT_SFEER_GROUP))
     return DEFAULT_SFEER_GROUP
 
-# EXU (input / detector) — listen-only; default group 1
-DEFAULT_EXU_GROUP = 1
+# Read-only address — listen-only binary sensor (observe Set/Reset; never control)
+DEFAULT_READONLY_GROUP = 1
 
 # RTC (bus clock) — Program write sequence; default group 1 / address 1
 DEFAULT_RTC_GROUP = 1
@@ -138,10 +138,10 @@ DEFAULT_CLOSE_TIME = 30.0  # seconds for full close travel
 #   "check_status": False,
 # }
 #
-# EXU (binary_sensor, listen-only — Status optional, no control commands):
+# Read-only address (binary_sensor — Status optional, no control commands):
 # {
 #   "name": "Front door contact",
-#   "type": "exu",
+#   "type": "readonly",
 #   "group": 1,
 #   "address": 5,
 #   "check_status": False,

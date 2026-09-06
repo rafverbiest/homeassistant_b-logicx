@@ -2,138 +2,142 @@
   "config": {
     "step": {
       "user": {
-        "title": "B-Logicx Gateway",
+        "title": "B-Logicx gateway",
+        "description": "Connect to your BL-NWM (or compatible) gateway on the local network.",
         "data": {
-          "host": "IP address or hostname of the BL-NWM gateway",
-          "port": "Port (default 10001)"
+          "host": "IP address or hostname",
+          "port": "TCP port (default 10001)"
         }
       }
     },
     "error": {
-      "invalid_host": "Invalid IP address or hostname",
-      "cannot_connect": "Failed to connect to the gateway. Please check the IP, port, and that the device is reachable from Home Assistant."
+      "invalid_host": "That does not look like a valid IP address or hostname.",
+      "cannot_connect": "Could not connect to the gateway. Check the IP, port, and that Home Assistant can reach the device."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "B-Logicx configuration",
-        "description": "Current entries:\n{addresses}\n\nChoose an action below. YAML import overwrites all existing entries."
+        "title": "B-Logicx",
+        "description": "Configured bus entries: {entry_count}.\n\nAdd or change bus members below. Use Edit or Remove to pick an existing entry. YAML import replaces all entries.",
+        "menu_options": {
+          "add_address": "Add bus address",
+          "add_sfeer_room": "Add Sfeer room",
+          "add_sfeer_mood": "Add Sfeer",
+          "edit_select": "Edit entry",
+          "remove_select": "Remove entry",
+          "integration_settings": "Integration settings",
+          "download_yaml_template": "Download YAML template",
+          "import_yaml": "Import from YAML"
+        }
       },
       "add_address": {
-        "title": "Add bus address \u2014 choose type",
-        "description": "Current entries:\n{addresses}\n\nNormal \u2192 switch. Cover \u2192 open/close pair. EXU \u2192 listen-only binary sensor. RTC \u2192 bus clock. (Sfeer rooms: use Add room for Sfeer.)",
+        "title": "What do you want to add?",
+        "description": "Sfeer rooms are added separately (menu: Add Sfeer room).",
         "data": {
-          "address_type": "Entry type"
+          "address_type": "Type"
         }
       },
       "add_normal": {
-        "title": "Add Normal Bus Address",
-        "description": "One bus address as a switch.\n\n{example}",
+        "title": "Add switch / SoftM",
+        "description": "One bus address as a Home Assistant switch.\n\nSoftM tracking: Home Assistant answers Toggle/Status/Timer on the bus for this address. Use Set/Reset as on/off commands (not Toggle). Do not also enable “ask on startup”, and do not use a hardware BL-STA on the same address.",
         "data": {
           "name": "Name",
           "group": "Group",
           "address": "Address",
-          "on_command": "On command",
-          "off_command": "Off command",
-          "check_status": "Check status on startup (send Status command)",
-          "enable_softm_status_tracking": "SoftM status tracking (Toggle/Status answered by HA)",
-          "softm_timer": "SoftM timer seconds (0 = off)",
-          "persist_state": "Persist SoftM state across restarts",
-          "default_state": "Default SoftM state if nothing persisted"
-        }
-      },
-      "add_exu": {
-        "title": "Add EXU (listen-only)",
-        "description": "{example}",
-        "data": {
-          "name": "Name",
-          "group": "Group (default 1)",
-          "address": "Address",
-          "check_status": "Check status on startup (send Status only)"
+          "on_command": "Command to turn on",
+          "off_command": "Command to turn off",
+          "check_status": "Ask the bus for current on/off when Home Assistant starts",
+          "enable_softm_status_tracking": "SoftM status tracking (Home Assistant answers Toggle/Status)",
+          "softm_timer": "SoftM timer (seconds; 0 = off). After a Timer command, turn on then auto off.",
+          "persist_state": "Remember SoftM on/off across Home Assistant restarts",
+          "default_state": "If nothing was remembered, start SoftM as on"
         }
       },
       "add_rtc": {
         "title": "Add RTC (bus clock)",
-        "description": "{example}",
+        "description": "Keeps the bus clock in sync (default address 1.1) by writing the time with Program sequences.\n\nDefault: every 12 hours at minute :17 (not on the hour). Startup sync runs after other status queries. DST sync waits a short delay after the clock change.",
         "data": {
           "name": "Name",
           "group": "Group (default 1)",
           "address": "Address",
-          "sync_interval_hours": "Sync interval (hours)",
-          "sync_minute": "Sync at minute (avoid 0 = on the hour)",
-          "sync_on_startup": "Sync on integration startup (after Status probes)",
+          "sync_interval_hours": "How often to sync (hours)",
+          "sync_minute": "Sync at this minute past the hour (avoid 0)",
+          "sync_on_startup": "Sync when the integration starts (after status queries)",
           "sync_on_dst": "Sync after daylight-saving time changes",
-          "dst_delay_minutes": "Minutes after DST change before sync"
+          "dst_delay_minutes": "Minutes to wait after a DST change before syncing"
         }
       },
       "add_ldm": {
         "title": "Add LDM (light sensor)",
-        "description": "{example}",
+        "description": "Outdoor/indoor light sensor on the bus. Levels also arrive on their own when the sensor updates.\n\nIf “read on startup” is on, Home Assistant requests a reading at start and adds a Refresh button.",
         "data": {
           "name": "Name",
           "group": "Group",
           "address": "Address",
-          "check_status": "Request light level on startup (also adds Refresh button)"
+          "check_status": "Read light level when Home Assistant starts (also adds a Refresh button)"
         }
       },
       "add_tsm": {
         "title": "Add TSM (temperature)",
-        "description": "{example}",
+        "description": "Thermostat / temperature module. Readings include measured temperature, active preset and setpoint.\n\nIf “read on startup” is on, Home Assistant requests a reading at start and adds a Refresh button.",
         "data": {
           "name": "Name",
           "group": "Group",
           "address": "Address",
-          "check_status": "Request Status on startup (also adds Refresh button)"
+          "check_status": "Read temperature when Home Assistant starts (also adds a Refresh button)"
         }
       },
       "add_shutter": {
-        "title": "Add Roller / Shutter / Blind (Cover)",
-        "description": "{example}",
+        "title": "Add cover (roller / shutter)",
+        "description": "A cover uses two bus addresses: one for open, one for close. Travel times only estimate when Home Assistant shows open or closed — they do not drive the motors.",
         "data": {
-          "name": "Cover name",
-          "open_group": "Open group",
-          "open_address": "Open address",
-          "close_group": "Close group",
-          "close_address": "Close address",
+          "name": "Name",
+          "open_group": "Open — group",
+          "open_address": "Open — address",
+          "close_group": "Close — group",
+          "close_address": "Close — address",
           "open_time": "Open travel time (seconds)",
           "close_time": "Close travel time (seconds)",
-          "check_status": "Check status on startup"
+          "check_status": "Ask the bus which relay is on when Home Assistant starts"
         }
       },
       "add_sfeer_room": {
-        "title": "Add room for Sfeer",
-        "description": "{example}",
+        "title": "Add Sfeer room",
+        "description": "One bus group per room (first room is usually group 5, then 6, …).\n\nCurrent Sfeer in this room: {moods}\n\nAdd each Sfeer afterwards with the menu item “Add Sfeer”.",
         "data": {
           "room_name": "Room name",
-          "group": "Bus group (first room usually 5, then 6\u2026)",
-          "check_status": "Check status on startup"
+          "group": "Bus group",
+          "check_status": "Ask the bus which Sfeer is active when Home Assistant starts"
         }
       },
       "add_sfeer_mood": {
-        "title": "Add Sfeer \u2014 choose room",
-        "description": "{example}",
+        "title": "Add Sfeer — choose room",
+        "description": "Pick the room (bus group). Next you will enter the Sfeer name and address (usually 221, 222, …).",
         "data": {
           "room": "Sfeer room"
         }
       },
       "add_sfeer_mood_details": {
-        "title": "Add Sfeer \u2014 mood",
-        "description": "{example}",
+        "title": "Add Sfeer",
+        "description": "Room “{room_name}” uses bus group {group}. All Sfeer in that room share this group; addresses are usually 221, 222, …",
         "data": {
-          "mood_name": "Mood name",
-          "address": "Address (usually 221, 222, \u2026)"
+          "mood_name": "Sfeer name",
+          "address": "Address"
         }
       },
       "edit_select": {
         "title": "Edit entry",
-        "description": "Select which entry to edit."
+        "description": "Choose which bus entry to edit. The list is sorted by group, then address.",
+        "data": {
+          "entry_to_edit": "Entry"
+        }
       },
       "remove_select": {
         "title": "Remove entry",
-        "description": "Select which entry to remove.",
+        "description": "Choose which bus entry to remove. The list is sorted by group, then address.",
         "data": {
-          "entry_to_remove": "Entry to remove"
+          "entry_to_remove": "Entry"
         }
       },
       "remove_confirm": {
@@ -145,34 +149,93 @@
       },
       "import_yaml": {
         "title": "Import from YAML",
-        "description": "{warning}\n\nUpload a YAML file matching the template (addresses: list). This replaces all configured entries.",
+        "description": "Warning: this replaces ALL existing bus entries.\n\nUpload a YAML file that matches the template (an `addresses:` list).",
         "data": {
           "import_yaml": "YAML file"
         }
       },
       "download_yaml_template": {
         "title": "Download YAML template",
-        "description": "{warning}\n\n{template}",
+        "description": "Copy the template below into a file (for example `addresses.yaml`), edit it, then use Import from YAML.\n\n{template}",
         "data": {
-          "template": "Template content (copy everything below)"
+          "template": "Template (copy everything below)"
         }
       },
       "integration_settings": {
         "title": "Integration settings",
-        "description": "{example}",
+        "description": "SoftM tracking (master switch): when enabled, Home Assistant can answer Toggle/Status for addresses that also have SoftM tracking turned on. Do not use a hardware BL-STA on those same addresses.\n\nBus repeater: Home Assistant keeps the single gateway link and listens on this host (default port 10001) so BLConfig or blxmonitor on the same LAN subnet can share the bus. Point those tools at the Home Assistant IP, not the gateway IP.",
         "data": {
-          "softm_tracking_enabled": "Enable SoftM status tracking (virtual status module)",
-          "bus_repeater_enabled": "Enable TCP bus repeater",
-          "bus_repeater_port": "Repeater listen port (default 10001)"
+          "softm_tracking_enabled": "Enable SoftM status tracking",
+          "bus_repeater_enabled": "Enable bus repeater",
+          "bus_repeater_port": "Bus repeater listen port (default 10001)"
+        }
+      },
+      "add_readonly": {
+        "title": "Add read-only address",
+        "description": "Like a normal bus address, but Home Assistant never sends control commands. It only watches Set/Reset (and may ask for on/off at startup). Useful for inputs or any address you want to observe without controlling.",
+        "data": {
+          "name": "Name",
+          "group": "Group (default 1)",
+          "address": "Address",
+          "check_status": "Ask the bus for current on/off when Home Assistant starts"
         }
       }
     },
     "error": {
       "invalid_yaml": "Could not read or parse the YAML file.",
-      "invalid_format": "YAML structure or one or more entries are invalid.",
+      "invalid_format": "The YAML structure or one or more entries is invalid.",
       "required": "This field is required.",
-      "softm_check_conflict": "SoftM status tracking answers Status for this address. Disable check status on startup — it is not used with SoftM tracking. If a hardware BL-STA already tracks this SoftM, do not enable SoftM tracking here either.",
-      "softm_command_conflict": "SoftM status tracking answers Toggle on the bus. On command must be Set and off command must be Reset — Toggle (or other commands) would double-flip the SoftM."
+      "softm_check_conflict": "SoftM tracking already answers Status for this address. Turn off “Ask the bus … when Home Assistant starts”. Also skip SoftM tracking here if a hardware BL-STA already tracks this SoftM.",
+      "softm_command_conflict": "SoftM tracking answers Toggle on the bus. Set “Command to turn on” to Set and “Command to turn off” to Reset — other commands (such as Toggle) would flip the SoftM twice."
+    }
+  },
+  "selector": {
+    "address_type": {
+      "options": {
+        "normal": "Switch / SoftM (normal address)",
+        "readonly": "Read-only address (observe only, no control)",
+        "shutter": "Cover / roller / shutter (open + close addresses)",
+        "rtc": "RTC (bus clock)",
+        "ldm": "LDM (light sensor)",
+        "tsm": "TSM (temperature / thermostat)"
+      }
+    }
+  },
+  "entity": {
+    "button": {
+      "sync_clock": {
+        "name": "Synchronize clock"
+      },
+      "refresh_light": {
+        "name": "Refresh light level"
+      },
+      "refresh_temperature": {
+        "name": "Refresh"
+      }
+    },
+    "sensor": {
+      "last_sync": {
+        "name": "Last sync"
+      },
+      "light_level": {
+        "name": "Light level"
+      },
+      "temperature": {
+        "name": "Temperature"
+      },
+      "active_preset": {
+        "name": "Active preset"
+      },
+      "active_setpoint": {
+        "name": "Active setpoint"
+      }
+    },
+    "select": {
+      "sfeer": {
+        "state": {
+          "Off": "Off"
+        }
+      }
     }
   }
 }
