@@ -2,19 +2,11 @@
 
 Custom integration for the **B-Logicx (BL-NWM)** bus gateway: switches, covers, Sfeer, read-only addresses, RTC clock sync, LDM light sensors, TSM thermostat telemetry, SoftM virtual status tracking, and an optional TCP bus repeater.
 
+**0.9.5.4:** SoftM `softm_timer` no longer cancelled by SoftM’s own Set echoes (Timer start / Status reply); Status mid-timer leaves the countdown running.
+
 **0.9.5.3:** Bus repeater allows localhost; `blxmonitor` lives in the library package (avoids stdlib `select` shadow); timestamps include the date (`YYYY-MM-DD HH:MM:SS.mmm`).
 
 **0.9.5.2:** `blxmonitor` `-l`/`--log-file` appends every on-screen TX/RX line (with timestamps) for rare-event debugging under `screen`/`tmux` via the TCP bus repeater.
-
-**0.9.5.1:** Same as 0.9.5 content; new version so HACS can upgrade past the earlier 0.9.5 tag.
-
-**0.9.5:** Options UX polish (menu list, Dutch/EN strings, address-first edit/remove), YAML export, working YAML download links (signed API; `data:` URLs never worked in HA markdown). See `TRANSLATIONS.md`.
-
-**0.9.4:** Options main-menu fix (single action list). Valid semver for HA/HACS (`0.9.3b` was rejected by hassfest). Sfeer option key `off` (was invalid `Off`).
-
-**0.9.3:** Dutch UI (`nl.json`), clearer options flow (no long member list on the main screen; edit/remove sorted by group then address), and newbie-friendly labels for status-on-startup / SoftM. See `TRANSLATIONS.md`.
-
-**0.9.1:** Config changes reload once (Status probes no longer run twice). SoftM / bus-repeater integration options are preserved when editing addresses.
 
 ## Install with HACS (custom repository)
 
@@ -43,10 +35,10 @@ Copy the `custom_components/b_logicx` folder into your HA `config/custom_compone
 
 Home Assistant can act as a **virtual status module** for Software Members (SoftM):
 
-- Bus **Toggle** → flip memory and emit **Set** / **Reset**
-- Bus **Status** → reply with **Set** / **Reset** from memory
-- Optional **Timer** → **Set**, wait `softm_timer` seconds, then **Reset** (Toggle cancels the timer)
-- **Set** / **Reset** on the bus update memory and cancel any running timer
+- Bus **Toggle** → flip memory and emit **Set** / **Reset** (cancels SoftM timer)
+- Bus **Status** → reply with **Set** / **Reset** from memory (**does not** cancel SoftM timer)
+- Optional bus **Timer** command → **Set**, wait `softm_timer` seconds, then **Reset** (`softm_timer` is not HA auto-off)
+- External / HA **Set** / **Reset** update memory and cancel SoftM timer (SoftM’s own reply echoes do not)
 
 Enable both:
 

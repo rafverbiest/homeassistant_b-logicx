@@ -65,6 +65,8 @@ class BLogicxHub:
         self._softm = SoftMTracker()
         self._softm_enabled = False
         self._softm_timer_tasks: dict[tuple[int, int], asyncio.Task] = {}
+        # Keys whose next Set/Reset is our SoftM reply echo (do not cancel timer)
+        self._softm_own_emit: set[tuple[int, int]] = set()
         self._repeater: BusRepeater | None = None
 
     def configure_softm_tracking(
@@ -202,6 +204,36 @@ class BLogicxHub:
         except Exception as err:  # noqa: BLE001
             _LOGGER.error("B-Logicx listener error: %s", err)
 
+    async def _softm_send(self, command: str, group: int, address: int) -> None:
+        """Send a SoftM reply; mark so the RX echo does not cancel SoftM timers."""
+        key = (group, address)
+        self._softm_own_emit.add(key)
+        try:
+            await self.async_send(command, group, address)
+        except Exception:
+            self._softm_own_emit.discard(key)
+            raise
+        # If the gateway never echoes TX, clear the mark so a later external
+        # Set/Reset still cancels SoftM timers.
+        asyncio.create_task(
+            self._softm_own_emit_expire(key),
+            name=f"softm_own_emit_{group}_{address}",
+        )
+
+    async def _softm_own_emit_expire(self, key: tuple[int, int]) -> None:
+        try:
+            await asyncio.sleep(0.15)
+        except asyncio.CancelledError:
+            return
+        self._softm_own_emit.discard(key)
+
+    def _softm_cancel_timer_task(self, group: int, address: int) -> None:
+        key = (group, address)
+        task = self._softm_timer_tasks.pop(key, None)
+        if task is not None and not task.done():
+            task.cancel()
+        self._softm.cancel_timer(group, address)
+
     async def _handle_softm_event(self, event: BLXEvent) -> None:
         """Virtual SoftM status tracking (Toggle/Status/Timer/Set/Reset)."""
         g, a = event.group, event.address
@@ -211,29 +243,29 @@ class BLogicxHub:
         key = (g, a)
 
         if cmd in ("Set", "Reset"):
-            # Absolute state from bus / HA: cancel SoftM timer and update memory
-            task = self._softm_timer_tasks.pop(key, None)
-            if task is not None and not task.done():
-                task.cancel()
-            self._softm.cancel_timer(g, a)
+            # Our SoftM Set/Reset echoes must not cancel SoftM timers (Timer start
+            # Set, Status reply, Toggle reply, Timer expiry Reset). External /
+            # HA absolute Set/Reset still cancel.
+            own_echo = key in self._softm_own_emit
+            if own_echo:
+                self._softm_own_emit.discard(key)
+            else:
+                self._softm_cancel_timer_task(g, a)
             self._softm.on_set_reset(g, a, cmd == "Set")
             return
 
         if cmd == "Toggle":
-            # Cancel timer task
-            task = self._softm_timer_tasks.pop(key, None)
-            if task is not None and not task.done():
-                task.cancel()
-            self._softm.cancel_timer(g, a)
+            self._softm_cancel_timer_task(g, a)
             action = self._softm.on_toggle(g, a)
             if action is not None:
-                await self.async_send(action.command, action.group, action.address)
+                await self._softm_send(action.command, action.group, action.address)
             return
 
         if cmd == "Status":
+            # Query only — do not cancel SoftM timer; reply from memory.
             action = self._softm.on_status(g, a)
             if action is not None:
-                await self.async_send(action.command, action.group, action.address)
+                await self._softm_send(action.command, action.group, action.address)
             return
 
         if cmd == "Timer":
@@ -244,7 +276,7 @@ class BLogicxHub:
             old = self._softm_timer_tasks.pop(key, None)
             if old is not None and not old.done():
                 old.cancel()
-            await self.async_send(action.command, action.group, action.address)
+            await self._softm_send(action.command, action.group, action.address)
             self._softm_timer_tasks[key] = asyncio.create_task(
                 self._softm_timer_fire(g, a, secs),
                 name=f"softm_timer_{g}_{a}",
@@ -259,7 +291,7 @@ class BLogicxHub:
         self._softm_timer_tasks.pop((group, address), None)
         if action is not None:
             try:
-                await self.async_send(action.command, action.group, action.address)
+                await self._softm_send(action.command, action.group, action.address)
             except Exception:
                 _LOGGER.exception("SoftM timer Reset failed for %s.%s", group, address)
 
@@ -366,6 +398,7 @@ class BLogicxHub:
             if not task.done():
                 task.cancel()
         self._softm_timer_tasks.clear()
+        self._softm_own_emit.clear()
         await self.async_stop_repeater()
 
     async def async_start_repeater(self, *, port: int = 10001) -> None:
