@@ -1,5 +1,7 @@
 # Translations & terminology (v0.9.3+)
 
+Repository docs: Dutch is the primary [`README.md`](README.md); English is [`README.en.md`](README.en.md).
+
 User-facing strings live in:
 
 | File | Role |
