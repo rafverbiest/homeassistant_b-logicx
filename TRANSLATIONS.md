@@ -1,6 +1,7 @@
 # Translations & terminology (v0.9.3+)
 
-Repository docs: Dutch is the primary [`README.md`](README.md); English is [`README.en.md`](README.en.md).
+Repository docs: Dutch is the primary [`README.md`](README.md); English is [`README.en.md`](README.en.md).  
+Public site: [b-logicx.rafverbiest.be](https://b-logicx.rafverbiest.be) (`docs/`). Wiki: Dutch pages primary, English twins (`Installation`, `Home-en`, …).
 
 User-facing strings live in:
 
