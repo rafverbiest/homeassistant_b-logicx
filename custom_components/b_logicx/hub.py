@@ -17,6 +17,7 @@ from .b_logicx.measure import (
     MeasureBusState,
     TsmReading,
 )
+from .b_logicx.audio import AUD_MISC_GROUP, AudBusState, AudCommand
 from .b_logicx.softm_tracker import SoftMConfig, SoftMTracker
 from .bus_repeater import BusRepeater
 
@@ -61,6 +62,11 @@ class BLogicxHub:
         ] = {}
         self._pending_ldm: dict[tuple[int, int], asyncio.Future] = {}
         self._pending_tsm: dict[tuple[int, int], asyncio.Future] = {}
+        self._aud = AudBusState()
+        self._aud_keys: set[tuple[int, int]] = set()
+        self._aud_callbacks: dict[
+            tuple[int, int], list[Callable[[AudCommand], None]]
+        ] = {}
         # SoftM virtual status tracking
         self._softm = SoftMTracker()
         self._softm_enabled = False
@@ -192,6 +198,7 @@ class BLogicxHub:
                     await self._handle_softm_event(event)
 
                 self._handle_measure_event(event, now)
+                self._handle_aud_event(event, now)
 
                 if key in self._listeners:
                     for callback in list(self._listeners[key]):
@@ -340,6 +347,53 @@ class BLogicxHub:
                 )
                 self._dispatch_tsm(key, reading)
             return
+    def register_aud(
+        self,
+        group: int,
+        address: int,
+        callback: Callable[[AudCommand], None],
+    ) -> Callable[[], None]:
+        key = (group, address)
+        self._aud_keys.add(key)
+        self._aud_callbacks.setdefault(key, []).append(callback)
+
+        def _unreg() -> None:
+            cbs = self._aud_callbacks.get(key, [])
+            if callback in cbs:
+                cbs.remove(callback)
+            if not cbs:
+                self._aud_keys.discard(key)
+                self._aud_callbacks.pop(key, None)
+
+        return _unreg
+
+    def _handle_aud_event(self, event: BLXEvent, now: float) -> None:
+        cmd = self._aud.note(
+            event.command,
+            event.group,
+            event.address,
+            now,
+            aud_keys=self._aud_keys,
+        )
+        if cmd is None:
+            return
+        key = (cmd.group, cmd.address)
+        _LOGGER.debug("AUD %s.%s code=%s", cmd.group, cmd.address, cmd.code)
+        for cb in list(self._aud_callbacks.get(key, [])):
+            try:
+                cb(cmd)
+            except Exception:  # noqa: BLE001
+                _LOGGER.exception("AUD callback error")
+
+    async def async_send_aud(self, group: int, address: int, code: int) -> None:
+        """Send Misc 0.code then Select group.address under the request lock."""
+        if self._conn is None:
+            raise RuntimeError("Not connected")
+        async with self._request_lock:
+            await self._conn.send("Misc", AUD_MISC_GROUP, int(code) & 0xFF)
+            await asyncio.sleep(0.01)
+            await self._conn.send("Select", group, address)
+
     def _dispatch_ldm(self, key: tuple[int, int], reading: LdmReading) -> None:
         fut = self._pending_ldm.get(key)
         if fut is not None and not fut.done():
@@ -394,6 +448,9 @@ class BLogicxHub:
         self._tsm_callbacks.clear()
         self._ldm_keys.clear()
         self._tsm_keys.clear()
+        self._aud_callbacks.clear()
+        self._aud_keys.clear()
+        self._aud = AudBusState()
         for task in list(self._softm_timer_tasks.values()):
             if not task.done():
                 task.cancel()
@@ -401,7 +458,9 @@ class BLogicxHub:
         self._softm_own_emit.clear()
         await self.async_stop_repeater()
 
-    async def async_start_repeater(self, *, port: int = 10001) -> None:
+    async def async_start_repeater(
+        self, *, port: int = 10001, allow_cidr: str | None = None
+    ) -> None:
         if self._conn is None:
             raise RuntimeError("Not connected")
         await self.async_stop_repeater()
@@ -409,6 +468,7 @@ class BLogicxHub:
             self._conn,
             self.host,
             port=port,
+            allow_cidr=allow_cidr,
             request_lock=self._request_lock,
         )
         await self._repeater.start()

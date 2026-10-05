@@ -28,20 +28,46 @@
           "address_type": "Type"
         }
       },
-      "add_normal": {
-        "title": "Schakelaar / SoftM toevoegen",
-        "description": "Eén busadres als Home Assistant-schakelaar.\n\nSoftM-tracking: Home Assistant beantwoordt Toggle/Status/Timer op de bus voor dit adres. Gebruik Set/Reset als aan/uit-commando’s (geen Toggle). Zet “vraag bij opstarten” niet aan, en gebruik geen hardware BL-STA op hetzelfde adres.",
+      "add_rlm": {
+        "title": "Schakelaar (RLM) toevoegen",
+        "description": "Eén busadres als Home Assistant-schakelaar. Aan- en uit-commando’s gaan naar dit adres. Een SoftM voeg je toe als type SoftM, niet hier.",
         "data": {
           "name": "Naam",
           "group": "Groep",
           "address": "Adres",
           "on_command": "Commando om aan te zetten",
           "off_command": "Commando om uit te zetten",
-          "check_status": "Vraag de bus naar de huidige aan/uit-stand wanneer Home Assistant start",
-          "enable_softm_status_tracking": "SoftM status tracking (Home Assistant beantwoordt Toggle/Status)",
+          "check_status": "Vraag de bus naar de huidige aan/uit-stand wanneer Home Assistant start"
+        }
+      },
+      "add_softm": {
+        "title": "SoftM toevoegen",
+        "description": "Een SoftM (software member). Home Assistant stuurt Set en Reset.\n\nSchakel de virtuele statusmodule in als Home Assistant Toggle, Status en Timer voor dit adres moet beantwoorden. Laat die uit als een hardware-statusmodule deze SoftM al volgt. De hoofdschakelaar bij Integratie-instellingen moet dan ook aan staan. De timer en de onthouden aan/uit-stand gelden alleen terwijl de virtuele statusmodule aan staat.",
+        "data": {
+          "name": "Naam",
+          "group": "Groep",
+          "address": "Adres",
+          "enable_softm_status_tracking": "Virtuele statusmodule inschakelen voor dit adres",
           "softm_timer": "SoftM-timer (seconden; 0 = uit). Na een Timer-commando: aan, daarna automatisch uit.",
           "persist_state": "SoftM aan/uit onthouden over herstarts van Home Assistant",
           "default_state": "Als er niets is onthouden, start SoftM als aan"
+        }
+      },
+      "add_aud": {
+        "title": "BL-AUD toevoegen (audio)",
+        "description": "Audiomodule, meestal groep 4. Home Assistant toont een mediaspeler: acht bronnen, afspelen, stop, volume omhoog/omlaag en dempen. Geef elke bron een naam. Een lege naam wordt bewaard als Source 1 … Source 8.",
+        "data": {
+          "name": "Naam",
+          "group": "Groep (meestal 4)",
+          "address": "Adres",
+          "source_1": "Naam bron 1",
+          "source_2": "Naam bron 2",
+          "source_3": "Naam bron 3",
+          "source_4": "Naam bron 4",
+          "source_5": "Naam bron 5",
+          "source_6": "Naam bron 6",
+          "source_7": "Naam bron 7",
+          "source_8": "Naam bron 8"
         }
       },
       "add_rtc": {
@@ -146,18 +172,19 @@
       },
       "download_yaml_template": {
         "title": "YAML-sjabloon downloaden",
-        "description": "Kopieer het sjabloon hieronder, of gebruik de downloadlink (opent een bestandsdownload). Pas het bestand aan en gebruik daarna Importeren uit YAML.\n\n[Sjabloon-bestand downloaden]({download_url})",
+        "description": "Kopieer het sjabloon hieronder, of gebruik de downloadlink (opent een bestandsdownload). Pas het bestand aan en gebruik daarna Importeren uit YAML.\n\n{download_link}",
         "data": {
           "template": "Sjabloon (kopieer alles hieronder)"
         }
       },
       "integration_settings": {
         "title": "Integratie-instellingen",
-        "description": "SoftM tracking (hoofdschakelaar): als dit aan staat, kan Home Assistant Toggle/Status beantwoorden voor adressen waar SoftM tracking ook per adres aan staat. Gebruik geen hardware BL-STA op diezelfde adressen.\n\nBus repeater: Home Assistant houdt de ene gateway-verbinding open en luistert op deze host (standaard poort 10001) zodat BLConfig of blxmonitor op hetzelfde LAN-subnet de bus kunnen delen. Richt die tools op het IP van Home Assistant, niet op het gateway-IP.",
+        "description": "SoftM tracking (hoofdschakelaar): als dit aan staat, kan Home Assistant Toggle/Status beantwoorden voor adressen waar SoftM tracking ook per adres aan staat. Gebruik geen hardware BL-STA op diezelfde adressen.\n\nBus repeater: Home Assistant houdt de ene gateway-verbinding open en luistert op deze host (standaard poort 10001) zodat BLConfig of blxmonitor de bus kunnen delen. Richt die tools op het IP van Home Assistant, niet op het gateway-IP. Toegelaten subnet is een CIDR (bijvoorbeeld 192.168.50.0/24). Localhost is altijd toegelaten. Laat het subnet leeg om het oude gedrag te houden (de /24 van de gateway).",
         "data": {
           "softm_tracking_enabled": "SoftM status tracking inschakelen",
           "bus_repeater_enabled": "Bus repeater inschakelen",
-          "bus_repeater_port": "Bus repeater-poort (standaard 10001)"
+          "bus_repeater_port": "Bus repeater-poort (standaard 10001)",
+          "bus_repeater_allow": "Toegelaten subnet (CIDR, bv. 192.168.50.0/24)"
         }
       },
       "add_readonly": {
@@ -172,7 +199,7 @@
       },
       "export_yaml": {
         "title": "YAML exporteren",
-        "description": "Kopieer de YAML hieronder, of gebruik de downloadlink (opent een bestandsdownload). Opnieuw laden via Importeren uit YAML (vervangt alle adressen).\n\n[YAML-bestand downloaden]({download_url})",
+        "description": "Kopieer de YAML hieronder, of gebruik de downloadlink (opent een bestandsdownload). Opnieuw laden via Importeren uit YAML (vervangt alle adressen).\n\n{download_link}",
         "data": {
           "export": "Huidige configuratie (YAML)"
         }
@@ -183,13 +210,17 @@
       "invalid_format": "De YAML-structuur of een of meer items is ongeldig.",
       "required": "Dit veld is verplicht.",
       "softm_check_conflict": "SoftM tracking beantwoordt Status al voor dit adres. Zet “Vraag de bus … wanneer Home Assistant start” uit. Sla SoftM tracking hier ook over als een hardware BL-STA deze SoftM al volgt.",
-      "softm_command_conflict": "SoftM tracking beantwoordt Toggle op de bus. Zet “Commando om aan te zetten” op Set en “Commando om uit te zetten” op Reset — andere commando’s (zoals Toggle) zouden de SoftM twee keer omschakelen."
+      "softm_command_conflict": "SoftM tracking beantwoordt Toggle op de bus. Zet “Commando om aan te zetten” op Set en “Commando om uit te zetten” op Reset — andere commando’s (zoals Toggle) zouden de SoftM twee keer omschakelen.",
+      "softm_timer_needs_vsm": "De SoftM-timer wordt beantwoord door de virtuele statusmodule. Schakel die in voor dit adres, of zet de timer op 0.",
+      "invalid_subnet": "Toegelaten subnet moet een CIDR zijn, bijvoorbeeld 192.168.50.0/24."
     }
   },
   "selector": {
     "address_type": {
       "options": {
-        "normal": "Schakelaar / SoftM (normaal adres)",
+        "rlm": "Schakelaar (RLM)",
+        "softm": "SoftM (software member)",
+        "aud": "BL-AUD (audiomodule)",
         "readonly": "Alleen-lezen adres (alleen volgen, geen bediening)",
         "shutter": "Rolluik (open- + sluitadres)",
         "rtc": "RTC (busklok)",

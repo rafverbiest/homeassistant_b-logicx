@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import html
 import logging
 from typing import Any
 
@@ -22,6 +23,7 @@ from homeassistant.helpers import selector
 
 import ipaddress
 
+from .bus_repeater import suggested_repeater_cidr
 from .address_config import (
     dump_addresses_yaml,
     entries_sorted_for_picker,
@@ -29,18 +31,22 @@ from .address_config import (
     parse_addresses_yaml,
 )
 from .const import (
+    ADDRESS_TYPE_AUD,
     ADDRESS_TYPE_READONLY,
     ADDRESS_TYPE_LDM,
-    ADDRESS_TYPE_NORMAL,
+    ADDRESS_TYPE_RLM,
     ADDRESS_TYPE_RTC,
     ADDRESS_TYPE_SFEER,
     ADDRESS_TYPE_SHUTTER,
+    ADDRESS_TYPE_SOFTM,
     ADDRESS_TYPE_TSM,
     CONF_ADDRESSES,
+    CONF_BUS_REPEATER_ALLOW,
     CONF_BUS_REPEATER_ENABLED,
     CONF_BUS_REPEATER_PORT,
     CONF_PORT,
     CONF_SOFTM_TRACKING_ENABLED,
+    DEFAULT_AUD_GROUP,
     DEFAULT_BUS_REPEATER_PORT,
     DEFAULT_CLOSE_TIME,
     DEFAULT_READONLY_GROUP,
@@ -61,6 +67,7 @@ from .const import (
     DOMAIN,
     OFF_COMMANDS,
     ON_COMMANDS,
+    is_softm_address,
     next_sfeer_group,
     sfeer_room_group,
 )
@@ -105,6 +112,7 @@ _SAFE_PLACEHOLDERS: dict[str, str] = {
     "template": "",
     "export_link": "",
     "download_url": "",
+    "download_link": "",
     "entry": "",
     "intro": "",
     "step_title": "",
@@ -112,7 +120,9 @@ _SAFE_PLACEHOLDERS: dict[str, str] = {
 }
 
 _ADDRESS_TYPE_LABELS_EN: dict[str, str] = {
-    ADDRESS_TYPE_NORMAL: "Switch / SoftM (normal address)",
+    ADDRESS_TYPE_RLM: "Switch (RLM)",
+    ADDRESS_TYPE_SOFTM: "SoftM (software member)",
+    ADDRESS_TYPE_AUD: "BL-AUD (audio module)",
     ADDRESS_TYPE_READONLY: "Read-only address (observe only, no control)",
     ADDRESS_TYPE_SHUTTER: "Cover / roller / shutter (open + close addresses)",
     ADDRESS_TYPE_RTC: "RTC (bus clock)",
@@ -120,7 +130,9 @@ _ADDRESS_TYPE_LABELS_EN: dict[str, str] = {
     ADDRESS_TYPE_TSM: "TSM (temperature / thermostat)",
 }
 _ADDRESS_TYPE_LABELS_NL: dict[str, str] = {
-    ADDRESS_TYPE_NORMAL: "Schakelaar / SoftM (normaal adres)",
+    ADDRESS_TYPE_RLM: "Schakelaar (RLM)",
+    ADDRESS_TYPE_SOFTM: "SoftM (software member)",
+    ADDRESS_TYPE_AUD: "BL-AUD (audiomodule)",
     ADDRESS_TYPE_READONLY: "Alleen-lezen adres (alleen volgen, geen bediening)",
     ADDRESS_TYPE_SHUTTER: "Rolluik (open- + sluitadres)",
     ADDRESS_TYPE_RTC: "RTC (busklok)",
@@ -131,6 +143,22 @@ _ADDRESS_TYPE_LABELS_NL: dict[str, str] = {
 
 def _flow_lang(hass: Any) -> str:
     return (getattr(getattr(hass, "config", None), "language", None) or "en")[:2]
+
+
+def _download_link(hass: Any, url: str, label_en: str, label_nl: str) -> str:
+    """Anchor for a config-flow description.
+
+    The translation string must not contain ``<a ...>``: IntlMessageFormat
+    reports that as an invalid tag. A markdown link is same-origin, and the
+    frontend then navigates inside the app instead of downloading. Passing
+    the anchor as a placeholder keeps the translator happy and sets
+    ``target="_blank"`` so the click is a real download.
+    """
+    label = label_nl if _flow_lang(hass) == "nl" else label_en
+    return (
+        f'<a href="{html.escape(url, quote=True)}" target="_blank">'
+        f"{html.escape(label)}</a>"
+    )
 
 
 def _placeholders(**kwargs: Any) -> dict[str, str]:
@@ -148,7 +176,9 @@ def _address_type_options(hass: Any) -> list[selector.SelectOptionDict]:
         else _ADDRESS_TYPE_LABELS_EN
     )
     order = [
-        ADDRESS_TYPE_NORMAL,
+        ADDRESS_TYPE_RLM,
+        ADDRESS_TYPE_SOFTM,
+        ADDRESS_TYPE_AUD,
         ADDRESS_TYPE_READONLY,
         ADDRESS_TYPE_SHUTTER,
         ADDRESS_TYPE_RTC,
@@ -184,7 +214,7 @@ def _menu_label(hass: Any, key: str) -> str:
 
 def _entry_key(entry: dict) -> str:
     """Stable key for edit/remove menus."""
-    t = entry.get("type", ADDRESS_TYPE_NORMAL)
+    t = entry.get("type")
     if t == ADDRESS_TYPE_SHUTTER:
         return (
             f"cover:{entry['open_group']}.{entry['open_address']}"
@@ -214,11 +244,22 @@ def _upsert_by_key(addresses: list[dict], new_entry: dict) -> list[dict]:
         if _entry_key(addr) == key:
             addresses[i] = new_entry
             return addresses
-    # Normal/read-only: also match by group+address across type changes
+    # Single-address entries also match by group+address across type changes
     t = new_entry.get("type")
-    if t in (ADDRESS_TYPE_NORMAL, ADDRESS_TYPE_READONLY):
+    if t in (
+        ADDRESS_TYPE_RLM,
+        ADDRESS_TYPE_SOFTM,
+        ADDRESS_TYPE_AUD,
+        ADDRESS_TYPE_READONLY,
+    ):
         for i, addr in enumerate(addresses):
-            if addr.get("type") in (ADDRESS_TYPE_NORMAL, ADDRESS_TYPE_READONLY, None):
+            if addr.get("type") in (
+                ADDRESS_TYPE_RLM,
+                ADDRESS_TYPE_SOFTM,
+                ADDRESS_TYPE_AUD,
+                ADDRESS_TYPE_READONLY,
+                None,
+            ):
                 if (
                     addr.get("group") == new_entry["group"]
                     and addr.get("address") == new_entry["address"]
@@ -277,10 +318,10 @@ def _yaml_template() -> str:
         return path.read_text(encoding="utf-8")
     except OSError:
         return """# B-Logicx addresses (full replace on import)
-# Types: normal | shutter | sfeer | readonly | rtc
+# Types: rlm | softm | aud | shutter | sfeer | readonly | rtc | ldm | tsm
 
 addresses:
-  - type: normal
+  - type: rlm
     name: Kitchen Light
     group: 2
     address: 33
@@ -300,13 +341,12 @@ addresses:
 
   - type: sfeer
     name: Lounge
+    group: 5
     check_status: true
     moods:
       - name: Reading
-        group: 5
         address: 221
       - name: Cinema
-        group: 5
         address: 222
 
   - type: readonly
@@ -325,20 +365,35 @@ addresses:
     sync_on_dst: true
     dst_delay_minutes: 1
 
-  - type: normal
+  - type: softm
     name: Software Member Example
     group: 10
     address: 200
-    on_command: Toggle
+    on_command: Set
     off_command: Reset
-    check_status: false
+    enable_softm_status_tracking: true
+    persist_state: true
+    default_state: false
+
+  - type: aud
+    name: Living audio
+    group: 4
+    address: 1
+    source_1: Radio
+    source_2: Source 2
+    source_3: Source 3
+    source_4: Source 4
+    source_5: Source 5
+    source_6: Source 6
+    source_7: Source 7
+    source_8: Source 8
 """
 
 
 class BLogicxConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for B-Logicx (gateway IP)."""
 
-    VERSION = 4
+    VERSION = 5
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -454,6 +509,22 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
     ) -> FlowResult:
         """SoftM tracking master switch + TCP bus repeater."""
         if user_input is not None:
+            allow = str(user_input.get(CONF_BUS_REPEATER_ALLOW) or "").strip()
+            if allow:
+                try:
+                    allow = str(ipaddress.ip_network(allow, strict=False))
+                except ValueError:
+                    return self.async_show_form(
+                        step_id="integration_settings",
+                        data_schema=self._integration_settings_schema(
+                            {
+                                **self.config_entry.options,
+                                **user_input,
+                            }
+                        ),
+                        errors={"base": "invalid_subnet"},
+                        description_placeholders=_placeholders(),
+                    )
             opts = {
                 **self.config_entry.options,
                 CONF_SOFTM_TRACKING_ENABLED: user_input.get(
@@ -467,40 +538,64 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                         CONF_BUS_REPEATER_PORT, DEFAULT_BUS_REPEATER_PORT
                     )
                 ),
+                CONF_BUS_REPEATER_ALLOW: allow,
             }
             return self.async_create_entry(title="", data=opts)
 
-        opts = self.config_entry.options
         return self.async_show_form(
             step_id="integration_settings",
-            data_schema=vol.Schema(
-                {
-                    vol.Optional(
-                        CONF_SOFTM_TRACKING_ENABLED,
-                        default=opts.get(CONF_SOFTM_TRACKING_ENABLED, False),
-                    ): selector.BooleanSelector(),
-                    vol.Optional(
-                        CONF_BUS_REPEATER_ENABLED,
-                        default=opts.get(CONF_BUS_REPEATER_ENABLED, False),
-                    ): selector.BooleanSelector(),
-                    vol.Optional(
-                        CONF_BUS_REPEATER_PORT,
-                        default=int(
-                            opts.get(
-                                CONF_BUS_REPEATER_PORT, DEFAULT_BUS_REPEATER_PORT
-                            )
-                        ),
-                    ): int,
-                }
-            ),
+            data_schema=self._integration_settings_schema(self.config_entry.options),
             description_placeholders=_placeholders(),
         )
+
+    def _integration_settings_schema(self, opts: dict) -> vol.Schema:
+        host = self.config_entry.data.get(CONF_HOST, "")
+        allow_default = opts.get(CONF_BUS_REPEATER_ALLOW) or suggested_repeater_cidr(
+            str(host)
+        )
+        return vol.Schema(
+            {
+                vol.Optional(
+                    CONF_SOFTM_TRACKING_ENABLED,
+                    default=opts.get(CONF_SOFTM_TRACKING_ENABLED, False),
+                ): selector.BooleanSelector(),
+                vol.Optional(
+                    CONF_BUS_REPEATER_ENABLED,
+                    default=opts.get(CONF_BUS_REPEATER_ENABLED, False),
+                ): selector.BooleanSelector(),
+                vol.Optional(
+                    CONF_BUS_REPEATER_PORT,
+                    default=int(
+                        opts.get(CONF_BUS_REPEATER_PORT, DEFAULT_BUS_REPEATER_PORT)
+                    ),
+                ): int,
+                vol.Optional(
+                    CONF_BUS_REPEATER_ALLOW,
+                    default=allow_default,
+                ): str,
+            }
+        )
+
+    async def _commit_address(self, new_addr: dict) -> FlowResult:
+        addresses = list(self.config_entry.data.get(CONF_ADDRESSES, []))
+        edit_key = getattr(self, "_edit_key", None)
+        if edit_key:
+            addresses = [a for a in addresses if _entry_key(a) != edit_key]
+            self._edit_key = None
+        addresses = _upsert_by_key(addresses, new_addr)
+        await self._save_and_reload(addresses)
+        return self._finish_options()
+
+    def _take_edit_defaults(self) -> dict:
+        defaults = getattr(self, "_edit_defaults", {}) or {}
+        self._edit_defaults = None
+        return defaults
 
     async def async_step_add_address(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         if user_input is not None:
-            t = user_input.get("address_type", ADDRESS_TYPE_NORMAL)
+            t = user_input.get("address_type", ADDRESS_TYPE_RLM)
             if t == ADDRESS_TYPE_SHUTTER:
                 return await self.async_step_add_shutter()
             if t == ADDRESS_TYPE_READONLY:
@@ -511,14 +606,18 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                 return await self.async_step_add_ldm()
             if t == ADDRESS_TYPE_TSM:
                 return await self.async_step_add_tsm()
-            return await self.async_step_add_normal()
+            if t == ADDRESS_TYPE_AUD:
+                return await self.async_step_add_aud()
+            if t == ADDRESS_TYPE_SOFTM:
+                return await self.async_step_add_softm()
+            return await self.async_step_add_rlm()
 
         return self.async_show_form(
             step_id="add_address",
             data_schema=vol.Schema(
                 {
                     vol.Required(
-                        "address_type", default=ADDRESS_TYPE_NORMAL
+                        "address_type", default=ADDRESS_TYPE_RLM
                     ): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=_address_type_options(self.hass),
@@ -530,69 +629,30 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
             description_placeholders=_placeholders(),
         )
 
-    async def async_step_add_normal(
+    async def async_step_add_rlm(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        errors: dict[str, str] = {}
+        """Add or edit an RLM switch. SoftM has its own screen."""
         if user_input is not None:
-            softm = bool(user_input.get("enable_softm_status_tracking", False))
-            check = bool(user_input.get("check_status", False))
-            on_cmd = user_input.get("on_command", DEFAULT_ON_COMMAND)
-            off_cmd = user_input.get("off_command", DEFAULT_OFF_COMMAND)
-            if softm and check:
-                errors["base"] = "softm_check_conflict"
-            elif softm and (
-                on_cmd != DEFAULT_ON_COMMAND or off_cmd != DEFAULT_OFF_COMMAND
-            ):
-                errors["base"] = "softm_command_conflict"
-            else:
-                new_addr: dict[str, Any] = {
-                    "name": user_input["name"].strip(),
-                    "type": ADDRESS_TYPE_NORMAL,
-                    "group": int(user_input["group"]),
-                    "address": int(user_input["address"]),
-                    "on_command": on_cmd,
-                    "off_command": off_cmd,
-                    "check_status": False if softm else check,
-                    "enable_softm_status_tracking": softm,
-                    "persist_state": bool(
-                        user_input.get("persist_state", True)
-                    )
-                    if softm
-                    else False,
-                    "default_state": bool(
-                        user_input.get("default_state", False)
-                    )
-                    if softm
-                    else False,
-                }
-                timer = user_input.get("softm_timer")
-                if softm and timer not in (None, ""):
-                    timer_val = float(timer)
-                    if timer_val > 0:
-                        new_addr["softm_timer"] = timer_val
-                addresses = list(self.config_entry.data.get(CONF_ADDRESSES, []))
-                edit_key = getattr(self, "_edit_key", None)
-                if edit_key:
-                    addresses = [
-                        a for a in addresses if _entry_key(a) != edit_key
-                    ]
-                    self._edit_key = None
-                addresses = _upsert_by_key(addresses, new_addr)
-                await self._save_and_reload(addresses)
-                return self._finish_options()
+            new_addr: dict[str, Any] = {
+                "name": user_input["name"].strip(),
+                "type": ADDRESS_TYPE_RLM,
+                "group": int(user_input["group"]),
+                "address": int(user_input["address"]),
+                "on_command": user_input.get("on_command", DEFAULT_ON_COMMAND),
+                "off_command": user_input.get("off_command", DEFAULT_OFF_COMMAND),
+                "check_status": bool(user_input.get("check_status", False)),
+                "enable_softm_status_tracking": False,
+            }
+            return await self._commit_address(new_addr)
 
-        defaults = getattr(self, "_edit_defaults", {}) or {}
-        self._edit_defaults = None
-        softm_def = bool(defaults.get("enable_softm_status_tracking", False))
+        defaults = self._take_edit_defaults()
         return self.async_show_form(
-            step_id="add_normal",
+            step_id="add_rlm",
             data_schema=vol.Schema(
                 {
                     vol.Required("name", default=defaults.get("name", "")): str,
-                    vol.Required(
-                        "group", default=defaults.get("group", 2)
-                    ): int,
+                    vol.Required("group", default=defaults.get("group", 2)): int,
                     vol.Required(
                         "address", default=defaults.get("address", 0)
                     ): int,
@@ -602,19 +662,69 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                     ): _command_selector(ON_COMMANDS, DEFAULT_ON_COMMAND),
                     vol.Required(
                         "off_command",
-                        default=defaults.get(
-                            "off_command", DEFAULT_OFF_COMMAND
-                        ),
+                        default=defaults.get("off_command", DEFAULT_OFF_COMMAND),
                     ): _command_selector(OFF_COMMANDS, DEFAULT_OFF_COMMAND),
                     vol.Optional(
                         "check_status",
-                        default=defaults.get("check_status", False)
-                        if not softm_def
-                        else False,
+                        default=defaults.get("check_status", False),
                     ): selector.BooleanSelector(),
+                }
+            ),
+            description_placeholders=_placeholders(),
+        )
+
+    async def async_step_add_softm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Add or edit a SoftM. Set/Reset only; VSM tracking is optional."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            # Absent means the box was cleared. The form default is on.
+            vsm = bool(user_input.get("enable_softm_status_tracking", False))
+            timer = user_input.get("softm_timer")
+            timer_val: float | None = None
+            if timer not in (None, "", 0, 0.0):
+                timer_val = float(timer)
+                if timer_val <= 0:
+                    timer_val = None
+            if timer_val and not vsm:
+                errors["base"] = "softm_timer_needs_vsm"
+            else:
+                new_addr: dict[str, Any] = {
+                    "name": user_input["name"].strip(),
+                    "type": ADDRESS_TYPE_SOFTM,
+                    "group": int(user_input["group"]),
+                    "address": int(user_input["address"]),
+                    "on_command": DEFAULT_ON_COMMAND,
+                    "off_command": DEFAULT_OFF_COMMAND,
+                    "check_status": False,
+                    "enable_softm_status_tracking": vsm,
+                    "persist_state": bool(user_input.get("persist_state", True)),
+                    "default_state": bool(user_input.get("default_state", False)),
+                }
+                if timer_val:
+                    new_addr["softm_timer"] = timer_val
+                return await self._commit_address(new_addr)
+
+        defaults = (
+            user_input
+            if user_input is not None
+            else self._take_edit_defaults()
+        )
+        return self.async_show_form(
+            step_id="add_softm",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("name", default=defaults.get("name", "")): str,
+                    vol.Required(
+                        "group", default=defaults.get("group", 10)
+                    ): int,
+                    vol.Required(
+                        "address", default=defaults.get("address", 0)
+                    ): int,
                     vol.Optional(
                         "enable_softm_status_tracking",
-                        default=softm_def,
+                        default=defaults.get("enable_softm_status_tracking", True),
                     ): selector.BooleanSelector(),
                     vol.Optional(
                         "softm_timer",
@@ -639,6 +749,45 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                 }
             ),
             errors=errors,
+            description_placeholders=_placeholders(),
+        )
+
+    async def async_step_add_aud(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Add or edit a BL-AUD media player and its eight source names."""
+        if user_input is not None:
+            new_addr: dict[str, Any] = {
+                "name": user_input["name"].strip() or "Audio",
+                "type": ADDRESS_TYPE_AUD,
+                "group": int(user_input["group"]),
+                "address": int(user_input["address"]),
+            }
+            for i in range(1, 9):
+                key = f"source_{i}"
+                label = str(user_input.get(key) or "").strip()
+                new_addr[key] = label or f"Source {i}"
+            return await self._commit_address(new_addr)
+
+        defaults = self._take_edit_defaults()
+        schema: dict[Any, Any] = {
+            vol.Required("name", default=defaults.get("name", "Audio")): str,
+            vol.Required(
+                "group",
+                default=int(defaults.get("group", DEFAULT_AUD_GROUP)),
+            ): int,
+            vol.Required(
+                "address", default=int(defaults.get("address", 1))
+            ): int,
+        }
+        for i in range(1, 9):
+            key = f"source_{i}"
+            schema[
+                vol.Optional(key, default=defaults.get(key) or f"Source {i}")
+            ] = str
+        return self.async_show_form(
+            step_id="add_aud",
+            data_schema=vol.Schema(schema),
             description_placeholders=_placeholders(),
         )
 
@@ -1184,7 +1333,11 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                 return await self.async_step_add_ldm()
             if t == ADDRESS_TYPE_TSM:
                 return await self.async_step_add_tsm()
-            return await self.async_step_add_normal()
+            if t == ADDRESS_TYPE_AUD:
+                return await self.async_step_add_aud()
+            if t == ADDRESS_TYPE_SOFTM or is_softm_address(entry):
+                return await self.async_step_add_softm()
+            return await self.async_step_add_rlm()
 
         current = self.config_entry.data.get(CONF_ADDRESSES, [])
         return self.async_show_form(
@@ -1324,7 +1477,14 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                 }
             ),
             # Link label lives in strings/nl.json; only the signed URL is dynamic.
-            description_placeholders=_placeholders(download_url=download_url),
+            description_placeholders=_placeholders(
+                download_link=_download_link(
+                    self.hass,
+                    download_url,
+                    "Download YAML file",
+                    "YAML-bestand downloaden",
+                ),
+            ),
         )
 
     async def async_step_download_yaml_template(
@@ -1356,5 +1516,12 @@ class BLogicxOptionsFlow(OptionsFlowWithConfigEntry):
                     ),
                 }
             ),
-            description_placeholders=_placeholders(download_url=download_url),
+            description_placeholders=_placeholders(
+                download_link=_download_link(
+                    self.hass,
+                    download_url,
+                    "Download template file",
+                    "Sjabloon-bestand downloaden",
+                ),
+            ),
         )

@@ -17,12 +17,16 @@ from .b_logicx.softm_tracker import SoftMConfig
 from .const import (
     ADDRESS_TYPE_READONLY,
     ADDRESS_TYPE_LDM,
-    ADDRESS_TYPE_NORMAL,
+    ADDRESS_TYPE_AUD,
+    ADDRESS_TYPE_RLM,
+    is_softm_address,
+    is_switch_address,
     ADDRESS_TYPE_RTC,
     ADDRESS_TYPE_SFEER,
     ADDRESS_TYPE_SHUTTER,
     ADDRESS_TYPE_TSM,
     CONF_ADDRESSES,
+    CONF_BUS_REPEATER_ALLOW,
     CONF_BUS_REPEATER_ENABLED,
     CONF_BUS_REPEATER_PORT,
     CONF_HOST,
@@ -54,6 +58,7 @@ PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
     Platform.BUTTON,
     Platform.SENSOR,
+    Platform.MEDIA_PLAYER,
 ]
 
 
@@ -83,7 +88,7 @@ def _merge_legacy_shutter_pairs(addresses: list[dict]) -> list[dict]:
             closes[key] = addr
 
     for addr in addresses:
-        # Pass through normal and already-new shutter entries
+        # Pass through non-shutter entries and covers already in the new shape
         if addr.get("type") != ADDRESS_TYPE_SHUTTER:
             result.append(addr)
             continue
@@ -168,7 +173,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
 
     Home Assistant calls this automatically when it loads a ConfigEntry
     whose stored version is lower than the VERSION declared in the
-    ConfigFlow (currently 4).
+    ConfigFlow (currently 5).
     """
     _LOGGER.debug(
         "Checking B-Logicx config entry migration (current version=%s)",
@@ -183,7 +188,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         for addr in addresses:
             addr.pop("area", None)
             addr.pop("control_mode", None)
-            addr.setdefault("type", ADDRESS_TYPE_NORMAL)
+            addr.setdefault("type", ADDRESS_TYPE_RLM)
             addr.setdefault("on_command", DEFAULT_ON_COMMAND)
             addr.setdefault("off_command", DEFAULT_OFF_COMMAND)
             addr.setdefault("check_status", False)
@@ -196,7 +201,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         addresses = list(new_data.get(CONF_ADDRESSES, []))
         for addr in addresses:
             if addr.get("type") != ADDRESS_TYPE_SHUTTER:
-                addr.setdefault("type", ADDRESS_TYPE_NORMAL)
+                addr.setdefault("type", ADDRESS_TYPE_RLM)
                 addr.setdefault("on_command", DEFAULT_ON_COMMAND)
                 addr.setdefault("off_command", DEFAULT_OFF_COMMAND)
         addresses = _merge_legacy_shutter_pairs(addresses)
@@ -241,6 +246,10 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             "Migrated B-Logicx config entry to v4 (cover open_time/close_time)"
         )
 
+    if version < 5:
+        version = 5
+        _LOGGER.info("Migrated B-Logicx config entry to v5")
+
     if version != config_entry.version or new_data != dict(config_entry.data):
         hass.config_entries.async_update_entry(
             config_entry,
@@ -279,9 +288,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     softm_cfgs: list[SoftMConfig] = []
     if softm_on:
         for a in entry.data.get(CONF_ADDRESSES, []):
-            if a.get("type", ADDRESS_TYPE_NORMAL) != ADDRESS_TYPE_NORMAL:
-                continue
-            if not a.get("enable_softm_status_tracking"):
+            if not is_softm_address(a):
                 continue
             timer = a.get("softm_timer")
             softm_cfgs.append(
@@ -304,8 +311,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         rport = int(
             entry.options.get(CONF_BUS_REPEATER_PORT, DEFAULT_BUS_REPEATER_PORT)
         )
+        allow = entry.options.get(CONF_BUS_REPEATER_ALLOW) or None
         try:
-            await hub.async_start_repeater(port=rport)
+            await hub.async_start_repeater(port=rport, allow_cidr=allow)
         except OSError as err:
             _LOGGER.error("Bus repeater failed to start on port %s: %s", rport, err)
 
@@ -324,11 +332,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     device_registry = dr.async_get(hass)
     addresses = entry.data.get(CONF_ADDRESSES, [])
     host = entry.data[CONF_HOST]
-    n_normal = sum(
-        1
-        for a in addresses
-        if a.get("type", ADDRESS_TYPE_NORMAL) == ADDRESS_TYPE_NORMAL
-    )
+    n_switch = sum(1 for a in addresses if is_switch_address(a))
+    n_aud = sum(1 for a in addresses if a.get("type") == ADDRESS_TYPE_AUD)
     n_cover = sum(1 for a in addresses if a.get("type") == ADDRESS_TYPE_SHUTTER)
     n_sfeer = sum(1 for a in addresses if a.get("type") == ADDRESS_TYPE_SFEER)
     n_readonly = sum(1 for a in addresses if a.get("type") == ADDRESS_TYPE_READONLY)
@@ -337,15 +342,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     n_tsm = sum(1 for a in addresses if a.get("type") == ADDRESS_TYPE_TSM)
     _LOGGER.info(
         "Setting up B-Logicx with %d entries "
-        "(%d normal, %d cover, %d sfeer, %d readonly, %d rtc, %d ldm, %d tsm)",
+        "(%d switch, %d cover, %d sfeer, %d readonly, %d rtc, %d ldm, %d tsm, %d aud)",
         len(addresses),
-        n_normal,
+        n_switch,
         n_cover,
         n_sfeer,
         n_readonly,
         n_rtc,
         n_ldm,
         n_tsm,
+        n_aud,
     )
 
     for addr in addresses:
@@ -385,6 +391,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
             name = addr.get("name", f"LDM {addr['group']}.{addr['address']}")
             model = f"LDM {addr['group']}.{addr['address']}"
+        elif addr.get("type") == ADDRESS_TYPE_AUD:
+            identifiers = get_device_identifiers(
+                host, int(addr["group"]), int(addr["address"])
+            )
+            name = addr.get("name", f"Audio {addr['group']}.{addr['address']}")
+            model = f"BL-AUD {addr['group']}.{addr['address']}"
         elif addr.get("type") == ADDRESS_TYPE_TSM:
             identifiers = get_tsm_device_identifiers(
                 host, int(addr["group"]), int(addr["address"])

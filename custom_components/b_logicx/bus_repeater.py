@@ -11,7 +11,6 @@ from __future__ import annotations
 import asyncio
 import ipaddress
 import logging
-import socket
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -20,41 +19,52 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 
-def _same_subnet(client_ip: str, gateway_ip: str) -> bool:
-    """Return True if the client may use the repeater.
-
-    Allowed:
-    - Loopback (127.0.0.0/8, ::1) — blxmonitor / tools on the HA host
-    - Same /24 as the configured NWM gateway (LAN clients)
-    """
+def suggested_repeater_cidr(gateway_host: str) -> str:
+    """Suggest a /24 from an IPv4 gateway address. Empty if host is not an IPv4."""
     try:
-        client = ipaddress.ip_address(client_ip)
+        ip = ipaddress.ip_address(gateway_host)
+    except ValueError:
+        return ""
+    if ip.version != 4:
+        return ""
+    return str(ipaddress.ip_network(f"{ip}/24", strict=False))
+
+
+def _legacy_gateway_slash24(client: ipaddress.IPv4Address | ipaddress.IPv6Address, gateway_ip: str) -> bool:
+    """Old behaviour: client is on the gateway's /24 (IPv4 only)."""
+    try:
         gateway = ipaddress.ip_address(gateway_ip)
     except ValueError:
         return False
+    if gateway.version != 4 or client.version != 4:
+        return False
+    return client in ipaddress.ip_network(f"{gateway}/24", strict=False)
 
-    # Local tools on the HA host (screen + blxmonitor, HA SSH add-on, etc.)
+
+def client_allowed(
+    client_ip: str,
+    gateway_ip: str,
+    allow_cidr: str | None = None,
+) -> bool:
+    """Return True if this repeater client may connect.
+
+    Loopback is always allowed. If *allow_cidr* is set, the client must be
+    inside that network. If it is empty, fall back to the gateway /24.
+    """
+    try:
+        client = ipaddress.ip_address(client_ip)
+    except ValueError:
+        return False
     if client.is_loopback:
         return True
-
-    # Prefer: find a local address that shares a /24 with the gateway, then
-    # require the client on that same /24. Fallback: same /24 as gateway alone.
-    gw_net = ipaddress.ip_network(f"{gateway}/24", strict=False)
-    if client not in gw_net:
-        return False
-
-    # Also verify we have a local IP on that subnet (HA is on the LAN)
-    try:
-        hostname = socket.gethostname()
-        for res in socket.getaddrinfo(hostname, None, socket.AF_INET):
-            local = ipaddress.ip_address(res[4][0])
-            if local in gw_net:
-                return True
-    except OSError:
-        pass
-
-    # Fallback: allow if client is in gateway /24 (typical HA on same LAN)
-    return client in gw_net
+    text = (allow_cidr or "").strip()
+    if text:
+        try:
+            network = ipaddress.ip_network(text, strict=False)
+        except ValueError:
+            return False
+        return client in network
+    return _legacy_gateway_slash24(client, gateway_ip)
 
 
 class BusRepeater:
@@ -66,11 +76,13 @@ class BusRepeater:
         gateway_host: str,
         *,
         port: int = 10001,
+        allow_cidr: str | None = None,
         request_lock: asyncio.Lock | None = None,
     ) -> None:
         self._conn = conn
         self._gateway_host = gateway_host
         self._port = port
+        self._allow_cidr = (allow_cidr or "").strip() or None
         self._request_lock = request_lock
         self._server: asyncio.Server | None = None
         self._clients: list[asyncio.StreamWriter] = []
@@ -145,10 +157,11 @@ class BusRepeater:
     ) -> None:
         peer = writer.get_extra_info("peername")
         client_ip = peer[0] if peer else ""
-        if not _same_subnet(client_ip, self._gateway_host):
+        if not client_allowed(client_ip, self._gateway_host, self._allow_cidr):
             _LOGGER.warning(
-                "Bus repeater rejected client %s (not on NWM subnet of %s)",
+                "Bus repeater rejected client %s (allowed: %s, gateway %s)",
                 client_ip,
+                self._allow_cidr or "gateway /24",
                 self._gateway_host,
             )
             writer.close()

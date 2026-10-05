@@ -2,7 +2,7 @@
 
 Read-only addresses are observed only: Set → on, Reset → off. The integration may
 send Status when check_status is enabled, but never Set/Reset/Toggle/Dimmer.
-(Originally modelled on BL-EXU; kept as a general listen-only normal-address mode.)
+(Originally modelled on BL-EXU; kept as a general listen-only bus address.)
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from .b_logicx.models import BLXEvent
 from .const import (
@@ -22,6 +23,7 @@ from .const import (
     CONF_HOST,
     DOMAIN,
     get_device_identifiers,
+    on_off_from_ha_state,
     get_entity_unique_id,
 )
 from .hub import BLogicxHub
@@ -63,7 +65,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class BLogicxReadonlySensor(BinarySensorEntity):
+class BLogicxReadonlySensor(BinarySensorEntity, RestoreEntity):
     """Listen-only bus address (read-only / observe Set-Reset)."""
 
     _attr_should_poll = False
@@ -106,6 +108,13 @@ class BLogicxReadonlySensor(BinarySensorEntity):
             if is_on is not None:
                 self._attr_is_on = is_on
                 self.async_write_ha_state()
+            return
+
+        last = await self.async_get_last_state()
+        restored = on_off_from_ha_state(last.state if last is not None else None)
+        if restored is not None:
+            self._attr_is_on = restored
+            self.async_write_ha_state()
 
     async def async_will_remove_from_hass(self) -> None:
         if self._unsub:

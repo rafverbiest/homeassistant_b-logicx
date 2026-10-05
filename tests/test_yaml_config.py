@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
 
-from address_config import parse_addresses_yaml
+from address_config import dump_addresses_yaml, parse_addresses_yaml
 from const import next_sfeer_group
 
 
@@ -26,7 +27,7 @@ def test_edge_cases_fixture():
     entries, err = parse_addresses_yaml(content)
     assert err is None
     types = {e["type"] for e in entries}
-    assert types == {"normal", "shutter", "sfeer", "readonly"}
+    assert types == {"rlm", "shutter", "sfeer", "readonly"}
     sfeer = next(e for e in entries if e["type"] == "sfeer")
     assert len(sfeer["moods"]) == 2
     cover = next(e for e in entries if e["type"] == "shutter")
@@ -40,11 +41,15 @@ def test_demo_site_yaml():
     assert err is None
     assert len(entries) >= 10
     types = {e["type"] for e in entries}
-    assert {"normal", "shutter", "sfeer", "readonly", "rtc"} <= types
+    assert {"rlm", "softm", "aud", "shutter", "sfeer", "readonly", "rtc"} <= types
+    assert "normal" not in types
     # Example group conventions (fictional site layout)
     for e in entries:
-        if e["type"] == "normal" and "Software" in e.get("name", ""):
+        if e["type"] in ("rlm", "softm") and "Software" in e.get("name", ""):
             assert e["group"] == 10
+        if e["type"] == "aud":
+            assert e["group"] == 4
+            assert e["source_1"] == "Radio"
         if e["type"] == "shutter":
             assert e["open_group"] == 3 and e["close_group"] == 3
 
@@ -59,7 +64,7 @@ def test_template_yaml():
 
 
 def test_invalid_yaml_syntax():
-    entries, err = parse_addresses_yaml("addresses: [\n  - type: normal\n    name: x\n")
+    entries, err = parse_addresses_yaml("addresses: [\n  - type: rlm\n    name: x\n")
     assert err == "invalid_yaml"
     assert entries == []
 
@@ -129,11 +134,9 @@ addresses:
 
 
 def test_dump_addresses_yaml_roundtrip():
-    from address_config import dump_addresses_yaml, parse_addresses_yaml
-
     original = """
 addresses:
-  - type: normal
+  - type: rlm
     name: Lamp
     group: 2
     address: 41
@@ -170,7 +173,79 @@ addresses:
     )
     assert "softm_tracking_enabled: true" in dumped
     assert dumped.strip().startswith("#")
+    assert "type: normal" not in dumped
+    assert "type: rlm" in dumped
+    assert re.search(
+        r"type: rlm\n\s*name: Lamp\n\s*group: 2\n\s*address: 41\n",
+        dumped,
+    )
+    assert "enable_softm_status_tracking" not in dumped.split("name: Rol")[0]
     again, err2 = parse_addresses_yaml(dumped)
     assert err2 is None
     assert len(again) == len(entries)
     assert {e["name"] for e in again} == {e["name"] for e in entries}
+    assert re.search(
+        r"type: shutter\n\s*name: Rol\n\s*open_group: 3\n\s*open_address: 5\n"
+        r"\s*close_group: 3\n\s*close_address: 6\n",
+        dumped,
+    )
+    assert re.search(
+        r"type: sfeer\n\s*name: Living\n\s*group: 5\n\s*moods:\n",
+        dumped,
+    )
+
+
+def test_type_normal_is_rejected():
+    entries, err = parse_addresses_yaml(
+        """
+addresses:
+  - type: normal
+    name: Lamp
+    group: 2
+    address: 1
+"""
+    )
+    assert err == "invalid_format"
+    assert entries == []
+
+
+def test_rlm_rejects_softm_flag():
+    entries, err = parse_addresses_yaml(
+        """
+addresses:
+  - type: rlm
+    name: Bad
+    group: 2
+    address: 1
+    enable_softm_status_tracking: true
+"""
+    )
+    assert err == "invalid_format"
+    assert entries == []
+
+
+def test_aud_source_names_and_dump_order():
+    entries, err = parse_addresses_yaml(
+        """
+addresses:
+  - type: aud
+    name: Living audio
+    address: 3
+    source_1: Radio
+    source_3: ""
+"""
+    )
+    assert err is None
+    aud = entries[0]
+    assert aud["type"] == "aud"
+    assert aud["group"] == 4
+    assert aud["address"] == 3
+    assert aud["source_1"] == "Radio"
+    assert aud["source_2"] == "Source 2"
+    assert aud["source_3"] == "Source 3"
+    dumped = dump_addresses_yaml(entries)
+    assert re.search(
+        r"type: aud\n\s*name: Living audio\n\s*group: 4\n\s*address: 3\n"
+        r"\s*source_1: Radio\n",
+        dumped,
+    )

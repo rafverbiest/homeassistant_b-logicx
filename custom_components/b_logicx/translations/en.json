@@ -28,20 +28,46 @@
           "address_type": "Type"
         }
       },
-      "add_normal": {
-        "title": "Add switch / SoftM",
-        "description": "One bus address as a Home Assistant switch.\n\nSoftM tracking: Home Assistant answers Toggle/Status/Timer on the bus for this address. Use Set/Reset as on/off commands (not Toggle). Do not also enable “ask on startup”, and do not use a hardware BL-STA on the same address.",
+      "add_rlm": {
+        "title": "Add switch (RLM)",
+        "description": "One bus address as a Home Assistant switch. On and off commands are sent to this address. Add a SoftM with the SoftM type, not here.",
         "data": {
           "name": "Name",
           "group": "Group",
           "address": "Address",
           "on_command": "Command to turn on",
           "off_command": "Command to turn off",
-          "check_status": "Ask the bus for current on/off when Home Assistant starts",
-          "enable_softm_status_tracking": "SoftM status tracking (Home Assistant answers Toggle/Status)",
+          "check_status": "Ask the bus for current on/off when Home Assistant starts"
+        }
+      },
+      "add_softm": {
+        "title": "Add SoftM",
+        "description": "A SoftM software member. Home Assistant controls it with Set and Reset.\n\nEnable the Virtual Status Module when Home Assistant should answer Toggle, Status and Timer for this address. Leave it off when a hardware status module already tracks this SoftM. The master switch in Integration settings must also be on. The timer and the remembered on/off apply only while the Virtual Status Module is enabled.",
+        "data": {
+          "name": "Name",
+          "group": "Group",
+          "address": "Address",
+          "enable_softm_status_tracking": "Enable Virtual Status Module for this address",
           "softm_timer": "SoftM timer (seconds; 0 = off). After a Timer command, turn on then auto off.",
           "persist_state": "Remember SoftM on/off across Home Assistant restarts",
           "default_state": "If nothing was remembered, start SoftM as on"
+        }
+      },
+      "add_aud": {
+        "title": "Add BL-AUD (audio)",
+        "description": "Audio module, usually group 4. Home Assistant shows a media player: eight sources, play, stop, volume up/down and mute. Give each source a name. An empty name is stored as Source 1 … Source 8.",
+        "data": {
+          "name": "Name",
+          "group": "Group (usually 4)",
+          "address": "Address",
+          "source_1": "Source 1 name",
+          "source_2": "Source 2 name",
+          "source_3": "Source 3 name",
+          "source_4": "Source 4 name",
+          "source_5": "Source 5 name",
+          "source_6": "Source 6 name",
+          "source_7": "Source 7 name",
+          "source_8": "Source 8 name"
         }
       },
       "add_rtc": {
@@ -146,18 +172,19 @@
       },
       "download_yaml_template": {
         "title": "Download YAML template",
-        "description": "Copy the template below, or use the download link (opens a file download). Edit the file, then use Import from YAML.\n\n[Download template file]({download_url})",
+        "description": "Copy the template below, or use the download link (opens a file download). Edit the file, then use Import from YAML.\n\n{download_link}",
         "data": {
           "template": "Template (copy everything below)"
         }
       },
       "integration_settings": {
         "title": "Integration settings",
-        "description": "SoftM tracking (master switch): when enabled, Home Assistant can answer Toggle/Status for addresses that also have SoftM tracking turned on. Do not use a hardware BL-STA on those same addresses.\n\nBus repeater: Home Assistant keeps the single gateway link and listens on this host (default port 10001) so BLConfig or blxmonitor on the same LAN subnet can share the bus. Point those tools at the Home Assistant IP, not the gateway IP.",
+        "description": "SoftM tracking (master switch): when enabled, Home Assistant can answer Toggle/Status for addresses that also have SoftM tracking turned on. Do not use a hardware BL-STA on those same addresses.\n\nBus repeater: Home Assistant keeps the single gateway link and listens on this host (default port 10001) so BLConfig or blxmonitor can share the bus. Point those tools at the Home Assistant IP, not the gateway IP. Allowed subnet is a CIDR (for example 192.168.50.0/24). Localhost is always allowed. Leave the subnet empty to keep the previous behaviour (the gateway’s /24).",
         "data": {
           "softm_tracking_enabled": "Enable SoftM status tracking",
           "bus_repeater_enabled": "Enable bus repeater",
-          "bus_repeater_port": "Bus repeater listen port (default 10001)"
+          "bus_repeater_port": "Bus repeater listen port (default 10001)",
+          "bus_repeater_allow": "Allowed subnet (CIDR, e.g. 192.168.50.0/24)"
         }
       },
       "add_readonly": {
@@ -172,7 +199,7 @@
       },
       "export_yaml": {
         "title": "Export YAML",
-        "description": "Copy the YAML below, or use the download link (opens a file download). Re-import with Import from YAML (that replaces all addresses).\n\n[Download YAML file]({download_url})",
+        "description": "Copy the YAML below, or use the download link (opens a file download). Re-import with Import from YAML (that replaces all addresses).\n\n{download_link}",
         "data": {
           "export": "Current configuration (YAML)"
         }
@@ -183,13 +210,17 @@
       "invalid_format": "The YAML structure or one or more entries is invalid.",
       "required": "This field is required.",
       "softm_check_conflict": "SoftM tracking already answers Status for this address. Turn off “Ask the bus … when Home Assistant starts”. Also skip SoftM tracking here if a hardware BL-STA already tracks this SoftM.",
-      "softm_command_conflict": "SoftM tracking answers Toggle on the bus. Set “Command to turn on” to Set and “Command to turn off” to Reset — other commands (such as Toggle) would flip the SoftM twice."
+      "softm_command_conflict": "SoftM tracking answers Toggle on the bus. Set “Command to turn on” to Set and “Command to turn off” to Reset — other commands (such as Toggle) would flip the SoftM twice.",
+      "softm_timer_needs_vsm": "The SoftM timer is answered by the Virtual Status Module. Enable it for this address, or set the timer to 0.",
+      "invalid_subnet": "Allowed subnet must be a CIDR such as 192.168.50.0/24."
     }
   },
   "selector": {
     "address_type": {
       "options": {
-        "normal": "Switch / SoftM (normal address)",
+        "rlm": "Switch (RLM)",
+        "softm": "SoftM (software member)",
+        "aud": "BL-AUD (audio module)",
         "readonly": "Read-only address (observe only, no control)",
         "shutter": "Cover / roller / shutter (open + close addresses)",
         "rtc": "RTC (bus clock)",

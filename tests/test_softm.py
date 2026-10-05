@@ -62,7 +62,7 @@ def test_untracked_ignored():
 def test_yaml_softm_fields():
     content = """
 addresses:
-  - type: normal
+  - type: softm
     name: SoftM
     group: 10
     address: 4
@@ -74,6 +74,7 @@ addresses:
     entries, err = parse_addresses_yaml(content)
     assert err is None
     e = entries[0]
+    assert e["type"] == "softm"
     assert e["enable_softm_status_tracking"] is True
     assert e["softm_timer"] == 30.0
     assert e["check_status"] is False
@@ -82,7 +83,7 @@ addresses:
 def test_yaml_rejects_check_and_softm():
     content = """
 addresses:
-  - type: normal
+  - type: softm
     name: Bad
     group: 10
     address: 1
@@ -97,7 +98,7 @@ addresses:
 def test_yaml_rejects_timer_without_tracking():
     content = """
 addresses:
-  - type: normal
+  - type: rlm
     name: Bad
     group: 10
     address: 1
@@ -110,7 +111,7 @@ addresses:
 def test_yaml_rejects_softm_with_toggle():
     content = """
 addresses:
-  - type: normal
+  - type: softm
     name: Bad
     group: 10
     address: 1
@@ -126,7 +127,7 @@ addresses:
 def test_yaml_rejects_softm_with_non_set_reset():
     content = """
 addresses:
-  - type: normal
+  - type: softm
     name: Bad
     group: 10
     address: 2
@@ -138,10 +139,61 @@ addresses:
     assert err == "invalid_format"
 
 
+def test_softm_vsm_flag_can_stay_off():
+    """Type softm stays a SoftM when a hardware status module already tracks it."""
+    from const import is_softm_address
+
+    content = """
+addresses:
+  - type: softm
+    name: Hardware STA
+    group: 10
+    address: 9
+    enable_softm_status_tracking: false
+  - type: softm
+    name: Virtual
+    group: 10
+    address: 10
+"""
+    entries, err = parse_addresses_yaml(content)
+    assert err is None
+    hardware, virtual = entries
+    assert hardware["type"] == "softm"
+    assert hardware["enable_softm_status_tracking"] is False
+    assert is_softm_address(hardware) is False
+    assert virtual["type"] == "softm"
+    assert virtual["enable_softm_status_tracking"] is True
+    assert is_softm_address(virtual) is True
+
+    from address_config import dump_addresses_yaml
+
+    dumped = dump_addresses_yaml([hardware])
+    assert "enable_softm_status_tracking: false" in dumped
+    again, err2 = parse_addresses_yaml(dumped)
+    assert err2 is None
+    assert again[0]["type"] == "softm"
+    assert again[0]["enable_softm_status_tracking"] is False
+
+
+def test_softm_timer_rejected_when_vsm_off():
+    content = """
+addresses:
+  - type: softm
+    name: Bad
+    group: 10
+    address: 11
+    enable_softm_status_tracking: false
+    softm_timer: 20
+"""
+    entries, err = parse_addresses_yaml(content)
+    assert err == "invalid_format"
+    assert entries == []
+
+
 def test_yaml_softm_defaults_to_set_reset():
     content = """
 addresses:
-  - type: normal
+  - type: softm
     name: SoftM
     group: 10
     address: 3
@@ -149,6 +201,7 @@ addresses:
 """
     entries, err = parse_addresses_yaml(content)
     assert err is None
+    assert entries[0]["type"] == "softm"
     assert entries[0]["on_command"] == "Set"
     assert entries[0]["off_command"] == "Reset"
 
@@ -163,16 +216,28 @@ def test_set_reset_and_cancel_timer():
     assert t.timer_expired(10, 4) is None
 
 
-def test_same_subnet_filter():
-    from bus_repeater import _same_subnet
+def test_on_off_from_ha_state():
+    from const import on_off_from_ha_state
 
-    # Same /24 as a typical LAN gateway → accept
-    assert _same_subnet("192.168.1.50", "192.168.1.10") is True
-    # Different /24 → reject
-    assert _same_subnet("10.0.0.5", "192.168.1.10") is False
-    # Invalid IP → reject
-    assert _same_subnet("not-an-ip", "192.168.1.10") is False
-    # Loopback on the HA host → accept (not on the NWM LAN subnet)
-    assert _same_subnet("127.0.0.1", "192.168.1.10") is True
-    assert _same_subnet("::1", "192.168.1.10") is True
-    assert _same_subnet("127.0.0.42", "10.0.0.1") is True
+    assert on_off_from_ha_state("on") is True
+    assert on_off_from_ha_state("off") is False
+    assert on_off_from_ha_state("unknown") is None
+    assert on_off_from_ha_state(None) is None
+
+
+def test_repeater_client_allowed():
+    from bus_repeater import client_allowed, suggested_repeater_cidr
+
+    # No configured CIDR → gateway /24
+    assert client_allowed("192.168.1.50", "192.168.1.10") is True
+    assert client_allowed("10.0.0.5", "192.168.1.10") is False
+    assert client_allowed("not-an-ip", "192.168.1.10") is False
+    # Loopback always allowed, even outside the typed subnet
+    assert client_allowed("127.0.0.1", "192.168.1.10", "10.0.0.0/24") is True
+    assert client_allowed("::1", "10.0.0.1", "192.168.50.0/24") is True
+    # Typed CIDR replaces the /24 guess
+    assert client_allowed("192.168.50.20", "10.1.1.1", "192.168.50.0/24") is True
+    assert client_allowed("192.168.1.20", "192.168.1.10", "10.0.0.0/8") is False
+    assert client_allowed("10.2.3.4", "192.168.1.10", "10.0.0.0/8") is True
+    assert suggested_repeater_cidr("192.168.50.150") == "192.168.50.0/24"
+    assert suggested_repeater_cidr("nwm.local") == ""

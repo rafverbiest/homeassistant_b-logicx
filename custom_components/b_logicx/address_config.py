@@ -12,13 +12,16 @@ import yaml
 
 try:
     from .const import (
+        ADDRESS_TYPE_AUD,
         ADDRESS_TYPE_READONLY,
         ADDRESS_TYPE_LDM,
-        ADDRESS_TYPE_NORMAL,
+        ADDRESS_TYPE_RLM,
+        ADDRESS_TYPE_SOFTM,
         ADDRESS_TYPE_RTC,
         ADDRESS_TYPE_SFEER,
         ADDRESS_TYPE_SHUTTER,
         ADDRESS_TYPE_TSM,
+        DEFAULT_AUD_GROUP,
         DEFAULT_CLOSE_TIME,
         DEFAULT_READONLY_GROUP,
         DEFAULT_LDM_GROUP,
@@ -37,13 +40,16 @@ try:
     )
 except ImportError:  # plain `python -m pytest` with ROOT on path
     from const import (
+        ADDRESS_TYPE_AUD,
         ADDRESS_TYPE_READONLY,
         ADDRESS_TYPE_LDM,
-        ADDRESS_TYPE_NORMAL,
+        ADDRESS_TYPE_RLM,
+        ADDRESS_TYPE_SOFTM,
         ADDRESS_TYPE_RTC,
         ADDRESS_TYPE_SFEER,
         ADDRESS_TYPE_SHUTTER,
         ADDRESS_TYPE_TSM,
+        DEFAULT_AUD_GROUP,
         DEFAULT_CLOSE_TIME,
         DEFAULT_READONLY_GROUP,
         DEFAULT_LDM_GROUP,
@@ -66,7 +72,7 @@ _LOGGER = logging.getLogger(__name__)
 
 def entry_sort_key(entry: dict) -> tuple:
     """Sort key for edit/remove pickers: group → address → name."""
-    t = entry.get("type", ADDRESS_TYPE_NORMAL)
+    t = entry.get("type")
     name = str(entry.get("name") or "")
     if t == ADDRESS_TYPE_SHUTTER:
         return (
@@ -90,7 +96,7 @@ def entries_sorted_for_picker(addresses: list[dict]) -> list[dict]:
 
 def entry_label(entry: dict) -> str:
     """Picker label: bus address first (matches sort), then name."""
-    t = entry.get("type", ADDRESS_TYPE_NORMAL)
+    t = entry.get("type")
     name = entry.get("name") or "Unnamed"
     if t == ADDRESS_TYPE_SHUTTER:
         return (
@@ -119,6 +125,65 @@ def _yaml_ready_value(value: Any) -> Any:
     return value
 
 
+_YAML_TAIL = (
+    "on_command",
+    "off_command",
+    "check_status",
+    "enable_softm_status_tracking",
+    "softm_timer",
+    "persist_state",
+    "default_state",
+    "open_time",
+    "close_time",
+    "sync_interval_hours",
+    "sync_minute",
+    "sync_on_startup",
+    "sync_on_dst",
+    "dst_delay_minutes",
+    "source_1",
+    "source_2",
+    "source_3",
+    "source_4",
+    "source_5",
+    "source_6",
+    "source_7",
+    "source_8",
+    "moods",
+)
+
+
+def _ordered_yaml_entry(entry: dict) -> dict:
+    """type, name, identity fields, then a stable tail."""
+    t = str(entry.get("type") or "")
+    if t == ADDRESS_TYPE_SHUTTER:
+        identity = ("open_group", "open_address", "close_group", "close_address")
+    elif t == ADDRESS_TYPE_SFEER:
+        identity = ("group", "moods")
+    else:
+        identity = ("group", "address")
+    order = ("type", "name", *identity, *_YAML_TAIL)
+    out: dict = {}
+    for key in order:
+        if key in entry and entry[key] is not None:
+            out[key] = entry[key]
+    for key in entry:
+        if key not in out and entry[key] is not None:
+            out[key] = entry[key]
+    return out
+
+
+def _export_entry(entry: dict) -> dict:
+    """Copy one address into export order, without unused SoftM keys on an RLM."""
+    ready = _yaml_ready_value(dict(entry))
+    if ready.get("type") == ADDRESS_TYPE_RLM:
+        if not ready.get("enable_softm_status_tracking"):
+            ready.pop("enable_softm_status_tracking", None)
+        for key in ("persist_state", "default_state", "softm_timer"):
+            if not ready.get(key):
+                ready.pop(key, None)
+    return _ordered_yaml_entry(ready)
+
+
 def dump_addresses_yaml(
     addresses: list[dict],
     *,
@@ -129,7 +194,7 @@ def dump_addresses_yaml(
     Integration options (SoftM master switch, bus repeater) are added as
     comments only — YAML import still replaces the addresses list alone.
     """
-    cleaned = [_yaml_ready_value(dict(a)) for a in addresses]
+    cleaned = [_export_entry(a) for a in addresses]
     # Stable-ish order: same as edit/remove picker
     cleaned = sorted(cleaned, key=entry_sort_key)
     body = yaml.safe_dump(
@@ -140,7 +205,7 @@ def dump_addresses_yaml(
     )
     header = (
         "# B-Logicx export — use Import from YAML to load (replaces all addresses)\n"
-        "# Types: normal | shutter | sfeer | readonly | rtc | ldm | tsm\n"
+        "# Types: rlm | softm | aud | shutter | sfeer | readonly | rtc | ldm | tsm\n"
     )
     if options:
         header += (
@@ -204,14 +269,24 @@ def normalize_yaml_entry(item: Any) -> dict:
     """Validate and normalise one YAML address dict."""
     if not isinstance(item, dict):
         raise ValueError("entry must be a mapping")
-    t = str(item.get("type", ADDRESS_TYPE_NORMAL)).strip().lower()
+    raw_type = item.get("type")
+    if raw_type is None or str(raw_type).strip() == "":
+        raise ValueError("type required")
+    t = str(raw_type).strip().lower()
     name = str(item.get("name", "")).strip()
     check = bool(item.get("check_status", False))
 
-    if t == ADDRESS_TYPE_NORMAL:
+    if t in (ADDRESS_TYPE_RLM, ADDRESS_TYPE_SOFTM):
         if not name:
             raise ValueError("name required")
-        softm_track = bool(item.get("enable_softm_status_tracking", False))
+        if t == ADDRESS_TYPE_SOFTM:
+            # Omitted flag stays on. False is explicit: a hardware BL-STA
+            # already tracks this software member.
+            softm_track = bool(item.get("enable_softm_status_tracking", True))
+        else:
+            if item.get("enable_softm_status_tracking"):
+                raise ValueError("type rlm cannot enable SoftM tracking; use type softm")
+            softm_track = False
         if softm_track and check:
             raise ValueError(
                 "check_status and enable_softm_status_tracking cannot both be true"
@@ -237,19 +312,26 @@ def normalize_yaml_entry(item: Any) -> dict:
                 raise ValueError("softm_timer must be > 0")
         else:
             softm_timer_val = None
-        persist = bool(item.get("persist_state", True if softm_track else False))
-        default_state = bool(item.get("default_state", False))
+        out_type = (
+            ADDRESS_TYPE_SOFTM if t == ADDRESS_TYPE_SOFTM else ADDRESS_TYPE_RLM
+        )
+        if out_type == ADDRESS_TYPE_SOFTM:
+            persist = bool(item.get("persist_state", True))
+            default_state = bool(item.get("default_state", False))
+        else:
+            persist = False
+            default_state = False
         entry = {
             "name": name,
-            "type": ADDRESS_TYPE_NORMAL,
+            "type": out_type,
             "group": int(item["group"]),
             "address": int(item["address"]),
             "on_command": on_cmd,
             "off_command": off_cmd,
             "check_status": False if softm_track else check,
             "enable_softm_status_tracking": softm_track,
-            "persist_state": persist if softm_track else False,
-            "default_state": default_state if softm_track else False,
+            "persist_state": persist,
+            "default_state": default_state,
         }
         if softm_timer_val is not None:
             entry["softm_timer"] = softm_timer_val
@@ -340,6 +422,21 @@ def normalize_yaml_entry(item: Any) -> dict:
             ),
             "check_status": check,
         }
+
+    if t in (ADDRESS_TYPE_AUD, "audio"):
+        if not name:
+            name = "Audio"
+        entry = {
+            "name": name,
+            "type": ADDRESS_TYPE_AUD,
+            "group": int(item.get("group", DEFAULT_AUD_GROUP)),
+            "address": int(item["address"]),
+        }
+        for i in range(1, 9):
+            key = f"source_{i}"
+            label = str(item.get(key) or "").strip()
+            entry[key] = label or f"Source {i}"
+        return entry
 
     if t == ADDRESS_TYPE_SFEER:
         if not name:

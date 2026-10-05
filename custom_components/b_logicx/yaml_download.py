@@ -1,7 +1,12 @@
 """Short-lived signed YAML downloads for the options flow.
 
-HA's config-flow markdown sanitizer strips ``data:`` URLs, so template/export
-\"download\" links never worked. We serve the file via a signed API path instead.
+HA's config-flow markdown sanitizer strips ``data:`` URLs, so the file is
+served from a signed API path. The step description must not contain the anchor itself: the frontend
+translation formatter rejects ``<a ...>`` as an invalid tag. The options flow
+passes a ready-made anchor (with ``target="_blank"``) in the
+``download_link`` placeholder. A normal markdown link is same-origin, and the
+frontend then treats the click as an in-app route: the dialog closes and the
+main page opens instead of downloading the file.
 """
 
 from __future__ import annotations
@@ -42,8 +47,8 @@ class BLogicxYamlDownloadView(HomeAssistantView):
         filename = item["filename"]
         content: str = item["content"]
         return web.Response(
-            body=content.encode("utf-8"),
-            content_type="application/yaml; charset=utf-8",
+            text=content,
+            content_type="application/yaml",
             headers={
                 "Content-Disposition": f'attachment; filename="{filename}"',
                 "Cache-Control": "no-store",

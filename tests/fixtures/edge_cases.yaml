@@ -1,7 +1,7 @@
 # Fixture for offline tests — short travel times (fictional addresses)
 # Lights group 2, covers group 3 (not a real site map).
 addresses:
-  - type: normal
+  - type: rlm
     name: Toggle light
     group: 2
     address: 100
@@ -9,7 +9,7 @@ addresses:
     off_command: Toggle
     check_status: true
 
-  - type: normal
+  - type: rlm
     name: SetReset light
     group: 2
     address: 101

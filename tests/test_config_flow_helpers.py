@@ -11,7 +11,7 @@ from address_config import entries_sorted_for_picker, entry_label
 def test_entry_label_address_first():
     assert (
         entry_label(
-            {"type": "normal", "name": "Lamp", "group": 2, "address": 41}
+            {"type": "rlm", "name": "Lamp", "group": 2, "address": 41}
         )
         == "2.41 — Lamp"
     )
@@ -43,8 +43,8 @@ def test_entry_label_address_first():
 
 def test_entries_sorted_group_then_address():
     addresses = [
-        {"type": "normal", "name": "Z", "group": 5, "address": 10},
-        {"type": "normal", "name": "A", "group": 2, "address": 80},
+        {"type": "rlm", "name": "Z", "group": 5, "address": 10},
+        {"type": "rlm", "name": "A", "group": 2, "address": 80},
         {
             "type": "shutter",
             "name": "Cover",
@@ -60,7 +60,7 @@ def test_entries_sorted_group_then_address():
             "moods": [{"name": "TV", "group": 5, "address": 221}],
         },
         {"type": "readonly", "name": "PIR", "group": 1, "address": 8},
-        {"type": "normal", "name": "B", "group": 2, "address": 17},
+        {"type": "rlm", "name": "B", "group": 2, "address": 17},
     ]
     sorted_addrs = entries_sorted_for_picker(addresses)
     names = [a["name"] for a in sorted_addrs]

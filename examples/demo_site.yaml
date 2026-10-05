@@ -5,11 +5,12 @@
 # Conventions used here (typical B-Logicx layout, not a real site):
 #   group 2  — lights / outlets
 #   group 3  — shutters / covers
+#   group 4  — audio (BL-AUD)
 #   group 10 — software members
-# Types: normal | shutter | sfeer | readonly | rtc
+# Types: rlm | softm | aud | shutter | sfeer | readonly | rtc | ldm | tsm
 
 addresses:
-  - type: normal
+  - type: rlm
     name: Kitchen ceiling
     group: 2
     address: 33
@@ -17,7 +18,7 @@ addresses:
     off_command: Reset
     check_status: true
 
-  - type: normal
+  - type: rlm
     name: Hallway
     group: 2
     address: 34
@@ -25,7 +26,7 @@ addresses:
     off_command: Toggle
     check_status: true
 
-  - type: normal
+  - type: rlm
     name: Workshop outlet
     group: 2
     address: 90
@@ -33,7 +34,7 @@ addresses:
     off_command: Reset
     check_status: true
 
-  - type: normal
+  - type: rlm
     name: Soft member demo
     group: 10
     address: 12
@@ -117,7 +118,20 @@ addresses:
     address: 45
     check_status: true
 
-  - type: normal
+  - type: aud
+    name: Living audio
+    group: 4
+    address: 1
+    source_1: Radio
+    source_2: CD
+    source_3: Bluetooth
+    source_4: HDMI
+    source_5: Optical
+    source_6: USB
+    source_7: AirPlay
+    source_8: Aux
+
+  - type: rlm
     name: Software member example
     group: 10
     address: 200
@@ -128,7 +142,7 @@ addresses:
   # SoftM with virtual status tracking (HA answers Toggle/Status/Timer).
   # Also enable Integration settings → SoftM status tracking.
   # on/off must be Set/Reset (Toggle is rejected with SoftM tracking).
-  - type: normal
+  - type: softm
     name: Software member example, status tracked by this integration (virtual BL-STA)
     group: 10
     address: 201

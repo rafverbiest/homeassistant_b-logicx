@@ -1,6 +1,6 @@
 """Switch platform for B-Logicx.
 
-Each configured *normal* address on the bus is exposed as a controllable switch.
+Each configured RLM or SoftM address is exposed as a controllable switch.
 Shutter/roller covers are handled by the cover platform (CoverEntity), not here.
 
 On/off commands are taken from the per-address config (defaults: Set / Reset).
@@ -26,7 +26,8 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
     ADDRESS_TYPE_READONLY,
-    ADDRESS_TYPE_NORMAL,
+    is_softm_address,
+    is_switch_address,
     ADDRESS_TYPE_SFEER,
     ADDRESS_TYPE_SHUTTER,
     CONF_ADDRESSES,
@@ -34,6 +35,7 @@ from .const import (
     DEFAULT_OFF_COMMAND,
     DEFAULT_ON_COMMAND,
     DOMAIN,
+    on_off_from_ha_state,
     get_device_identifiers,
     get_entity_unique_id,
 )
@@ -46,7 +48,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up B-Logicx switches from a config entry (normal addresses only)."""
+    """Set up B-Logicx switches from a config entry (RLM and SoftM)."""
     hub: BLogicxHub = hass.data[DOMAIN][entry.entry_id]
 
     addresses: list[dict] = entry.data.get(CONF_ADDRESSES, [])
@@ -60,14 +62,14 @@ async def async_setup_entry(
             ADDRESS_TYPE_READONLY,
         ):
             continue
-        if addr.get("type", ADDRESS_TYPE_NORMAL) != ADDRESS_TYPE_NORMAL:
+        if not is_switch_address(addr):
             continue
         if "group" not in addr or "address" not in addr:
             continue
 
         on_command = addr.get("on_command", DEFAULT_ON_COMMAND)
         off_command = addr.get("off_command", DEFAULT_OFF_COMMAND)
-        softm = bool(addr.get("enable_softm_status_tracking", False))
+        softm = is_softm_address(addr)
         entities.append(
             BLogicxSwitch(
                 hub=hub,
@@ -90,7 +92,7 @@ async def async_setup_entry(
 
 
 class BLogicxSwitch(SwitchEntity, RestoreEntity):
-    """Switch representing one normal address on the B-Logicx bus."""
+    """Switch representing one RLM or SoftM address on the B-Logicx bus."""
 
     _attr_should_poll = False
 
@@ -142,6 +144,16 @@ class BLogicxSwitch(SwitchEntity, RestoreEntity):
                 self._attr_is_on = self._default_state
             self._hub.softm_seed(self._group, self._address, bool(self._attr_is_on))
             self.async_write_ha_state()
+            return
+
+        if not self._check_status:
+            # No Status probe: show the last known on/off so the entity is not
+            # unknown after a restart. Bus Set/Reset still updates it later.
+            last = await self.async_get_last_state()
+            restored = on_off_from_ha_state(last.state if last is not None else None)
+            if restored is not None:
+                self._attr_is_on = restored
+                self.async_write_ha_state()
             return
 
         if self._check_status:

@@ -11,6 +11,7 @@ CONF_ADDRESSES = "addresses"
 CONF_SOFTM_TRACKING_ENABLED = "softm_tracking_enabled"
 CONF_BUS_REPEATER_ENABLED = "bus_repeater_enabled"
 CONF_BUS_REPEATER_PORT = "bus_repeater_port"
+CONF_BUS_REPEATER_ALLOW = "bus_repeater_allow"
 DEFAULT_BUS_REPEATER_PORT = 10001
 
 # The default port is defined in the library (single source of truth)
@@ -20,7 +21,9 @@ except ImportError:  # offline tests with flat sys.path
     from b_logicx.const import BLX_TCP_PORT as DEFAULT_PORT
 
 # Address / entity types
-ADDRESS_TYPE_NORMAL = "normal"
+ADDRESS_TYPE_RLM = "rlm"
+ADDRESS_TYPE_SOFTM = "softm"
+ADDRESS_TYPE_AUD = "aud"
 ADDRESS_TYPE_SHUTTER = "shutter"
 ADDRESS_TYPE_SFEER = "sfeer"
 ADDRESS_TYPE_READONLY = "readonly"
@@ -66,6 +69,9 @@ def sfeer_room_group(entry: dict) -> int:
 # Read-only address — listen-only binary sensor (observe Set/Reset; never control)
 DEFAULT_READONLY_GROUP = 1
 
+# BL-AUD audio module — usually group 4
+DEFAULT_AUD_GROUP = 4
+
 # RTC (bus clock) — Program write sequence; default group 1 / address 1
 DEFAULT_RTC_GROUP = 1
 DEFAULT_RTC_ADDRESS = 1
@@ -103,10 +109,10 @@ DEFAULT_CLOSE_TIME = 30.0  # seconds for full close travel
 
 # Structure of a monitored address / cover entry in CONF_ADDRESSES:
 #
-# Normal switch:
+# RLM switch:
 # {
 #   "name": "Living room light",
-#   "type": "normal",
+#   "type": "rlm",
 #   "group": 2,
 #   "address": 65,
 #   "on_command": "Set",
@@ -161,8 +167,35 @@ DEFAULT_CLOSE_TIME = 30.0  # seconds for full close travel
 # }
 
 
+def is_softm_address(entry: dict) -> bool:
+    """True when Home Assistant's Virtual Status Module answers this address.
+
+    Type softm only means the address is a software member. A hardware
+    BL-STA may already track it, in which case the per-address flag is off.
+    """
+    return (
+        str(entry.get("type") or "").strip().lower() == ADDRESS_TYPE_SOFTM
+        and bool(entry.get("enable_softm_status_tracking"))
+    )
+
+
+def is_switch_address(entry: dict) -> bool:
+    """RLM or SoftM switch."""
+    t = str(entry.get("type") or "").strip().lower()
+    return t in (ADDRESS_TYPE_RLM, ADDRESS_TYPE_SOFTM)
+
+
+def on_off_from_ha_state(state: str | None) -> bool | None:
+    """Map a restored HA state string to on/off, or None if unknown."""
+    if state == "on":
+        return True
+    if state == "off":
+        return False
+    return None
+
+
 def get_entity_unique_id(host: str, group: int, address: int) -> str:
-    """Generate a stable unique_id for a normal bus-address switch entity.
+    """Generate a stable unique_id for an RLM or SoftM switch entity.
 
     Uses the gateway host (as entered during initial config) + group + address.
     This makes the unique_id survive:
@@ -177,7 +210,7 @@ def get_entity_unique_id(host: str, group: int, address: int) -> str:
 
 
 def get_device_identifiers(host: str, group: int, address: int) -> set[tuple[str, str]]:
-    """Generate stable device registry identifiers for a normal bus address.
+    """Generate stable device registry identifiers for one bus address.
 
     Includes the gateway host so that:
     - Multiple gateways with overlapping bus addresses don't collide.
