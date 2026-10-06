@@ -18,6 +18,12 @@ from b_logicx.audio import (
 AUD = {(4, 1), (4, 2)}
 
 
+def test_volume_misc_codes():
+    # Wire codes: Misc 0.9 is volume up, Misc 0.10 is volume down.
+    assert AUD_VOLUME_UP == 9
+    assert AUD_VOLUME_DOWN == 10
+
+
 def test_pair_survives_unrelated_frames():
     st = AudBusState()
     now = 100.0
