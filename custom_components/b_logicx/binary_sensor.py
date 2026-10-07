@@ -1,8 +1,10 @@
 """Binary sensor platform for B-Logicx read-only addresses.
 
+If you want to just monitor SoftM's or RLMs or anything with a Set/Reset state
+but don't want to risk accidentally toggling them in HA.
+
 Read-only addresses are observed only: Set → on, Reset → off. The integration may
 send Status when check_status is enabled, but never Set/Reset/Toggle/Dimmer.
-(Originally modelled on BL-EXU; kept as a general listen-only bus address.)
 """
 
 from __future__ import annotations
@@ -101,6 +103,7 @@ class BLogicxReadonlySensor(BinarySensorEntity, RestoreEntity):
         self._unsub = self._hub.register_listener(
             self._handle_event, self._group, self._address
         )
+        # Ask once at startup, or show the last on/off and wait for the bus.
         if self._check_status:
             is_on = await self._hub.async_request_status(
                 self._group, self._address

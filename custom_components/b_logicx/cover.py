@@ -1,10 +1,10 @@
 """Cover platform for B-Logicx rollers / shutters / blinds.
 
 Each shutter is one CoverEntity backed by exactly two bus addresses:
-  - open address  (relay that drives open / up)
-  - close address (relay that drives close / down)
+  - open address  (RLM that drives open / up)
+  - close address (RLM that drives close / down)
 
-B-Logicx datagram pairs (hardcoded — not configurable):
+B-Logicx datagram pairs (hardcoded in BLConfig — not configurable):
   open  → Toggle(open)  + Reset(close)
   close → Toggle(close) + Reset(open)
   stop  → Toggle(last active direction)
@@ -292,6 +292,7 @@ class BLogicxCover(CoverEntity):
         _LOGGER.debug("Cover %s: stop → unknown", self._attr_name)
 
     def _schedule_travel_complete(self, direction: str, seconds: float) -> None:
+        """When the travel time ends, show open or closed if still moving that way."""
         self._cancel_travel_timer()
 
         @callback
@@ -418,6 +419,7 @@ class BLogicxCover(CoverEntity):
         self.async_write_ha_state()
 
     def _active_direction(self) -> str | None:
+        """Which relay Stop should Toggle: current motion, a relay that is on, or the last direction."""
         if self._motion in ("open", "close"):
             return self._motion
         if self._open_relay_on is True:

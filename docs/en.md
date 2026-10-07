@@ -20,6 +20,7 @@ Custom integration that connects Home Assistant directly to a **B-Logicx BL-NWM 
 
 - Switches (RLM / SoftM) and **read-only** addresses  
 - **Covers** (dual RLM) and **Sfeer** selection  
+- **BL-AUD** as a media player (sources, volume up/down, mute)  
 - **SoftM** virtual status module (VSM) inside Home Assistant  
 - **TCP bus repeater** — share the single NWM link with BLConfig / blxmonitor  
 - **RTC** sync (incl. DST), **LDM** light sensor, **TSM** thermostat  

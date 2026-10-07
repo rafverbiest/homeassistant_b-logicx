@@ -1,6 +1,8 @@
-"""Human-readable B-Logicx bus lines (shared by blxmonitor and tests).
+"""Text lines for the bus log. This is not the wire format.
 
-Format matches blxmonitor.py:
+A frame heard from the gateway is just the event. A frame this program
+sent is the same line with [SENT] in front, so the two directions stay
+apart in one log:
 
   [YYYY-MM-DD HH:MM:SS.mmm] Set 2.80
   [YYYY-MM-DD HH:MM:SS.mmm] [SENT] Status 2.17
@@ -16,24 +18,24 @@ if TYPE_CHECKING:
 
 
 def timestamp() -> str:
-    """Return current wall date+time as YYYY-MM-DD HH:MM:SS.mmm."""
+    """Local clock as YYYY-MM-DD HH:MM:SS.mmm."""
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
 
 
 def format_event(event: BLXEvent | str) -> str:
-    """Right-hand side of a bus line: ``Set 2.80``."""
+    """The event itself: "Set 2.80". A BLXEvent uses its own text form."""
     return str(event)
 
 
 def format_recv(event: BLXEvent | str, *, ts: str | None = None) -> str:
-    """Gateway → client (live bus event), blxmonitor style."""
+    """One log line for a datagram received from the gateway."""
     if ts is None:
         ts = timestamp()
     return f"[{ts}] {format_event(event)}"
 
 
 def format_sent(event: BLXEvent | str, *, ts: str | None = None) -> str:
-    """Client → gateway (command we sent), blxmonitor ``[SENT]`` style."""
+    """One log line for a datagram this program sent to the gateway."""
     if ts is None:
         ts = timestamp()
     return f"[{ts}] [SENT] {format_event(event)}"

@@ -9,17 +9,20 @@ Lives with the reusable `b_logicx` library (not the Home Assistant
 platform modules) so it can run without HA installed and without
 shadowing the stdlib ``select`` module.
 
-  python3 /config/custom_components/b_logicx/b_logicx/blxmonitor.py -i 192.168.50.150
+  python3 /config/custom_components/b_logicx/b_logicx/blxmonitor.py -i 192.168.0.180
 
 Program commands and the two following datagrams are shown by default
 (useful when debugging RTC sync / programming traffic).
 To hide them:  --hide-program
 
-  python3 .../b_logicx/blxmonitor.py -i 192.168.50.150 -p 10001
+  python3 .../b_logicx/blxmonitor.py -i 192.168.0.180 -p 10001
 
 Log every on-screen bus line (RX + [SENT], with timestamps) to a file:
 
-  python3 .../b_logicx/blxmonitor.py -i 192.168.50.150 -l /var/log/blxbus.log
+  python3 .../b_logicx/blxmonitor.py -i 192.168.0.180 -l /var/log/blxbus.log
+
+FIXME: Ctrl-C out of this tool tends to mess up the terminal, which may need
+a 'reset' command afterwards.
 """
 
 from __future__ import annotations
@@ -34,12 +37,12 @@ import threading
 from pathlib import Path
 from typing import Optional, TextIO
 
-# Import asyncio (and thus stdlib ``select``) BEFORE putting the Home Assistant
-# integration directory on sys.path. That directory contains select.py (the HA
-# platform), which would otherwise shadow the stdlib and break this CLI.
-#
-# When this file is run as a script, sys.path[0] is this package directory
-# (no select.py here), so the stdlib wins and is cached in sys.modules.
+# asyncio (and through it the standard-library select) must be imported
+# before the integration directory is added to sys.path. That directory
+# contains select.py, the Home Assistant platform, which would otherwise
+# be loaded instead of the standard library and break this program.
+# Run as a script, sys.path[0] is this package folder, which has no
+# select.py, so the standard library is the one that gets cached.
 
 # Enable readline for command history (up/down arrows) and editing.
 # This is stdlib and works on Linux/macOS. Gracefully ignored elsewhere.
@@ -96,16 +99,14 @@ def _print_live(text: str) -> None:
         if readline:
             try:
                 buf = readline.get_line_buffer()
-                # Clear the current prompt line completely
+                # Wipe the half-typed prompt, print the event, draw the prompt again.
                 line_len = len(PROMPT) + len(buf)
                 sys.stdout.write("\r" + " " * line_len + "\r")
                 sys.stdout.flush()
 
-                # Print the new content
                 sys.stdout.write(text + "\n")
                 sys.stdout.flush()
 
-                # Redraw the prompt + whatever the user has typed so far
                 sys.stdout.write(PROMPT + buf)
                 sys.stdout.flush()
                 readline.redisplay()
@@ -124,6 +125,7 @@ def print_event(event_str: str) -> None:
 
 
 def parse_args() -> argparse.Namespace:
+    """Gateway address, and whether to hide Program frames or write a log."""
     parser = argparse.ArgumentParser(
         description="B-Logicx Monitor (uses the shared b_logicx library)"
     )
@@ -210,6 +212,7 @@ async def run_monitor(
     skip_programming: bool = False,
     log_file: Optional[str] = None,
 ) -> None:
+    """Connect, print every event, and send whatever is typed at blx>."""
     global _log_fp
 
     if log_file:
@@ -261,6 +264,7 @@ async def run_monitor(
 
 
 def main() -> None:
+    """Parse arguments and run the monitor until Ctrl-C or quit."""
     args = parse_args()
     try:
         asyncio.run(

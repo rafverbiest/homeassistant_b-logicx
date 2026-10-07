@@ -1,8 +1,24 @@
-"""BL-AUD media player.
+"""BL-AUD media player virtual module
 
-Classic Set/Reset/Timer/Status do not apply. Each action is Misc 0.N
-followed by Select <group>.<address>. State is remembered locally: the
-module does not answer Status.
+To understand BL-AUD, it is helpful to think of it as a sort of 'software member'
+because there is no real hardware involved. It's normally assigned an address in group 4.
+It is being sent commands through BL-DSM media control screens (or using normal INM's)
+
+These commands to the BL-AUD address are monitored by BL-BHS, which takes action
+controlling a physical media player, usually connected to the BHS via Ethernet or RS232.
+
+This is an implementation that mimics these commands and also catches them
+so we can display media player status.
+
+In future versions, it would be nice to try to bypass BHS and
+control media players directly from Home Assistant.
+
+Classic Set/Reset/Timer/Status do not apply.
+Each 'command' consists of two datagrams:
+
+Misc 0.N
+Select <group>.<address>.
+
 """
 
 from __future__ import annotations
@@ -20,19 +36,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
-from .b_logicx.audio import (
-    AUD_MUTE_OFF,
-    AUD_MUTE_ON,
-    AUD_PLAY,
-    AUD_SOURCE_MAX,
-    AUD_SOURCE_MIN,
-    AUD_STOP,
-    AUD_VOLUME_DOWN,
-    AUD_VOLUME_UP,
-    AudCommand,
-    AudPlayerState,
-    apply_aud_command,
-)
+from .b_logicx.audio import *
 from .const import (
     ADDRESS_TYPE_AUD,
     CONF_ADDRESSES,
@@ -92,7 +96,11 @@ async def async_setup_entry(
 
 
 class BLogicxAudMediaPlayer(MediaPlayerEntity, RestoreEntity):
-    """One BL-AUD address as a Home Assistant media player."""
+    """
+    One BL-AUD address presents itself as a Home Assistant media player.
+    I'm still contemplating how to cleanly make it work in future when HA needs
+    to also control the media player trough other integrations
+    """
 
     _attr_should_poll = False
     _attr_device_class = MediaPlayerDeviceClass.SPEAKER
@@ -132,13 +140,19 @@ class BLogicxAudMediaPlayer(MediaPlayerEntity, RestoreEntity):
             idx = self._player.source_index - 1
             if 0 <= idx < len(self._sources):
                 title = self._sources[idx]
-        # The bus has no track name. The card prints media_title in the
-        # artwork area and keeps the real source picker behind the menu.
+        # The bus has no track name, so we're showing the source name
+        # in the media player widget. Not how it's supposed to work
+        # but better than an empty widget
         self._attr_source = title
         self._attr_media_title = title
         self._attr_is_volume_muted = self._player.muted
 
     async def _send(self, code: int) -> None:
+        """Send Misc then Select, and apply that code locally.
+
+        The echo of those frames comes back through the hub and applies again.
+        Both applies produce the same player state.
+        """
         await self._hub.async_send_aud(self._group, self._address, code)
         apply_aud_command(self._player, code)
         self._publish()

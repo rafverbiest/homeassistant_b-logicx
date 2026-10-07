@@ -1,4 +1,9 @@
-"""Sensor platform — RTC last sync, LDM light %, TSM temperature / presets."""
+"""Sensors that only display what the bus already said.
+
+One RTC shows when this integration last wrote the clock. One LDM shows the
+light level in percent. One TSM becomes the temperature, the active preset,
+the active setpoint, and one cached setpoint for each preset name.
+"""
 
 from __future__ import annotations
 

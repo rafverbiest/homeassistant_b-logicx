@@ -19,7 +19,18 @@
     "step": {
       "init": {
         "title": "B-Logicx",
-        "description": "Kies hieronder een actie. YAML-import overschrijft alle bestaande items."
+        "description": "Kies hieronder een actie. YAML-import overschrijft alle bestaande items.",
+        "menu_options": {
+          "add_address": "Busadres toevoegen",
+          "add_sfeer_room": "Sfeer-ruimte toevoegen",
+          "add_sfeer_mood": "Sfeer toevoegen",
+          "edit_select": "Item bewerken",
+          "remove_select": "Item verwijderen",
+          "integration_settings": "Integratie-instellingen",
+          "export_yaml": "YAML exporteren",
+          "download_yaml_template": "YAML-sjabloon downloaden",
+          "import_yaml": "Importeren uit YAML"
+        }
       },
       "add_address": {
         "title": "Wat wil je toevoegen?",
@@ -207,6 +218,7 @@
     },
     "error": {
       "invalid_yaml": "Kan het YAML-bestand niet lezen of verwerken.",
+      "template_missing": "Het sjabloonbestand is niet gevonden.",
       "invalid_format": "De YAML-structuur of een of meer items is ongeldig.",
       "required": "Dit veld is verplicht.",
       "softm_check_conflict": "SoftM tracking beantwoordt Status al voor dit adres. Zet “Vraag de bus … wanneer Home Assistant start” uit. Sla SoftM tracking hier ook over als een hardware BL-STA deze SoftM al volgt.",
@@ -226,19 +238,6 @@
         "rtc": "RTC (busklok)",
         "ldm": "LDM (lichtsensor)",
         "tsm": "TSM (temperatuur / thermostaat)"
-      }
-    },
-    "options_menu": {
-      "options": {
-        "add_address": "Busadres toevoegen",
-        "add_sfeer_room": "Sfeer-ruimte toevoegen",
-        "add_sfeer_mood": "Sfeer toevoegen",
-        "edit_select": "Item bewerken",
-        "remove_select": "Item verwijderen",
-        "integration_settings": "Integratie-instellingen",
-        "download_yaml_template": "YAML-sjabloon downloaden",
-        "import_yaml": "Importeren uit YAML",
-        "export_yaml": "YAML exporteren"
       }
     }
   },

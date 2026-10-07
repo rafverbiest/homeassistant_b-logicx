@@ -1,4 +1,11 @@
-"""RTC scheduling: startup (after Status), interval phase, DST watch."""
+"""When to write a BL-RTC.
+
+Startup waits until Status probes have gone quiet, then writes the clock if
+that module asks for it. Each module then has an interval task.
+
+A special routine detects when DST changes and schedules the RTC update asap
+so the RTC spends as little time as possible using the wrong hour.
+"""
 
 from __future__ import annotations
 
@@ -111,6 +118,7 @@ class RtcSyncManager:
         self._tasks.clear()
 
     async def async_sync_one(self, cfg: dict[str, Any], *, reason: str) -> None:
+        """Write the nine clock frames for one module, 10 ms apart."""
         if self._stopped:
             return
         group = int(cfg["group"])
@@ -148,6 +156,7 @@ class RtcSyncManager:
         _LOGGER.warning("No RTC config for %s.%s", group, address)
 
     async def _interval_loop(self, cfg: dict[str, Any]) -> None:
+        """Sleep until the next phased minute, then write the clock."""
         interval = float(
             cfg.get("sync_interval_hours", DEFAULT_RTC_SYNC_INTERVAL_HOURS)
         )
@@ -176,6 +185,7 @@ class RtcSyncManager:
             await self.async_sync_one(cfg, reason="interval")
 
     async def _dst_loop(self, cfg: dict[str, Any]) -> None:
+        """Watch the UTC offset. After a change, wait, then write the clock."""
         delay_min = int(
             cfg.get("dst_delay_minutes", DEFAULT_RTC_DST_DELAY_MINUTES)
         )

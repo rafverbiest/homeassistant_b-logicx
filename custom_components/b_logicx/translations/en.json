@@ -19,7 +19,18 @@
     "step": {
       "init": {
         "title": "B-Logicx",
-        "description": "Choose an action below. YAML import overwrites all existing entries."
+        "description": "Choose an action below. YAML import overwrites all existing entries.",
+        "menu_options": {
+          "add_address": "Add bus address",
+          "add_sfeer_room": "Add Sfeer room",
+          "add_sfeer_mood": "Add Sfeer",
+          "edit_select": "Edit entry",
+          "remove_select": "Remove entry",
+          "integration_settings": "Integration settings",
+          "export_yaml": "Export YAML",
+          "download_yaml_template": "Download YAML template",
+          "import_yaml": "Import from YAML"
+        }
       },
       "add_address": {
         "title": "What do you want to add?",
@@ -207,6 +218,7 @@
     },
     "error": {
       "invalid_yaml": "Could not read or parse the YAML file.",
+      "template_missing": "The template file could not be found.",
       "invalid_format": "The YAML structure or one or more entries is invalid.",
       "required": "This field is required.",
       "softm_check_conflict": "SoftM tracking already answers Status for this address. Turn off “Ask the bus … when Home Assistant starts”. Also skip SoftM tracking here if a hardware BL-STA already tracks this SoftM.",
@@ -226,19 +238,6 @@
         "rtc": "RTC (bus clock)",
         "ldm": "LDM (light sensor)",
         "tsm": "TSM (temperature / thermostat)"
-      }
-    },
-    "options_menu": {
-      "options": {
-        "add_address": "Add bus address",
-        "add_sfeer_room": "Add Sfeer room",
-        "add_sfeer_mood": "Add Sfeer",
-        "edit_select": "Edit entry",
-        "remove_select": "Remove entry",
-        "integration_settings": "Integration settings",
-        "download_yaml_template": "Download YAML template",
-        "import_yaml": "Import from YAML",
-        "export_yaml": "Export YAML"
       }
     }
   },

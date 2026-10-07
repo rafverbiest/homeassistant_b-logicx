@@ -1,4 +1,19 @@
-"""B-Logicx hub that manages the connection to one BL-NWM gateway.
+"""Home Assistant's one voice on a single BL-NWM gateway.
+
+This is the "Pièce de résistance" of this implentation :)
+
+Each datagram is handled in this order:
+
+1. A Status query that is waiting for Set or Reset on this address.
+2. The SoftM virtual status module, which may answer on the bus.
+3. The LDM / TSM decoder.
+4. The BL-AUD decoder.
+5. Entity callbacks registered for this group.address.
+
+Status, an LDM request, a TSM request, a BL-AUD command, an RTC write, and a
+frame the repeater forwards all share one lock, so they cannot cut into each
+other. A SoftM reply does not take that lock: it is sent from the listener,
+and the listener is what a Status wait is blocked on.
 """
 
 from __future__ import annotations
@@ -20,20 +35,30 @@ from .b_logicx.measure import (
 from .b_logicx.audio import AUD_MISC_GROUP, AudBusState, AudCommand
 from .b_logicx.softm_tracker import SoftMConfig, SoftMTracker
 from .bus_repeater import BusRepeater
+from .const import DEFAULT_BUS_REPEATER_PORT
 
 _LOGGER = logging.getLogger(__name__)
 
 # Status wait: long enough for a slow bus device, short enough not to stall setup.
 _STATUS_TIMEOUT = 2.5
+# On integration statup, we query each address that has the option 'Check status'
+# set to On. This causes some traffic on the bus when many addresses need to be queried.
+# B-Logicx datagrams unfortunately tend to collide when the bus is busy.
+# One would think we live in a time where CSMA is commonplace, old-school technology,
+# but in certain areas of Belgium people like to reinvent the wheel, poorly.
+#
+# I absolutely loathe having to do this (the real fix needs to happen in the hardware)
+# but we do not control that. So, to get around this, we need to slow down.
+#
 # After each request/response (Status, LDM, TSM), pause before the next transaction.
-# 50 ms was enough for most addresses but Status 5.223 (Sfeer) intermittently
-# missed Set/Reset; 100 ms is more reliable on a busy startup queue.
+# 50 ms seems to be enough for most hardware but Sfeers intermittently
+# missed Set/Resets; 100 ms seems to be more reliable on a busy startup queue.
 _STATUS_GAP = 0.10  # 100 ms
 _MEASURE_TIMEOUT = 2.5
 
 
 class BLogicxHub:
-    """Manages a single connection + distributes events to listeners."""
+    """The listener, the request lock, and the registries for one gateway."""
 
     def __init__(self, hass: HomeAssistant, host: str, port: int) -> None:
         self.hass = hass
@@ -78,6 +103,7 @@ class BLogicxHub:
     def configure_softm_tracking(
         self, enabled: bool, configs: list[SoftMConfig]
     ) -> None:
+        """Turn virtual status tracking on, or clear it when the master switch is off."""
         self._softm_enabled = enabled
         if enabled:
             self._softm.configure(configs)
@@ -85,9 +111,11 @@ class BLogicxHub:
             self._softm.configure([])
 
     def softm_seed(self, group: int, address: int, is_on: bool) -> None:
+        """Overwrite SoftM memory, for example from a restored on/off."""
         self._softm.seed(group, address, is_on)
 
     def softm_get_state(self, group: int, address: int) -> bool | None:
+        """Remembered on/off for a tracked SoftM, or None."""
         return self._softm.get_state(group, address)
 
     def register_listener(
@@ -114,6 +142,7 @@ class BLogicxHub:
     def register_ldm(
         self, group: int, address: int, callback: Callable[[LdmReading], None]
     ) -> Callable[[], None]:
+        """An LDM. System on this group.address commits a light reading."""
         key = (group, address)
         self._ldm_keys.add(key)
         self._ldm_callbacks.setdefault(key, []).append(callback)
@@ -131,6 +160,7 @@ class BLogicxHub:
     def register_tsm(
         self, group: int, address: int, callback: Callable[[TsmReading], None]
     ) -> Callable[[], None]:
+        """A TSM. System on this group.address commits the temperature."""
         key = (group, address)
         self._tsm_keys.add(key)
         self._tsm_callbacks.setdefault(key, []).append(callback)
@@ -181,7 +211,7 @@ class BLogicxHub:
                 key = (event.group, event.address)
                 now = time.monotonic()
 
-                # Resolve any in-flight Status wait for this address
+                # Finish a waiting Status before SoftM looks at the same frame.
                 if event.command in ("Set", "Reset") and key in self._pending_status:
                     fut = self._pending_status[key]
                     if not fut.done():
@@ -228,6 +258,7 @@ class BLogicxHub:
         )
 
     async def _softm_own_emit_expire(self, key: tuple[int, int]) -> None:
+        """Forget our own echo mark after 150 ms if the gateway never sent it back."""
         try:
             await asyncio.sleep(0.15)
         except asyncio.CancelledError:
@@ -235,6 +266,7 @@ class BLogicxHub:
         self._softm_own_emit.discard(key)
 
     def _softm_cancel_timer_task(self, group: int, address: int) -> None:
+        """Stop the waiting task so expiry will not send Reset."""
         key = (group, address)
         task = self._softm_timer_tasks.pop(key, None)
         if task is not None and not task.done():
@@ -250,9 +282,9 @@ class BLogicxHub:
         key = (g, a)
 
         if cmd in ("Set", "Reset"):
-            # Our SoftM Set/Reset echoes must not cancel SoftM timers (Timer start
-            # Set, Status reply, Toggle reply, Timer expiry Reset). External /
-            # HA absolute Set/Reset still cancel.
+            # This is where a timer obeys Reset. An outside Set or Reset cancels
+            # it. The Set/Reset we just sent ourselves (timer start, Status
+            # reply, Toggle reply, expiry) is marked for 150 ms and does not.
             own_echo = key in self._softm_own_emit
             if own_echo:
                 self._softm_own_emit.discard(key)
@@ -290,6 +322,7 @@ class BLogicxHub:
             )
 
     async def _softm_timer_fire(self, group: int, address: int, secs: float) -> None:
+        """When the delay ends, send Reset unless the timer was cancelled."""
         try:
             await asyncio.sleep(secs)
         except asyncio.CancelledError:
@@ -315,7 +348,8 @@ class BLogicxHub:
             self._measure.note_settings(g, a, now)
             return
 
-        # Data / Select / System 15.x / other — not part of LDM or TSM triple
+        # Value and Settings were stored above. Only System can commit them,
+        # and only when this group.address is a registered LDM or TSM.
         if cmd != "System":
             return
 
@@ -347,12 +381,14 @@ class BLogicxHub:
                 )
                 self._dispatch_tsm(key, reading)
             return
+
     def register_aud(
         self,
         group: int,
         address: int,
         callback: Callable[[AudCommand], None],
     ) -> Callable[[], None]:
+        """A BL-AUD. Select on this group.address commits the pending Misc."""
         key = (group, address)
         self._aud_keys.add(key)
         self._aud_callbacks.setdefault(key, []).append(callback)
@@ -368,6 +404,7 @@ class BLogicxHub:
         return _unreg
 
     def _handle_aud_event(self, event: BLXEvent, now: float) -> None:
+        """Hand the frame to the one Misc slot. A committed command updates the player."""
         cmd = self._aud.note(
             event.command,
             event.group,
@@ -386,7 +423,10 @@ class BLogicxHub:
                 _LOGGER.exception("AUD callback error")
 
     async def async_send_aud(self, group: int, address: int, code: int) -> None:
-        """Send Misc 0.code then Select group.address under the request lock."""
+        """Send Misc 0.code, wait 10 ms, then Select the player, under the request lock.
+
+        The gap gives the module a moment to see the Misc before Select.
+        """
         if self._conn is None:
             raise RuntimeError("Not connected")
         async with self._request_lock:
@@ -395,6 +435,7 @@ class BLogicxHub:
             await self._conn.send("Select", group, address)
 
     def _dispatch_ldm(self, key: tuple[int, int], reading: LdmReading) -> None:
+        """Wake a waiting LDM request and tell every callback for this sensor."""
         fut = self._pending_ldm.get(key)
         if fut is not None and not fut.done():
             fut.set_result(reading)
@@ -405,6 +446,7 @@ class BLogicxHub:
                 _LOGGER.exception("LDM callback error")
 
     def _dispatch_tsm(self, key: tuple[int, int], reading: TsmReading) -> None:
+        """Wake a waiting TSM request and tell every callback for this thermostat."""
         fut = self._pending_tsm.get(key)
         if fut is not None and not fut.done():
             fut.set_result(reading)
@@ -459,8 +501,12 @@ class BLogicxHub:
         await self.async_stop_repeater()
 
     async def async_start_repeater(
-        self, *, port: int = 10001, allow_cidr: str | None = None
+        self, *, port: int = DEFAULT_BUS_REPEATER_PORT, allow_cidr: str | None = None
     ) -> None:
+        """Let BLConfig or blxmonitor share this gateway connection.
+
+        Frames they send take the same request lock as Status and the sensors.
+        """
         if self._conn is None:
             raise RuntimeError("Not connected")
         await self.async_stop_repeater()
@@ -474,6 +520,7 @@ class BLogicxHub:
         await self._repeater.start()
 
     async def async_stop_repeater(self) -> None:
+        """Close the repeater listener. The gateway connection stays open."""
         if self._repeater is not None:
             await self._repeater.stop()
             self._repeater = None
@@ -489,7 +536,11 @@ class BLogicxHub:
             self._conn = None
 
     async def async_send(self, command: str, group: int, address: int) -> None:
-        """Send a command on the bus."""
+        """Write one datagram without the request lock.
+
+        SoftM answers from the listener. Taking the lock here could deadlock
+        a Status wait that holds the lock until this listener runs.
+        """
         if self._conn is None:
             raise RuntimeError("Not connected")
         await self._conn.send(command, group, address)
@@ -520,6 +571,7 @@ class BLogicxHub:
         return _unreg
 
     def notify_rtc_synced(self, group: int, address: int, when) -> None:
+        """Remember when this clock was written and tell the RTC entity."""
         self.rtc_last_sync[(group, address)] = when
         for cb in list(self._rtc_sync_callbacks):
             try:
@@ -609,7 +661,10 @@ class BLogicxHub:
     async def async_request_ldm(
         self, group: int, address: int, *, timeout: float = _MEASURE_TIMEOUT
     ) -> LdmReading | None:
-        """Request LDM reading: Data 0.2 then Select g.a; wait for Value+System."""
+        """Ask an LDM for a reading: Data 0.2, 10 ms, then Select, and wait.
+
+        The module answers with Value and then System. System commits the reading.
+        """
         key = (group, address)
         async with self._request_lock:
             if self._conn is None:
@@ -647,7 +702,10 @@ class BLogicxHub:
     async def async_request_tsm(
         self, group: int, address: int, *, timeout: float = _MEASURE_TIMEOUT
     ) -> TsmReading | None:
-        """Request TSM triple via Status g.a; wait for Value 11 + Settings + System."""
+        """Ask a TSM for a reading by sending Status, then wait for the triple.
+
+        The module answers Value 11, Settings, and System. System commits it.
+        """
         key = (group, address)
         async with self._request_lock:
             if self._conn is None:

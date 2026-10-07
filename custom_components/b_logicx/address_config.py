@@ -1,6 +1,9 @@
-"""Pure YAML address config parse (no Home Assistant imports).
+"""Turn a YAML file into address dicts, and write those dicts back out.
 
-Used by config_flow and by CLI tests so the same schema is validated offline.
+Home Assistant imports are avoided, so the config flow and the offline tests share
+one schema. Import replaces the address list only. The SoftM master switch
+and the bus repeater stay in Integration settings, and export mentions them
+as comments rather than as data the import would apply.
 """
 
 from __future__ import annotations
@@ -11,63 +14,40 @@ from typing import Any
 import yaml
 
 try:
-    from .const import (
-        ADDRESS_TYPE_AUD,
-        ADDRESS_TYPE_READONLY,
-        ADDRESS_TYPE_LDM,
-        ADDRESS_TYPE_RLM,
-        ADDRESS_TYPE_SOFTM,
-        ADDRESS_TYPE_RTC,
-        ADDRESS_TYPE_SFEER,
-        ADDRESS_TYPE_SHUTTER,
-        ADDRESS_TYPE_TSM,
-        DEFAULT_AUD_GROUP,
-        DEFAULT_CLOSE_TIME,
-        DEFAULT_READONLY_GROUP,
-        DEFAULT_LDM_GROUP,
-        DEFAULT_TSM_GROUP,
-        DEFAULT_OFF_COMMAND,
-        DEFAULT_ON_COMMAND,
-        DEFAULT_OPEN_TIME,
-        DEFAULT_RTC_DST_DELAY_MINUTES,
-        DEFAULT_RTC_GROUP,
-        DEFAULT_RTC_SYNC_INTERVAL_HOURS,
-        DEFAULT_RTC_SYNC_MINUTE,
-        DEFAULT_RTC_SYNC_ON_DST,
-        DEFAULT_RTC_SYNC_ON_STARTUP,
-        DEFAULT_SFEER_GROUP,
-        sfeer_room_group,
-    )
-except ImportError:  # plain `python -m pytest` with ROOT on path
-    from const import (
-        ADDRESS_TYPE_AUD,
-        ADDRESS_TYPE_READONLY,
-        ADDRESS_TYPE_LDM,
-        ADDRESS_TYPE_RLM,
-        ADDRESS_TYPE_SOFTM,
-        ADDRESS_TYPE_RTC,
-        ADDRESS_TYPE_SFEER,
-        ADDRESS_TYPE_SHUTTER,
-        ADDRESS_TYPE_TSM,
-        DEFAULT_AUD_GROUP,
-        DEFAULT_CLOSE_TIME,
-        DEFAULT_READONLY_GROUP,
-        DEFAULT_LDM_GROUP,
-        DEFAULT_TSM_GROUP,
-        DEFAULT_OFF_COMMAND,
-        DEFAULT_ON_COMMAND,
-        DEFAULT_OPEN_TIME,
-        DEFAULT_RTC_DST_DELAY_MINUTES,
-        DEFAULT_RTC_GROUP,
-        DEFAULT_RTC_SYNC_INTERVAL_HOURS,
-        DEFAULT_RTC_SYNC_MINUTE,
-        DEFAULT_RTC_SYNC_ON_DST,
-        DEFAULT_RTC_SYNC_ON_STARTUP,
-        DEFAULT_SFEER_GROUP,
-        sfeer_room_group,
-    )
+    from .const import *
+except ImportError:
+    from const import *
 
 _LOGGER = logging.getLogger(__name__)
+
+# Keys written after type, name, and the identity fields. A key that an
+# address does not have is skipped, so an RLM does not grow player sources.
+# Maintaining this order makes YAML files readable
+YAML_ORDER = (
+    "on_command",
+    "off_command",
+    "check_status",
+    "enable_softm_status_tracking",
+    "softm_timer",
+    "persist_state",
+    "default_state",
+    "open_time",
+    "close_time",
+    "sync_interval_hours",
+    "sync_minute",
+    "sync_on_startup",
+    "sync_on_dst",
+    "dst_delay_minutes",
+    "source_1",
+    "source_2",
+    "source_3",
+    "source_4",
+    "source_5",
+    "source_6",
+    "source_7",
+    "source_8",
+    "moods",
+)
 
 
 def entry_sort_key(entry: dict) -> tuple:
@@ -125,35 +105,8 @@ def _yaml_ready_value(value: Any) -> Any:
     return value
 
 
-_YAML_TAIL = (
-    "on_command",
-    "off_command",
-    "check_status",
-    "enable_softm_status_tracking",
-    "softm_timer",
-    "persist_state",
-    "default_state",
-    "open_time",
-    "close_time",
-    "sync_interval_hours",
-    "sync_minute",
-    "sync_on_startup",
-    "sync_on_dst",
-    "dst_delay_minutes",
-    "source_1",
-    "source_2",
-    "source_3",
-    "source_4",
-    "source_5",
-    "source_6",
-    "source_7",
-    "source_8",
-    "moods",
-)
-
-
 def _ordered_yaml_entry(entry: dict) -> dict:
-    """type, name, identity fields, then a stable tail."""
+    """type, name, identity fields, then YAML_ORDER."""
     t = str(entry.get("type") or "")
     if t == ADDRESS_TYPE_SHUTTER:
         identity = ("open_group", "open_address", "close_group", "close_address")
@@ -161,7 +114,7 @@ def _ordered_yaml_entry(entry: dict) -> dict:
         identity = ("group", "moods")
     else:
         identity = ("group", "address")
-    order = ("type", "name", *identity, *_YAML_TAIL)
+    order = ("type", "name", *identity, *YAML_ORDER)
     out: dict = {}
     for key in order:
         if key in entry and entry[key] is not None:
@@ -266,7 +219,12 @@ def parse_addresses_yaml(content: str) -> tuple[list[dict], str | None]:
 
 
 def normalize_yaml_entry(item: Any) -> dict:
-    """Validate and normalise one YAML address dict."""
+    """Validate one address and fill the defaults the rest of the integration expects.
+
+    type is required. An unknown type is rejected. For a softm, an omitted
+    enable_softm_status_tracking means on. Tracking on forces Set and Reset,
+    forces check_status off, and is the only case where softm_timer is allowed.
+    """
     if not isinstance(item, dict):
         raise ValueError("entry must be a mapping")
     raw_type = item.get("type")
@@ -337,6 +295,7 @@ def normalize_yaml_entry(item: Any) -> dict:
             entry["softm_timer"] = softm_timer_val
         return entry
 
+    # Listen-only: Set and Reset update the sensor. Nothing is ever sent.
     if t == ADDRESS_TYPE_READONLY:
         if not name:
             raise ValueError("name required")
@@ -348,6 +307,7 @@ def normalize_yaml_entry(item: Any) -> dict:
             "check_status": check,
         }
 
+    # check_status here means ask for a reading when Home Assistant starts.
     if t == ADDRESS_TYPE_LDM:
         if not name:
             name = "Light sensor"
@@ -359,6 +319,7 @@ def normalize_yaml_entry(item: Any) -> dict:
             "check_status": check,
         }
 
+    # Same startup reading as an LDM. The request itself is a Status.
     if t == ADDRESS_TYPE_TSM:
         if not name:
             name = "Temperature"
@@ -401,10 +362,11 @@ def normalize_yaml_entry(item: Any) -> dict:
                 is not None
                 else DEFAULT_RTC_DST_DELAY_MINUTES
             ),
+            # A clock has nothing to answer Status with.
             "check_status": False,
         }
 
-    if t in (ADDRESS_TYPE_SHUTTER, "cover", "roller", "blind"):
+    if t == ADDRESS_TYPE_SHUTTER:
         if not name:
             name = "Cover"
         return {
@@ -423,7 +385,8 @@ def normalize_yaml_entry(item: Any) -> dict:
             "check_status": check,
         }
 
-    if t in (ADDRESS_TYPE_AUD, "audio"):
+    # A blank source name becomes "Source N".
+    if t == ADDRESS_TYPE_AUD:
         if not name:
             name = "Audio"
         entry = {

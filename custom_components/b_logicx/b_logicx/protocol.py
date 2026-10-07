@@ -1,4 +1,13 @@
-"""Encode/decode 2-byte B-Logicx datagrams (shared by library, fake gateway, tests)."""
+"""Turn two wire bytes into a BLXEvent, and the other way around.
+
+Layout of one datagram, first byte first:
+
+  byte 0        address, 0–255
+  byte 1 high   command code, 0–15 (COMMAND_CODES in const.py)
+  byte 1 low    group, 0–15
+
+Set on group 2, address 80 is the bytes 0x50 0x32, written "Set 2.80".
+"""
 
 from __future__ import annotations
 
@@ -7,7 +16,11 @@ from .models import BLXEvent
 
 
 def encode_datagram(command: str | int, group: int, address: int) -> bytes:
-    """Build a 2-byte datagram: byte0=address, byte1=(cmd<<4)|group."""
+    """Build the two wire bytes from a command, group and address.
+
+    A command name is matched without case ("set" and "Set" are the same) but must
+    be one of the 16 names. A number is used directly as the command code.
+    """
     if isinstance(command, str):
         cmd_name = command.title()
         if cmd_name not in COMMAND_NAMES:
@@ -21,7 +34,11 @@ def encode_datagram(command: str | int, group: int, address: int) -> bytes:
 
 
 def decode_datagram(data: bytes) -> BLXEvent:
-    """Decode exactly 2 bytes into a BLXEvent."""
+    """Split exactly two bytes into command, group and address.
+
+    A high half that is not in COMMAND_CODES is named "UNK" plus the number,
+    so the frame is still visible.
+    """
     if len(data) != 2:
         raise ValueError("Datagram must be exactly 2 bytes")
     cmd_code = (data[1] & 0xF0) >> 4

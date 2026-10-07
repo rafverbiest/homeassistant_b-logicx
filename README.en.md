@@ -23,7 +23,7 @@ Custom integration for the **B-Logicx (BL-NWM / BL-NWX)** bus gateway: switches,
 5. **Restart** Home Assistant.
 6. **Settings → Devices & services → Add integration → B-Logicx** and enter your gateway IP (default port `10001`).
 
-Configure addresses in the integration options (UI) or via YAML import. Template: `custom_components/b_logicx/template.yaml`.
+Configure addresses in the integration options (UI) or via YAML import. Template: `custom_components/b_logicx/flow/template.yaml`.
 
 ## Manual install
 

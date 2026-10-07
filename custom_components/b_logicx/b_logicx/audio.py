@@ -1,9 +1,10 @@
 """BL-AUD command pairing (pure, no HA).
 
-A command is Misc 0.N followed, within 2 seconds, by Select <group>.<address>.
-Other datagrams in between do not cancel the pending Misc (same idea as LDM/TSM).
-A newer Misc replaces the pending one. Select for a non-AUD address does not
-consume it.
+A command is Misc 0.N followed immediately by Select <group>.<address>.
+Other datagrams in between do not cancel the pending Misc
+A newer Misc replaces the pending one, so two different media player
+commands might collide, but we did not invent the protocol.
+Select for a non-AUD address does not consume the pending Misc.
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ from dataclasses import dataclass
 AUD_MISC_GROUP = 0
 AUD_MAX_AGE_S = 2.0
 
-# Misc address byte → action
+# Misc 0.N — the address byte is the action. Volume up is 9, volume down is 10.
 AUD_STOP = 0
 AUD_SOURCE_MIN = 1
 AUD_SOURCE_MAX = 8
@@ -28,6 +29,11 @@ AUD_COMMANDS = frozenset(range(0, 14))
 
 @dataclass
 class AudCommand:
+    """A Misc that was committed by Select. group and address are the player.
+
+    code is the Misc address byte (stop, source 1–8, volume, play, mute).
+    """
+
     group: int
     address: int
     code: int
@@ -43,7 +49,12 @@ class AudPlayerState:
 
 
 def apply_aud_command(player: AudPlayerState, code: int) -> None:
-    """Apply one Misc command code. Volume steps do not change play or mute."""
+    """Update the remembered player from one Misc code.
+
+    Stop leaves the source name in place and sets idle. Play does not change
+    the source. Volume up and down change nothing here: the bus has no level
+    to store. Mute is remembered on its own.
+    """
     if code == AUD_STOP:
         player.state = "idle"
     elif AUD_SOURCE_MIN <= code <= AUD_SOURCE_MAX:
@@ -73,6 +84,14 @@ class AudBusState:
         *,
         aud_keys: set[tuple[int, int]],
     ) -> AudCommand | None:
+        """Watch the bus for Misc 0.N, then Select of a configured player.
+
+        Returns the command only when that Select arrives within 2 seconds.
+        Anything else, including Select for a light sensor, leaves the pending
+        Misc where it is. A newer Misc replaces it. There is one slot for
+        every player, so two modules inside 2 seconds share it and the later
+        Misc wins.
+        """
         g = int(group) & 0x0F
         a = int(address) & 0xFF
         if command == "Misc" and g == AUD_MISC_GROUP and a in AUD_COMMANDS:

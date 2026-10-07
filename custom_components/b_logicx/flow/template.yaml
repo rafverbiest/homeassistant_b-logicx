@@ -3,7 +3,7 @@
 # Fictional example values only — replace with your bus map.
 #
 # Example conventions: lights/outlets group 2, covers group 3,
-# audio group 4, software members group 10 (not a real site).
+# audio group 4, software members group 10.
 
 addresses:
   - type: rlm

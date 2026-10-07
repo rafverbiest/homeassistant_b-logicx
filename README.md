@@ -23,7 +23,7 @@ Custom integration voor de **B-Logicx (BL-NWM / BL-NWX)** bus-gateway: schakelaa
 5. **Herstart** Home Assistant.
 6. **Instellingen → Apparaten en diensten → Integratie toevoegen → B-Logicx** en vul het IP van je gateway in (standaardpoort `10001`).
 
-Configureer adressen in de integratie-opties (UI) of via YAML-import. Sjabloon: `custom_components/b_logicx/template.yaml`.
+Configureer adressen in de integratie-opties (UI) of via YAML-import. Sjabloon: `custom_components/b_logicx/flow/template.yaml`.
 
 ## Handmatige installatie
 

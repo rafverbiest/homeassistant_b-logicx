@@ -1,9 +1,14 @@
-"""TCP bus repeater — share the single NWM connection with BLConfig / blxmonitor.
+"""Share the one gateway connection with BLConfig or blxmonitor.
 
-Listens on HA (default port 10001). Accepts clients on the same subnet as the
-configured NWM, plus loopback (localhost / 127.0.0.1 / ::1) so tools on the HA
-host itself can connect. Forwards raw 2-byte RX from the gateway (pre
-Program-skip) and forwards complete 2-byte client TX to the gateway.
+Home Assistant already holds the gateway socket. This server listens on all
+interfaces, on the same port as the gateway by default. Loopback is always
+allowed. Any other client must be inside the configured CIDR, or, when that
+is empty, on the gateway's /24.
+
+Bytes from the gateway are copied to every client before Program filtering.
+Bytes from a client are two-byte frames written to the gateway under the
+same request lock as Status and the sensors, so they do not land in the
+middle of those sequences.
 """
 
 from __future__ import annotations
@@ -15,6 +20,11 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .b_logicx.connection import BLXConnection
+
+try:
+    from .const import DEFAULT_BUS_REPEATER_PORT
+except ImportError:  # offline tests with flat sys.path
+    from const import DEFAULT_BUS_REPEATER_PORT
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -75,7 +85,7 @@ class BusRepeater:
         conn: BLXConnection,
         gateway_host: str,
         *,
-        port: int = 10001,
+        port: int = DEFAULT_BUS_REPEATER_PORT,
         allow_cidr: str | None = None,
         request_lock: asyncio.Lock | None = None,
     ) -> None:
@@ -93,6 +103,7 @@ class BusRepeater:
         return self._port
 
     async def start(self) -> None:
+        """Listen, and copy every raw gateway frame to connected clients."""
         if self._server is not None:
             return
 
@@ -127,6 +138,7 @@ class BusRepeater:
             _LOGGER.info("Bus repeater stopped")
 
     def _broadcast(self, data: bytes) -> None:
+        """Write one received frame to every client without blocking the reader."""
         dead: list[asyncio.StreamWriter] = []
         for w in list(self._clients):
             try:
@@ -155,6 +167,10 @@ class BusRepeater:
     async def _handle_client(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ) -> None:
+        """Accept one client, or close it when the allow list says no.
+
+        Each read is exactly two bytes, one datagram, then written to the gateway.
+        """
         peer = writer.get_extra_info("peername")
         client_ip = peer[0] if peer else ""
         if not client_allowed(client_ip, self._gateway_host, self._allow_cidr):

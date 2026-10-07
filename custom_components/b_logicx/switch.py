@@ -1,13 +1,13 @@
-"""Switch platform for B-Logicx.
+"""Switch platform for an RLM or a SoftM.
 
-Each configured RLM or SoftM address is exposed as a controllable switch.
-Shutter/roller covers are handled by the cover platform (CoverEntity), not here.
+- A tracked SoftM (this is the Virtual Status Module): Home Assistant always sends
+  Set and Reset, restores the last on/off or uses default_state, and does not
+  ask Status.
 
-On/off commands are taken from the per-address config (defaults: Set / Reset).
-State is tracked from bus Set/Reset events.
+- An untracked SoftM, and an RLM, send the configured on and off
+  commands and may ask Status at startup. Either way, a Set or Reset heard on
+  the bus is what updates the switch.
 
-SoftM status tracking (enable_softm_status_tracking) uses RestoreEntity /
-default_state instead of check_status (mutually exclusive).
 """
 
 from __future__ import annotations

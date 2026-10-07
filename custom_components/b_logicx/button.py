@@ -1,4 +1,8 @@
-"""Button platform — RTC sync; LDM/TSM refresh when check_status is on."""
+"""Buttons that ask a module to do something now.
+
+Every RTC gets a sync button. An LDM or a TSM gets a refresh button only when
+check_status is on, the same flag that asks for a reading at startup.
+"""
 
 from __future__ import annotations
 

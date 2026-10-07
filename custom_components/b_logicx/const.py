@@ -1,4 +1,11 @@
-"""Constants for the B-Logicx Home Assistant integration."""
+"""Names and defaults for one configured bus address.
+
+An address is a dict stored on the config entry. type decides which Home
+Assistant entity it becomes. group and address, or a shutter's open and close
+pair, or a Sfeer room's moods, say where it sits on the bus. The helpers at
+the bottom build a stable entity id from the gateway host plus that location,
+so a reload or a re-import keeps the same entity.
+"""
 
 DOMAIN = "b_logicx"
 
@@ -12,13 +19,15 @@ CONF_SOFTM_TRACKING_ENABLED = "softm_tracking_enabled"
 CONF_BUS_REPEATER_ENABLED = "bus_repeater_enabled"
 CONF_BUS_REPEATER_PORT = "bus_repeater_port"
 CONF_BUS_REPEATER_ALLOW = "bus_repeater_allow"
-DEFAULT_BUS_REPEATER_PORT = 10001
 
-# The default port is defined in the library (single source of truth)
+# Gateway port and the repeater's listen port share the library constant.
 try:
-    from .b_logicx.const import BLX_TCP_PORT as DEFAULT_PORT
+    from .b_logicx.const import BLX_TCP_PORT
 except ImportError:  # offline tests with flat sys.path
-    from b_logicx.const import BLX_TCP_PORT as DEFAULT_PORT
+    from b_logicx.const import BLX_TCP_PORT
+
+DEFAULT_PORT = BLX_TCP_PORT
+DEFAULT_BUS_REPEATER_PORT = BLX_TCP_PORT
 
 # Address / entity types
 ADDRESS_TYPE_RLM = "rlm"
@@ -100,9 +109,9 @@ DEFAULT_OFF_COMMAND = COMMAND_RESET
 #   stop  → Toggle(last active direction)
 # These are not configurable — hardcoded in cover.py.
 #
-# Travel times (v0.5.1): after open_time / close_time seconds of commanded
-# motion, HA reports open / closed. Mid-stop clears to unknown. Bus traffic
-# is unchanged — times only affect Home Assistant state.
+# After open_time / close_time seconds of commanded motion, Home Assistant
+# reports open or closed. Stopping in the middle clears that to unknown.
+# The times are not sent on the bus.
 
 DEFAULT_OPEN_TIME = 30.0  # seconds for full open travel
 DEFAULT_CLOSE_TIME = 30.0  # seconds for full close travel
@@ -117,6 +126,19 @@ DEFAULT_CLOSE_TIME = 30.0  # seconds for full close travel
 #   "address": 65,
 #   "on_command": "Set",
 #   "off_command": "Reset",
+#   "check_status": False,
+# }
+#
+# SoftM. Tracking on means Home Assistant is the virtual status module
+# (Set/Reset only). Tracking off means a hardware BL-STA already tracks it.
+# {
+#   "name": "Hall light",
+#   "type": "softm",
+#   "group": 10,
+#   "address": 1,
+#   "on_command": "Set",
+#   "off_command": "Reset",
+#   "enable_softm_status_tracking": True,
 #   "check_status": False,
 # }
 #
@@ -165,6 +187,10 @@ DEFAULT_CLOSE_TIME = 30.0  # seconds for full close travel
 #   "sync_on_dst": True,
 #   "dst_delay_minutes": 1,
 # }
+#
+# BL-AUD. source_1 … source_8 are the names shown for Misc 0.1 … 0.8.
+# LDM and TSM are the same shape as a read-only address: group, address,
+# and check_status to ask for a reading when Home Assistant starts.
 
 
 def is_softm_address(entry: dict) -> bool:
@@ -277,16 +303,99 @@ def get_rtc_device_identifiers(host: str, group: int, address: int) -> set[tuple
 
 
 def get_ldm_unique_id(host: str, group: int, address: int) -> str:
+    """Stable unique_id for one light sensor."""
     return f"{host}_ldm_{group}_{address}"
 
 
 def get_ldm_device_identifiers(host: str, group: int, address: int) -> set[tuple[str, str]]:
+    """Device registry id for one light sensor."""
     return {(DOMAIN, get_ldm_unique_id(host, group, address))}
 
 
 def get_tsm_unique_id(host: str, group: int, address: int) -> str:
+    """Stable unique_id for one thermostat."""
     return f"{host}_tsm_{group}_{address}"
 
 
 def get_tsm_device_identifiers(host: str, group: int, address: int) -> set[tuple[str, str]]:
+    """Device registry id for one thermostat."""
     return {(DOMAIN, get_tsm_unique_id(host, group, address))}
+
+
+def address_device(host: str, addr: dict) -> tuple[set[tuple[str, str]], str, str]:
+    """Identifiers, name, and model registered for one stored address."""
+    if addr.get("type") == ADDRESS_TYPE_SHUTTER:
+        identifiers = get_cover_device_identifiers(
+            host,
+            int(addr["open_group"]),
+            int(addr["open_address"]),
+            int(addr["close_group"]),
+            int(addr["close_address"]),
+        )
+        name = addr.get("name", "Cover")
+        model = (
+            f"Cover {addr['open_group']}.{addr['open_address']} / "
+            f"{addr['close_group']}.{addr['close_address']}"
+        )
+    elif addr.get("type") == ADDRESS_TYPE_SFEER:
+        name = addr.get("name", "Sfeer")
+        identifiers = get_sfeer_device_identifiers(host, name)
+        n_moods = len(addr.get("moods") or [])
+        model = f"Sfeer room ({n_moods} moods)"
+    elif addr.get("type") == ADDRESS_TYPE_READONLY:
+        identifiers = get_device_identifiers(host, addr["group"], addr["address"])
+        name = addr.get("name", f"Read-only {addr['group']}.{addr['address']}")
+        model = f"Read-only {addr['group']}.{addr['address']}"
+    elif addr.get("type") == ADDRESS_TYPE_RTC:
+        identifiers = get_rtc_device_identifiers(
+            host, int(addr["group"]), int(addr["address"])
+        )
+        name = addr.get("name", f"RTC {addr['group']}.{addr['address']}")
+        model = f"RTC {addr['group']}.{addr['address']}"
+    elif addr.get("type") == ADDRESS_TYPE_LDM:
+        identifiers = get_ldm_device_identifiers(
+            host, int(addr["group"]), int(addr["address"])
+        )
+        name = addr.get("name", f"LDM {addr['group']}.{addr['address']}")
+        model = f"LDM {addr['group']}.{addr['address']}"
+    elif addr.get("type") == ADDRESS_TYPE_AUD:
+        identifiers = get_device_identifiers(
+            host, int(addr["group"]), int(addr["address"])
+        )
+        name = addr.get("name", f"Audio {addr['group']}.{addr['address']}")
+        model = f"BL-AUD {addr['group']}.{addr['address']}"
+    elif addr.get("type") == ADDRESS_TYPE_TSM:
+        identifiers = get_tsm_device_identifiers(
+            host, int(addr["group"]), int(addr["address"])
+        )
+        name = addr.get("name", f"TSM {addr['group']}.{addr['address']}")
+        model = f"TSM {addr['group']}.{addr['address']}"
+    else:
+        # RLM and SoftM switches share one device shape.
+        identifiers = get_device_identifiers(host, addr["group"], addr["address"])
+        name = addr.get("name", f"{addr['group']}.{addr['address']}")
+        model = f"Bus Device {addr['group']}.{addr['address']}"
+    return identifiers, name, model
+
+
+def configured_device_identifiers(
+    host: str, addresses: list[dict]
+) -> set[tuple[str, str]]:
+    """Every device identifier the current address list still owns."""
+    keep: set[tuple[str, str]] = set()
+    for addr in addresses:
+        identifiers, _, _ = address_device(host, addr)
+        keep.update(identifiers)
+    return keep
+
+
+def device_no_longer_configured(
+    device_identifiers: set[tuple[str, str]],
+    keep: set[tuple[str, str]],
+) -> bool:
+    """True when this device's b_logicx ids are all absent from the address list.
+
+    A device with no b_logicx identifier is left alone.
+    """
+    ours = {ident for ident in device_identifiers if ident[0] == DOMAIN}
+    return bool(ours) and ours.isdisjoint(keep)

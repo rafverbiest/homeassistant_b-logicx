@@ -1,14 +1,15 @@
-"""Async B-Logicx connection library.
+"""One TCP client for a BL-NWM gateway.
 
-This module provides an asyncio-native client for the BL-NWM gateway.
-It has no external dependencies beyond the Python standard library.
+The gateway accepts a single connection and sends one stream of 2-byte
+datagrams. This module keeps one client per host and port, and one background
+reader on that socket. Every listener gets a copy of each datagram. A second
+read loop on the same socket would slip off the 2-byte boundaries and turn
+later frames into nonsense group.address values.
 
-Important: the gateway is a single-slot TCP device, and each connection has
-exactly one receive stream. This class enforces a process-wide singleton per
-(host, port) and runs **one** background reader that fans events out to all
-subscribers. Concurrent ``readexactly(2)`` loops on the same socket would
-desynchronise the 2-byte framing and produce garbage group.address values
-(and lost Status replies).
+Home Assistant leaves Program frames out of that copy. A Program command and
+the two datagrams after it are a programming payload, not a normal bus event.
+If those two datagrams do not arrive within 10 seconds, filtering stops so
+later real events are not thrown away. blxmonitor can ask for the raw stream.
 """
 
 from __future__ import annotations
@@ -34,34 +35,32 @@ class BLXConnectionError(Exception):
 
 
 class BLXConnection:
-    """Async connection to a B-Logicx BL-NWM gateway.
+    """The shared client for one gateway address.
 
-    This class enforces a single connection per (host, port) at all times.
-    Only one TCP connection to the gateway is ever allowed (gateway limitation).
+    Calling BLXConnection(host, port) again returns this same object while it
+    is still open. Listeners use events() and must not read the socket.
 
-    By default, "Program" commands (and the two datagrams that follow them)
-    are automatically skipped. These datagrams carry programming payload
-    rather than normal bus events. Normal listeners (such as the Home
-    Assistant integration) should use the default.
+    skip_programming=True (the Home Assistant default) hides Program and the
+    two payload frames that follow it. skip_programming=False delivers every
+    datagram, which is what you usually want in the bus monitor.
 
-    If the two payload datagrams do not arrive within ~10 seconds after a
-    Program command, the skip state is automatically reset. This prevents
-    the receiver from indefinitely discarding legitimate datagrams if the
-    programming sequence was interrupted.
-
-    Pass skip_programming=False to receive every raw datagram, including
-    programming traffic. This is intended for diagnostic tools.
+    Special care is taken so that we never try to open more than a single connection
+    to the BL-NWM/NWX (it is limited to just a single slot)
     """
 
     # Class-level registry: only one live instance per (host, port).
     _active_connections: dict[tuple[str, int], "BLXConnection"] = {}
     _connect_locks: dict[tuple[str, int], asyncio.Lock] = {}
 
-    # Timeout after which we give up waiting for the 2 datagrams following a
-    # "Program" command and resume normal processing.
+    # How long a Program command may wait for its two payload frames.
     PROGRAM_PAYLOAD_TIMEOUT = 10.0  # seconds
 
     def __new__(cls, host: str, port: int = BLX_TCP_PORT, *, skip_programming: bool = True):
+        """Return the single open client for this host and port, or create one.
+
+        A client that has already been closed is forgotten, so the next call
+        can connect again.
+        """
         key = (host, port)
         if key in cls._active_connections:
             existing = cls._active_connections[key]
@@ -76,8 +75,12 @@ class BLXConnection:
     def __init__(
         self, host: str, port: int = BLX_TCP_PORT, *, skip_programming: bool = True
     ) -> None:
+        """Prepare a new client. An already-open client is left connected.
+
+        A later call may turn Program filtering off. It cannot turn it back on.
+        """
         if getattr(self, "_initialized", False):
-            # Singleton re-entry: allow enabling raw Program traffic if requested
+            # Same object again: only the raw-traffic request is honoured.
             if not skip_programming:
                 self._skip_programming = False
             return
@@ -94,17 +97,22 @@ class BLXConnection:
         # Single background reader → fan-out to subscribers (unbounded queues).
         self._recv_task: asyncio.Task | None = None
         self._subscribers: list[asyncio.Queue] = []
-        self._start_lock: asyncio.Lock | None = None  # created lazily (needs running loop)
+        self._start_lock: asyncio.Lock | None = None  # created on first use
         # Raw RX tee (before Program-skip) for bus repeater
         self._raw_rx_callbacks: list[RawRxCallback] = []
 
     def _get_start_lock(self) -> asyncio.Lock:
+        """One lock shared by connect and by starting the reader."""
         if self._start_lock is None:
             self._start_lock = asyncio.Lock()
         return self._start_lock
 
     async def connect(self) -> None:
-        """Open the TCP connection. Guards against opening when already open."""
+        """Open the TCP connection, or keep the one that is already open.
+
+        A second caller waits on the same lock and then finds the socket
+        already up, so two tasks cannot open two connections.
+        """
         if self._writer is not None and not getattr(self, "_closed", False):
             await self._ensure_receiver()
             return
@@ -186,24 +194,30 @@ class BLXConnection:
             BLXConnection._connect_locks.pop(key, None)
 
     async def __aenter__(self) -> BLXConnection:
+        """Connect when used as "async with BLXConnection(...)"."""
         await self.connect()
         return self
 
     async def __aexit__(self, exc_type, exc, tb) -> None:
+        """Close that connection when the async-with block ends."""
         await self.close()
 
     def _encode_datagram(self, command: str | int, group: int, address: int) -> bytes:
-        """Build the 2-byte datagram."""
+        """Two wire bytes, via the shared encoder in protocol.py."""
         return encode_datagram(command, group, address)
 
     def _decode_datagram(self, data: bytes) -> BLXEvent:
-        """Decode a 2-byte datagram into a BLXEvent."""
+        """One BLXEvent from two wire bytes, and a debug log of the raw pair."""
         event = decode_datagram(data)
         _LOGGER.debug("RX %s (raw %02X %02X)", event, data[0], data[1])
         return event
 
     def register_raw_rx(self, callback: RawRxCallback) -> Callable[[], None]:
-        """Register for every raw 2-byte RX datagram (before Program-skip)."""
+        """Call back with every received pair of bytes, before Program filtering.
+
+        The bus repeater uses this so programming traffic is forwarded too.
+        The returned function removes the callback.
+        """
         self._raw_rx_callbacks.append(callback)
 
         def _unreg() -> None:
@@ -213,7 +227,7 @@ class BLXConnection:
         return _unreg
 
     async def send_raw(self, data: bytes) -> None:
-        """Send exactly 2 raw bytes to the gateway."""
+        """Write two bytes already encoded by the caller. Connects if needed."""
         if len(data) != 2:
             raise ValueError("datagram must be exactly 2 bytes")
         if self._writer is None:
@@ -223,7 +237,7 @@ class BLXConnection:
         await self._writer.drain()
 
     async def send(self, command: str | int, group: int, address: int) -> None:
-        """Send a command to the bus."""
+        """Encode one command and write it. Connects if needed."""
         if self._writer is None:
             await self.connect()
         assert self._writer is not None
@@ -302,6 +316,8 @@ class BLXConnection:
 
                 event = self._decode_datagram(data)
 
+                # Program, and the two frames after it, stay off the event
+                # stream. The raw callbacks above already saw those bytes.
                 if self._skip_programming:
                     now = time.monotonic()
                     if self._skip_count > 0:
@@ -401,6 +417,7 @@ class BLXConnection:
                 pass
 
     async def _feed_queue(self, queue: asyncio.Queue[BLXEvent]) -> None:
+        """Copy the shared event stream into the queue monitor() handed out."""
         try:
             async for event in self.events():
                 await queue.put(event)

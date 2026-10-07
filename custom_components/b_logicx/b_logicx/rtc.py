@@ -1,10 +1,10 @@
-"""B-Logicx RTC (bus clock) Program sequence — pure helpers, no HA.
+"""B-Logicx RTC (bus clock) Program sequence.
 
-Legacy script packs time fields as 4 hex characters, then byte-swaps
-(``ABCD`` → wire ``CD AB``), identical to normal datagrams. Payload frames
-still decode as command/group/address; the command nibble is an artifact of
-packing, not an intentional bus action. The RTC accepts them as register
-data because they follow a Program command.
+BL-RTC is not DST-aware and the clock drifts away quite a lot.
+Aditionally, it does not contain a battery backup so every power failure
+*requires* the BL-RTC to be reprogrammed with the date/time
+
+This file describes how to program the clock.
 """
 
 from __future__ import annotations
@@ -41,7 +41,12 @@ def build_rtc_sync_hex4(
     group: int = 1,
     address: int = 1,
 ) -> list[str]:
-    """Nine legacy hex4 strings for a full RTC time write."""
+    """Nine legacy hex4 strings that write the clock.
+
+    Three passes, one per register: Program, the data bytes, then 0003 / 0004 /
+    0005 to select register 3, 4 or 5. Register 3 is minute and second, 4 is
+    weekday (Monday is 1) and hour, 5 is month and day. The digits are decimal.
+    """
     prog = program_hex4(group, address)
     minute = when.minute
     second = when.second
@@ -119,10 +124,12 @@ def next_phased_sync(
 
     Examples with ``sync_minute=17``, ``interval_hours=12``: 00:17 and 12:17.
     Never intentionally lands on ``:00`` unless ``sync_minute`` is 0.
+    This is done to try to avoid bus collisions because automations tend to
+    'pile up' at minute 0 and the B-Logicx is notoriously collision-sensitive.
     """
     interval_h = max(1, int(round(float(interval_hours))))
     minute = max(0, min(59, int(sync_minute)))
-    # Search a few days of candidates
+    # Walk forward from midnight until a slot is strictly after now.
     from datetime import timedelta
 
     day0 = now.replace(hour=0, minute=minute, second=0, microsecond=0)

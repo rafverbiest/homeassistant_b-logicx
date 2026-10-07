@@ -1,9 +1,19 @@
 """Select platform for B-Logicx Sfeer (room moods).
 
 One SelectEntity per room. Options are Off plus each configured mood name.
-Activating a mood sends Dimmer to that virtual address; the bus answers with
+Activating a mood sends Dimmer to that virtual address (221 and up); the bus answers with
 Set/Reset and enforces mutual exclusivity (Reset on the previous mood).
-Off sends Dimmer to the currently active mood address.
+Off sends Dimmer to the currently active mood address, which then functions akin to a Toggle.
+
+The Rooms described here have nothing to do with Home Assistants Rooms.
+B-Logicx uses groups 5 trough 9 to address a room for Sfeer functionality,
+so you can cleanly have 5 different rooms using moods.
+
+The Dimmer hardware is required to be addressed according to the room they are in, which
+is how the dimmers know when to respond to Sfeer commands (address 221 and up in that group)
+
+Using group 10 and above might work, but doesn't feel right as you will
+be trespassing on territories assigned for different purposes. (group 10 is SoftM)
 """
 
 from __future__ import annotations
@@ -175,6 +185,7 @@ class BLogicxSfeerSelect(SelectEntity):
 
     @callback
     def _handle_event(self, event: BLXEvent) -> None:
+        """Set on a mood makes it the current option. Reset of that mood shows Off."""
         key = (event.group, event.address)
         mname = self._addr_map.get(key)
         if mname is None:

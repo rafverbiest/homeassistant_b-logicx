@@ -20,6 +20,7 @@ Custom integration die Home Assistant rechtstreeks koppelt aan een **B-Logicx BL
 
 - Schakelaars (RLM / SoftM) en **alleen-lezen** adressen  
 - **Rolluiken** (dubbele RLM) en **Sfeer**-selectie  
+- **BL-AUD** als mediaspeler (bronnen, volume omhoog/omlaag, dempen)  
 - **SoftM** virtuele statusmodule (VSM) in Home Assistant  
 - **TCP bus repeater** — deel de ene NWM-verbinding met BLConfig / blxmonitor  
 - **RTC**-synchronisatie (incl. DST), **LDM**-lichtsensor, **TSM**-thermostaat  

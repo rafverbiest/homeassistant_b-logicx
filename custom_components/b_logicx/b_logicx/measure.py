@@ -1,9 +1,13 @@
-"""Decode multi-frame LDM / TSM measurements (pure, no HA).
+"""Decode multi-frame LDM / TSM measurements.
 
 LDM light:
   Value g.a (g != 11) → light payload
   System G.A          → device id
   raw = (g<<8)|a ; percent = raw * 100 / 1024
+
+The integer value measured in this way does not match the value
+displayed in BLConfig completely, but it's close enough and certainly
+yields a valid 'brightness' number that should be usable in HA
 
 TSM (exactly three frames; anything after is ignored):
   Value 11.x          → measured °C = address/2 (offset included)
@@ -11,6 +15,9 @@ TSM (exactly three frames; anything after is ignored):
   System G.A          → device id → commit reading
 
 Dual sticky Values: group 11 is TSM-only; other groups are LDM-only.
+
+I currently have no other types of sensors to analyze.
+FIXME: BL-WSM coming soon!
 """
 
 from __future__ import annotations
@@ -50,6 +57,7 @@ def raw_to_percent(raw: int) -> float:
 
 
 def value_frame_to_percent(group: int, address: int) -> float:
+    """LDM brightness, 0–100, from one Value frame that is not group 11."""
     return raw_to_percent(value_frame_to_raw(group, address))
 
 
@@ -68,6 +76,11 @@ def settings_to_preset(group: int, address: int) -> tuple[int, float, str]:
 
 @dataclass
 class LdmReading:
+    """One light reading. group and address are the System frame (the sensor).
+
+    value_group and value_address are the Value frame that carried the light level.
+    """
+
     group: int
     address: int
     raw: int
@@ -113,6 +126,11 @@ class MeasureBusState:
     preset_setpoint_cache: dict[int, float] = field(default_factory=dict)
 
     def note_value(self, group: int, address: int, now: float) -> None:
+        """Remember the latest Value. Group 11 is a temperature; any other group is light.
+
+        A newer Value of the same kind replaces the previous one. This does not
+        look at other commands, so an unrelated frame cannot wipe the slot.
+        """
         g = int(group) & 0x0F
         a = int(address) & 0xFF
         if g == TSM_VALUE_GROUP:
@@ -126,6 +144,7 @@ class MeasureBusState:
             self.ldm_value_at = now
 
     def note_settings(self, group: int, address: int, now: float) -> None:
+        """Remember the latest thermostat preset. Group is the preset, address/2 is °C."""
         idx, sp, name = settings_to_preset(group, address)
         self.last_settings_index = idx
         self.last_settings_setpoint = sp
@@ -141,6 +160,11 @@ class MeasureBusState:
         *,
         max_age: float = VALUE_MAX_AGE_S,
     ) -> LdmReading | None:
+        """Pair a System frame with a light Value from the last 2 seconds.
+
+        The Value is left in place, so a second System inside that window can
+        pair with it too. A Value older than max_age is ignored, not deleted.
+        """
         if self.ldm_value_raw is None or self.ldm_value_at <= 0:
             return None
         if now - self.ldm_value_at > max_age:
@@ -164,7 +188,11 @@ class MeasureBusState:
         *,
         max_age: float = VALUE_MAX_AGE_S,
     ) -> TsmReading | None:
-        """Commit TSM on System id after sticky Value 11 (+ Settings if seen)."""
+        """Pair a System frame with a Value 11 from the last 2 seconds.
+
+        The preset is whatever Settings was seen last, even if that was earlier
+        than the 2 seconds. The Value is left in place.
+        """
         if self.tsm_temp_c is None or self.tsm_value_at <= 0:
             return None
         if now - self.tsm_value_at > max_age:

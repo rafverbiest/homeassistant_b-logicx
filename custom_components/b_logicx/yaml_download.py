@@ -1,12 +1,17 @@
-"""Short-lived signed YAML downloads for the options flow.
+"""Have the 'export YAML' function provide a browser-downloadable file
 
-HA's config-flow markdown sanitizer strips ``data:`` URLs, so the file is
-served from a signed API path. The step description must not contain the anchor itself: the frontend
-translation formatter rejects ``<a ...>`` as an invalid tag. The options flow
-passes a ready-made anchor (with ``target="_blank"``) in the
-``download_link`` placeholder. A normal markdown link is same-origin, and the
-frontend then treats the click as an in-app route: the dialog closes and the
-main page opens instead of downloading the file.
+It's a bit of a hack, if anyone has a better idea, let me know :)
+
+A data: URL is stripped by the config-flow markdown sanitizer. A normal
+markdown link to this host is treated as an in-app route, so the dialog
+closes and the main page opens. The flow therefore puts an HTML anchor, with
+target="_blank", into the download_link placeholder. The translation strings
+only contain that placeholder. An <a> tag written in strings.json is rejected
+as an invalid tag.
+
+requires_auth is false, and this view does not check the signature on the
+URL. The id is a random value. The store forgets every staged file once more
+than 32 are waiting. It does not expire them by the 15 minute signature time.
 """
 
 from __future__ import annotations
@@ -32,11 +37,11 @@ _TTL = timedelta(minutes=15)
 
 
 class BLogicxYamlDownloadView(HomeAssistantView):
-    """Serve a previously staged YAML blob (auth via signed path)."""
+    """Return one staged YAML file. An unknown id is a 404."""
 
     url = "/api/b_logicx/yaml_download/{download_id}"
     name = "api:b_logicx:yaml_download"
-    requires_auth = False  # signature on the URL is the gate
+    requires_auth = False
 
     async def get(self, request: web.Request, download_id: str) -> web.Response:
         hass: HomeAssistant = request.app["hass"]
@@ -73,10 +78,9 @@ def async_yaml_download_url(
     filename: str,
     content: str,
 ) -> str:
-    """Stage YAML and return a signed relative path for a markdown link.
+    """Store the YAML and return a path the options flow can put in the anchor.
 
-    Link *labels* belong in ``strings.json`` / ``translations/*.json``; this
-    helper only returns the URL placeholder value (e.g. ``{download_url}``).
+    The path is signed for 15 minutes. This view does not check that signature.
     """
     async_setup_yaml_downloads(hass)
     download_id = uuid.uuid4().hex

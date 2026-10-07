@@ -81,6 +81,6 @@ def test_translation_files_key_parity():
             yield prefix
 
     assert set(leaves(en)) == set(leaves(nl))
-    assert "selector.options_menu.options.add_sfeer_room" in set(leaves(en))
+    assert "options.step.init.menu_options.add_sfeer_room" in set(leaves(en))
     assert "selector.address_type.options.shutter" in set(leaves(nl))
     

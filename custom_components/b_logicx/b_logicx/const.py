@@ -1,8 +1,14 @@
-"""Constants for the B-Logicx protocol."""
+"""Names for the 16 B-Logicx command codes.
 
+A datagram is two bytes. The command is the high half of the second byte,
+a number from 0 to 15. The rest of the integration uses these names
+("Set", "Status", "Select", …) rather than the numbers.
+"""
+
+# TCP port of a BL-NWM / BL-NWX gateway.
 BLX_TCP_PORT = 10001
 
-# Command codes (high nibble of second byte)
+# High half of byte 1 → command name. See protocol.py for the byte layout.
 COMMAND_CODES = {
     0: "Null",
     1: "Reset",
@@ -22,5 +28,5 @@ COMMAND_CODES = {
     15: "Program",
 }
 
-# Reverse mapping: name -> code
+# Name → code, used when a caller asks to send "Set" or "Status".
 COMMAND_NAMES = {name: code for code, name in COMMAND_CODES.items()}

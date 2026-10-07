@@ -1,7 +1,18 @@
-"""B-Logicx integration for Home Assistant.
+"""Start and stop one B-Logicx config entry.
 
-This integration uses the shared `b_logicx` library for communication
-with the BL-NWM gateway.
+async_setup_entry:
+
+1. Register the YAML download route.
+2. Open the hub, or reuse the one already stored for this entry.
+3. Turn on SoftM tracking and the bus repeater when those options say so.
+4. Create one device per address, drop devices whose address was removed,
+   and load the entity platforms.
+5. Start the clock sync after the platforms, so startup Status probes go first.
+
+A reload stops the listener and leaves the TCP socket open, so it does not
+open a second connection. The socket closes when Home Assistant itself stops.
+Without this, connection errors would appear on reload, since
+BL-NWM has just a single slot available.
 """
 
 from __future__ import annotations
@@ -14,38 +25,7 @@ from homeassistant.core import HomeAssistant
 import homeassistant.helpers.device_registry as dr
 
 from .b_logicx.softm_tracker import SoftMConfig
-from .const import (
-    ADDRESS_TYPE_READONLY,
-    ADDRESS_TYPE_LDM,
-    ADDRESS_TYPE_AUD,
-    ADDRESS_TYPE_RLM,
-    is_softm_address,
-    is_switch_address,
-    ADDRESS_TYPE_RTC,
-    ADDRESS_TYPE_SFEER,
-    ADDRESS_TYPE_SHUTTER,
-    ADDRESS_TYPE_TSM,
-    CONF_ADDRESSES,
-    CONF_BUS_REPEATER_ALLOW,
-    CONF_BUS_REPEATER_ENABLED,
-    CONF_BUS_REPEATER_PORT,
-    CONF_HOST,
-    CONF_PORT,
-    CONF_SOFTM_TRACKING_ENABLED,
-    DEFAULT_BUS_REPEATER_PORT,
-    DEFAULT_CLOSE_TIME,
-    DEFAULT_OFF_COMMAND,
-    DEFAULT_ON_COMMAND,
-    DEFAULT_OPEN_TIME,
-    DEFAULT_PORT,
-    DOMAIN,
-    get_cover_device_identifiers,
-    get_device_identifiers,
-    get_ldm_device_identifiers,
-    get_rtc_device_identifiers,
-    get_sfeer_device_identifiers,
-    get_tsm_device_identifiers,
-)
+from .const import *
 from .hub import BLogicxHub
 from .rtc_sync import RtcSyncManager
 
@@ -62,206 +42,9 @@ PLATFORMS: list[Platform] = [
 ]
 
 
-def _merge_legacy_shutter_pairs(addresses: list[dict]) -> list[dict]:
-    """Convert legacy two-entry shutter pairs into one cover entry each.
-
-    Legacy format (partial 0.5): two dicts with type=shutter, role=open|close,
-    and sibling_* mutual references. New format: one dict with open_*/close_*.
-    """
-    result: list[dict] = []
-    consumed: set[tuple[int, int]] = set()
-
-    # Index role=open entries for pairing
-    opens: dict[tuple[int, int], dict] = {}
-    closes: dict[tuple[int, int], dict] = {}
-    for addr in addresses:
-        if addr.get("type") != ADDRESS_TYPE_SHUTTER:
-            continue
-        # Already new format
-        if "open_group" in addr and "close_group" in addr and "role" not in addr:
-            continue
-        role = addr.get("role")
-        key = (int(addr["group"]), int(addr["address"]))
-        if role == "open":
-            opens[key] = addr
-        elif role == "close":
-            closes[key] = addr
-
-    for addr in addresses:
-        # Pass through non-shutter entries and covers already in the new shape
-        if addr.get("type") != ADDRESS_TYPE_SHUTTER:
-            result.append(addr)
-            continue
-        if "open_group" in addr and "close_group" in addr and "role" not in addr:
-            result.append(addr)
-            continue
-
-        role = addr.get("role")
-        key = (int(addr["group"]), int(addr["address"]))
-        if key in consumed:
-            continue
-
-        if role == "open":
-            sib = (
-                int(addr.get("sibling_group", 0)),
-                int(addr.get("sibling_address", 0)),
-            )
-            close_addr = closes.get(sib)
-            name = (
-                addr.get("shutter_name")
-                or (close_addr or {}).get("shutter_name")
-                or addr.get("name")
-                or "Cover"
-            )
-            # Strip role suffix from name if present
-            if name.endswith(" (Open)"):
-                name = name[: -len(" (Open)")]
-            result.append(
-                {
-                    "name": name,
-                    "type": ADDRESS_TYPE_SHUTTER,
-                    "open_group": key[0],
-                    "open_address": key[1],
-                    "close_group": sib[0],
-                    "close_address": sib[1],
-                    "open_time": DEFAULT_OPEN_TIME,
-                    "close_time": DEFAULT_CLOSE_TIME,
-                    "check_status": addr.get("check_status", False)
-                    or (close_addr or {}).get("check_status", False),
-                }
-            )
-            consumed.add(key)
-            if sib in closes:
-                consumed.add(sib)
-        elif role == "close":
-            # Only emit if we never saw the matching open (orphan close)
-            sib = (
-                int(addr.get("sibling_group", 0)),
-                int(addr.get("sibling_address", 0)),
-            )
-            if sib in opens:
-                # Will be handled when we process open
-                continue
-            name = addr.get("shutter_name") or addr.get("name") or "Cover"
-            if name.endswith(" (Close)"):
-                name = name[: -len(" (Close)")]
-            result.append(
-                {
-                    "name": name,
-                    "type": ADDRESS_TYPE_SHUTTER,
-                    "open_group": sib[0],
-                    "open_address": sib[1],
-                    "close_group": key[0],
-                    "close_address": key[1],
-                    "open_time": DEFAULT_OPEN_TIME,
-                    "close_time": DEFAULT_CLOSE_TIME,
-                    "check_status": addr.get("check_status", False),
-                }
-            )
-            consumed.add(key)
-        else:
-            # Unknown shutter shape — drop rather than create broken entities
-            _LOGGER.warning(
-                "Dropping unrecognised shutter entry during migration: %s", addr
-            )
-
-    return result
-
-
-async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
-    """Migrate old config entry data formats to the current version.
-
-    Home Assistant calls this automatically when it loads a ConfigEntry
-    whose stored version is lower than the VERSION declared in the
-    ConfigFlow (currently 5).
-    """
-    _LOGGER.debug(
-        "Checking B-Logicx config entry migration (current version=%s)",
-        config_entry.version,
-    )
-
-    version = config_entry.version
-    new_data = {**config_entry.data}
-    addresses = list(new_data.get(CONF_ADDRESSES, []))
-
-    if version < 2:
-        for addr in addresses:
-            addr.pop("area", None)
-            addr.pop("control_mode", None)
-            addr.setdefault("type", ADDRESS_TYPE_RLM)
-            addr.setdefault("on_command", DEFAULT_ON_COMMAND)
-            addr.setdefault("off_command", DEFAULT_OFF_COMMAND)
-            addr.setdefault("check_status", False)
-        new_data[CONF_ADDRESSES] = addresses
-        version = 2
-        _LOGGER.info("Migrated B-Logicx config entry fields for v2")
-
-    if version < 3:
-        # Merge legacy two-entry shutter pairs into single CoverEntity configs
-        addresses = list(new_data.get(CONF_ADDRESSES, []))
-        for addr in addresses:
-            if addr.get("type") != ADDRESS_TYPE_SHUTTER:
-                addr.setdefault("type", ADDRESS_TYPE_RLM)
-                addr.setdefault("on_command", DEFAULT_ON_COMMAND)
-                addr.setdefault("off_command", DEFAULT_OFF_COMMAND)
-        addresses = _merge_legacy_shutter_pairs(addresses)
-        for addr in addresses:
-            if addr.get("type") == ADDRESS_TYPE_SHUTTER:
-                addr.setdefault("check_status", False)
-                for k in (
-                    "role",
-                    "shutter_name",
-                    "sibling_group",
-                    "sibling_address",
-                    "sibling_on_command",
-                    "sibling_off_command",
-                    "group",
-                    "address",
-                    "on_command",
-                    "off_command",
-                    "open_command",
-                    "close_command",
-                    "opposite_command",
-                ):
-                    addr.pop(k, None)
-        new_data[CONF_ADDRESSES] = addresses
-        version = 3
-        _LOGGER.info(
-            "Migrated B-Logicx config entry to v3 (CoverEntity single-entry covers)"
-        )
-
-    if version < 4:
-        # v0.5.1: per-cover travel times for HA open/closed estimate
-        addresses = list(new_data.get(CONF_ADDRESSES, []))
-        for addr in addresses:
-            if addr.get("type") != ADDRESS_TYPE_SHUTTER:
-                continue
-            for k in ("open_command", "close_command", "opposite_command"):
-                addr.pop(k, None)
-            addr.setdefault("open_time", DEFAULT_OPEN_TIME)
-            addr.setdefault("close_time", DEFAULT_CLOSE_TIME)
-        new_data[CONF_ADDRESSES] = addresses
-        version = 4
-        _LOGGER.info(
-            "Migrated B-Logicx config entry to v4 (cover open_time/close_time)"
-        )
-
-    if version < 5:
-        version = 5
-        _LOGGER.info("Migrated B-Logicx config entry to v5")
-
-    if version != config_entry.version or new_data != dict(config_entry.data):
-        hass.config_entries.async_update_entry(
-            config_entry,
-            data=new_data,
-            version=version,
-        )
-
-    return True
-
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up B-Logicx from a config entry."""
+    """Connect, register devices, and load every platform for this entry."""
     hass.data.setdefault(DOMAIN, {})
 
     from .yaml_download import async_setup_yaml_downloads
@@ -282,8 +65,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception as err:
         _LOGGER.error("Failed to connect to B-Logicx gateway at %s: %s", host, err)
         raise ConfigEntryNotReady(f"Could not connect to {host}") from err
-
-    # SoftM virtual status tracking (master option + per-address flags)
+    # This is the master switch for the Virtual Status Module.
+    # Each address still needs enable_softm_status_tracking before is_softm_address is true.
     softm_on = bool(entry.options.get(CONF_SOFTM_TRACKING_ENABLED, False))
     softm_cfgs: list[SoftMConfig] = []
     if softm_on:
@@ -306,7 +89,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "SoftM status tracking enabled for %d address(es)", len(softm_cfgs)
         )
 
-    # TCP bus repeater (optional)
+    # Optional. A failure to bind the listen port is logged and setup continues.
     if entry.options.get(CONF_BUS_REPEATER_ENABLED, False):
         rport = int(
             entry.options.get(CONF_BUS_REPEATER_PORT, DEFAULT_BUS_REPEATER_PORT)
@@ -317,6 +100,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except OSError as err:
             _LOGGER.error("Bus repeater failed to start on port %s: %s", rport, err)
 
+    # Reload only stops the listener. A full Home Assistant stop closes the socket.
     async def _close_on_ha_stop(_event) -> None:
         await hub.async_close()
 
@@ -354,62 +138,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         n_aud,
     )
 
+    keep = configured_device_identifiers(host, addresses)
     for addr in addresses:
-        if addr.get("type") == ADDRESS_TYPE_SHUTTER:
-            identifiers = get_cover_device_identifiers(
-                host,
-                int(addr["open_group"]),
-                int(addr["open_address"]),
-                int(addr["close_group"]),
-                int(addr["close_address"]),
-            )
-            name = addr.get("name", "Cover")
-            model = (
-                f"Cover {addr['open_group']}.{addr['open_address']} / "
-                f"{addr['close_group']}.{addr['close_address']}"
-            )
-        elif addr.get("type") == ADDRESS_TYPE_SFEER:
-            name = addr.get("name", "Sfeer")
-            identifiers = get_sfeer_device_identifiers(host, name)
-            n_moods = len(addr.get("moods") or [])
-            model = f"Sfeer room ({n_moods} moods)"
-        elif addr.get("type") == ADDRESS_TYPE_READONLY:
-            identifiers = get_device_identifiers(
-                host, addr["group"], addr["address"]
-            )
-            name = addr.get("name", f"Read-only {addr['group']}.{addr['address']}")
-            model = f"Read-only {addr['group']}.{addr['address']}"
-        elif addr.get("type") == ADDRESS_TYPE_RTC:
-            identifiers = get_rtc_device_identifiers(
-                host, int(addr["group"]), int(addr["address"])
-            )
-            name = addr.get("name", f"RTC {addr['group']}.{addr['address']}")
-            model = f"RTC {addr['group']}.{addr['address']}"
-        elif addr.get("type") == ADDRESS_TYPE_LDM:
-            identifiers = get_ldm_device_identifiers(
-                host, int(addr["group"]), int(addr["address"])
-            )
-            name = addr.get("name", f"LDM {addr['group']}.{addr['address']}")
-            model = f"LDM {addr['group']}.{addr['address']}"
-        elif addr.get("type") == ADDRESS_TYPE_AUD:
-            identifiers = get_device_identifiers(
-                host, int(addr["group"]), int(addr["address"])
-            )
-            name = addr.get("name", f"Audio {addr['group']}.{addr['address']}")
-            model = f"BL-AUD {addr['group']}.{addr['address']}"
-        elif addr.get("type") == ADDRESS_TYPE_TSM:
-            identifiers = get_tsm_device_identifiers(
-                host, int(addr["group"]), int(addr["address"])
-            )
-            name = addr.get("name", f"TSM {addr['group']}.{addr['address']}")
-            model = f"TSM {addr['group']}.{addr['address']}"
-        else:
-            identifiers = get_device_identifiers(
-                host, addr["group"], addr["address"]
-            )
-            name = addr.get("name", f"{addr['group']}.{addr['address']}")
-            model = f"Bus Device {addr['group']}.{addr['address']}"
-
+        identifiers, name, model = address_device(host, addr)
         device_registry.async_get_or_create(
             config_entry_id=entry.entry_id,
             identifiers=identifiers,
@@ -418,9 +149,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             model=model,
         )
 
+    # An address removed in the options flow stays in the device registry
+    # until this link is dropped. Home Assistant does not expire it.
+    removed = 0
+    for device in dr.async_entries_for_config_entry(
+        device_registry, entry.entry_id
+    ):
+        if device_no_longer_configured(set(device.identifiers), keep):
+            device_registry.async_remove_device(device.id)
+            removed += 1
+    if removed:
+        _LOGGER.info(
+            "Removed %d device(s) no longer in the address list", removed
+        )
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # RTC: after platforms (Status probes) have started, run startup sync + timers
+    # After the platforms, so their startup Status probes are already queued.
+    # A reload finds Home Assistant already running and starts the clock now.
+    # A boot waits for homeassistant_started.
     rtc_manager = RtcSyncManager.from_addresses(hass, hub, addresses)
     if rtc_manager is not None:
         hass.data[DOMAIN][f"{entry.entry_id}_rtc"] = rtc_manager
@@ -431,7 +178,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.async_on_unload(
             hass.bus.async_listen_once("homeassistant_started", _start_rtc)
         )
-        # If HA is already running (reload), start immediately in background
         if hass.is_running:
             entry.async_create_background_task(
                 hass, rtc_manager.async_start(), name="b_logicx_rtc_start"
@@ -455,3 +201,14 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hub: BLogicxHub = hass.data[DOMAIN].pop(entry.entry_id)
     await hub.async_stop()
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def async_remove_config_entry_device(
+    _hass: HomeAssistant, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
+) -> bool:
+    """Allow deleting a device whose address is no longer configured."""
+    host = config_entry.data[CONF_HOST]
+    keep = configured_device_identifiers(
+        host, config_entry.data.get(CONF_ADDRESSES, [])
+    )
+    return device_no_longer_configured(set(device_entry.identifiers), keep)
