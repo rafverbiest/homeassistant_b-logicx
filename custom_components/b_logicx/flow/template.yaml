@@ -1,5 +1,5 @@
 # B-Logicx addresses (full replace on import)
-# Types: rlm | softm | aud | shutter | sfeer | readonly | rtc | ldm | tsm
+# Types: rlm | dimmer | softm | aud | shutter | sfeer | readonly | rtc | ldm | tsm | wsm | bm8
 # Fictional example values only — replace with your bus map.
 #
 # Example conventions: lights/outlets group 2, covers group 3,
@@ -13,6 +13,13 @@ addresses:
     on_command: Set
     off_command: Reset
     check_status: true
+
+  - type: dimmer
+    name: Table lamp
+    group: 5
+    address: 40
+    remembers_level: false
+    participates_in_moods: true
 
   - type: shutter
     name: Office Blind
@@ -62,10 +69,22 @@ addresses:
     address: 45
     check_status: true
 
+  - type: wsm
+    name: Roof wind
+    group: 1
+    address: 12
+    check_status: false
+
+  - type: bm8
+    name: Front door
+    group: 1
+    address: 8
+
   - type: aud
     name: Living audio
     group: 4
     address: 1
+    controller: bhs
     source_1: Radio
     source_2: CD
     source_3: Bluetooth

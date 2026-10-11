@@ -14,11 +14,37 @@ from typing import Any
 import yaml
 
 try:
+    from .b_logicx.audio import (
+        MUTE_ACTIONS,
+        STOP_ACTIONS,
+        VOLUME_STEP_MAX,
+        VOLUME_STEP_MIN,
+    )
     from .const import *
 except ImportError:
+    from b_logicx.audio import (
+        MUTE_ACTIONS,
+        STOP_ACTIONS,
+        VOLUME_STEP_MAX,
+        VOLUME_STEP_MIN,
+    )
     from const import *
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _aud_volume_step(raw: object) -> int:
+    """Percentage points of one volume press. Whole numbers from 1 to 20."""
+    if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+        raise ValueError("aud volume_step must be a whole number")
+    if isinstance(raw, float) and not raw.is_integer():
+        raise ValueError("aud volume_step must be a whole number")
+    step = int(raw)
+    if step < VOLUME_STEP_MIN or step > VOLUME_STEP_MAX:
+        raise ValueError(
+            f"aud volume_step must be {VOLUME_STEP_MIN}..{VOLUME_STEP_MAX}"
+        )
+    return step
 
 # Keys written after type, name, and the identity fields. A key that an
 # address does not have is skipped, so an RLM does not grow player sources.
@@ -31,6 +57,8 @@ YAML_ORDER = (
     "softm_timer",
     "persist_state",
     "default_state",
+    "remembers_level",
+    "participates_in_moods",
     "open_time",
     "close_time",
     "sync_interval_hours",
@@ -38,6 +66,12 @@ YAML_ORDER = (
     "sync_on_startup",
     "sync_on_dst",
     "dst_delay_minutes",
+    "controller",
+    "media_player",
+    "volume_step",
+    "stop_action",
+    "mute_action",
+    "turn_on_with_play",
     "source_1",
     "source_2",
     "source_3",
@@ -134,6 +168,17 @@ def _export_entry(entry: dict) -> dict:
         for key in ("persist_state", "default_state", "softm_timer"):
             if not ready.get(key):
                 ready.pop(key, None)
+    if ready.get("type") == ADDRESS_TYPE_DIMMER:
+        ready.pop("default_level", None)
+    if ready.get("type") == ADDRESS_TYPE_AUD and ready.get("controller") != AUD_CONTROLLER_HA:
+        for key in (
+            "media_player",
+            "volume_step",
+            "stop_action",
+            "mute_action",
+            "turn_on_with_play",
+        ):
+            ready.pop(key, None)
     return _ordered_yaml_entry(ready)
 
 
@@ -158,7 +203,7 @@ def dump_addresses_yaml(
     )
     header = (
         "# B-Logicx export — use Import from YAML to load (replaces all addresses)\n"
-        "# Types: rlm | softm | aud | shutter | sfeer | readonly | rtc | ldm | tsm\n"
+        "# Types: rlm | dimmer | softm | aud | shutter | sfeer | readonly | rtc | ldm | tsm | wsm | bm8\n"
     )
     if options:
         header += (
@@ -319,6 +364,29 @@ def normalize_yaml_entry(item: Any) -> dict:
             "check_status": check,
         }
 
+    # Same request pair as an LDM: Data 0.2, then Select. The answer is Value 14.
+    if t == ADDRESS_TYPE_WSM:
+        if not name:
+            name = "Wind sensor"
+        return {
+            "name": name,
+            "type": ADDRESS_TYPE_WSM,
+            "group": int(item.get("group", DEFAULT_WSM_GROUP)),
+            "address": int(item["address"]),
+            "check_status": check,
+        }
+
+    # Eight chime buttons and one stop button. Nothing on the bus is listened for.
+    if t == ADDRESS_TYPE_BM8:
+        if not name:
+            name = "Chime"
+        return {
+            "name": name,
+            "type": ADDRESS_TYPE_BM8,
+            "group": int(item.get("group", DEFAULT_BM8_GROUP)),
+            "address": int(item["address"]),
+        }
+
     # Same startup reading as an LDM. The request itself is a Status.
     if t == ADDRESS_TYPE_TSM:
         if not name:
@@ -389,17 +457,57 @@ def normalize_yaml_entry(item: Any) -> dict:
     if t == ADDRESS_TYPE_AUD:
         if not name:
             name = "Audio"
+        if "controller" not in item or str(item.get("controller") or "").strip() == "":
+            raise ValueError("aud controller required")
+        controller = str(item.get("controller")).strip().lower()
+        if controller not in (AUD_CONTROLLER_BHS, AUD_CONTROLLER_HA):
+            raise ValueError(f"unknown aud controller {controller!r}")
         entry = {
             "name": name,
             "type": ADDRESS_TYPE_AUD,
             "group": int(item.get("group", DEFAULT_AUD_GROUP)),
             "address": int(item["address"]),
+            "controller": controller,
         }
+        if controller == AUD_CONTROLLER_HA:
+            player = str(item.get("media_player") or "").strip()
+            if not player:
+                raise ValueError("media_player required when Home Assistant controls the BL-AUD")
+            entry["media_player"] = player
+            stop_action = str(item.get("stop_action") or "").strip().lower()
+            if stop_action not in STOP_ACTIONS:
+                raise ValueError(f"aud stop_action must be one of {STOP_ACTIONS}")
+            entry["stop_action"] = stop_action
+            if item.get("mute_action") not in (None, ""):
+                mute_action = str(item.get("mute_action")).strip().lower()
+                if mute_action not in MUTE_ACTIONS:
+                    raise ValueError(f"aud mute_action must be one of {MUTE_ACTIONS}")
+                entry["mute_action"] = mute_action
+            if item.get("volume_step") not in (None, ""):
+                entry["volume_step"] = _aud_volume_step(item.get("volume_step"))
+            if "turn_on_with_play" in item and item.get("turn_on_with_play") is not None:
+                if not isinstance(item.get("turn_on_with_play"), bool):
+                    raise ValueError("aud turn_on_with_play must be true or false")
+                entry["turn_on_with_play"] = item["turn_on_with_play"]
         for i in range(1, 9):
             key = f"source_{i}"
             label = str(item.get(key) or "").strip()
             entry[key] = label or f"Source {i}"
         return entry
+
+    if t == ADDRESS_TYPE_DIMMER:
+        if not name:
+            raise ValueError("name required")
+        if "group" not in item or "address" not in item:
+            raise ValueError("group and address required")
+        return {
+            "name": name,
+            "type": ADDRESS_TYPE_DIMMER,
+            "group": int(item["group"]),
+            "address": int(item["address"]),
+            "remembers_level": bool(item.get("remembers_level", False)),
+            "participates_in_moods": bool(item.get("participates_in_moods", True)),
+        }
 
     if t == ADDRESS_TYPE_SFEER:
         if not name:

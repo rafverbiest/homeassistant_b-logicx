@@ -2,6 +2,8 @@
 
 from const import (
     ADDRESS_TYPE_AUD,
+    ADDRESS_TYPE_BM8,
+    ADDRESS_TYPE_DIMMER,
     ADDRESS_TYPE_LDM,
     ADDRESS_TYPE_READONLY,
     ADDRESS_TYPE_RTC,
@@ -9,13 +11,17 @@ from const import (
     ADDRESS_TYPE_SHUTTER,
     ADDRESS_TYPE_SOFTM,
     ADDRESS_TYPE_TSM,
+    ADDRESS_TYPE_WSM,
     DOMAIN,
     address_device,
     configured_device_identifiers,
     device_no_longer_configured,
+    get_bm8_device_identifiers,
     get_cover_device_identifiers,
+    get_dimmer_device_identifiers,
     get_device_identifiers,
     get_sfeer_device_identifiers,
+    get_wsm_device_identifiers,
 )
 
 HOST = "192.168.1.10"
@@ -61,6 +67,21 @@ def test_address_device_matches_the_per_type_identifiers():
 
     tsm = {"type": ADDRESS_TYPE_TSM, "name": "Heat", "group": 1, "address": 4}
     assert address_device(HOST, tsm)[2] == "TSM 1.4"
+
+    wsm = {"type": ADDRESS_TYPE_WSM, "name": "Roof", "group": 1, "address": 12}
+    assert address_device(HOST, wsm)[0] == get_wsm_device_identifiers(HOST, 1, 12)
+    assert address_device(HOST, wsm)[1:] == ("Roof", "BL-WSM 1.12")
+
+    bm8 = {"type": ADDRESS_TYPE_BM8, "name": "Front door", "group": 1, "address": 8}
+    assert address_device(HOST, bm8)[0] == get_bm8_device_identifiers(HOST, 1, 8)
+    assert address_device(HOST, bm8)[1:] == ("Front door", "BL-BM8 1.8")
+    assert address_device(HOST, bm8)[0] != get_device_identifiers(HOST, 1, 8)
+    assert address_device(HOST, bm8)[0] != get_wsm_device_identifiers(HOST, 1, 8)
+
+    dimmer = {"type": ADDRESS_TYPE_DIMMER, "name": "Table", "group": 5, "address": 40}
+    assert address_device(HOST, dimmer)[0] == get_dimmer_device_identifiers(HOST, 5, 40)
+    assert address_device(HOST, dimmer)[1:] == ("Table", "Dimmer 5.40")
+    assert address_device(HOST, dimmer)[0] != get_device_identifiers(HOST, 5, 40)
 
 
 def test_removed_address_is_no_longer_configured():

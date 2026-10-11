@@ -39,6 +39,7 @@ PLATFORMS: list[Platform] = [
     Platform.BUTTON,
     Platform.SENSOR,
     Platform.MEDIA_PLAYER,
+    Platform.LIGHT,
 ]
 
 
@@ -124,17 +125,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     n_rtc = sum(1 for a in addresses if a.get("type") == ADDRESS_TYPE_RTC)
     n_ldm = sum(1 for a in addresses if a.get("type") == ADDRESS_TYPE_LDM)
     n_tsm = sum(1 for a in addresses if a.get("type") == ADDRESS_TYPE_TSM)
+    n_wsm = sum(1 for a in addresses if a.get("type") == ADDRESS_TYPE_WSM)
+    n_bm8 = sum(1 for a in addresses if a.get("type") == ADDRESS_TYPE_BM8)
+    n_dimmer = sum(1 for a in addresses if a.get("type") == ADDRESS_TYPE_DIMMER)
     _LOGGER.info(
         "Setting up B-Logicx with %d entries "
-        "(%d switch, %d cover, %d sfeer, %d readonly, %d rtc, %d ldm, %d tsm, %d aud)",
+        "(%d switch, %d dimmer, %d cover, %d sfeer, %d readonly, "
+        "%d rtc, %d ldm, %d tsm, %d wsm, %d bm8, %d aud)",
         len(addresses),
         n_switch,
+        n_dimmer,
         n_cover,
         n_sfeer,
         n_readonly,
         n_rtc,
         n_ldm,
         n_tsm,
+        n_wsm,
+        n_bm8,
         n_aud,
     )
 

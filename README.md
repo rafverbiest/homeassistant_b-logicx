@@ -2,7 +2,7 @@
 
 **Nederlands** | [English](README.en.md)
 
-Custom integration voor de **B-Logicx (BL-NWM / BL-NWX)** bus-gateway: schakelaars, rolluiken, Sfeer, alleen-lezen adressen, SoftM VSM, RTC, LDM/TSM en een optionele TCP bus repeater.
+Custom integration voor de **B-Logicx (BL-NWM / BL-NWX)** bus-gateway: schakelaars, dimmers, rolluiken, Sfeer, alleen-lezen adressen, SoftM VSM, RTC, LDM/TSM/WSM, BL-BM8 en een optionele TCP bus repeater.
 
 **Site:** [b-logicx.rafverbiest.be](https://b-logicx.rafverbiest.be) ·
 **Wiki:** [documentatie](https://github.com/rafverbiest/homeassistant_b-logicx/wiki) ·
@@ -32,7 +32,7 @@ Kopieer `custom_components/b_logicx` naar je HA-`config/custom_components/`, her
 ## Verder lezen (wiki)
 
 - [Installatie](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Installatie) · [Configuratie](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Configuratie)
-- [SoftM](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/SoftM) · [Bus-repeater](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Bus-repeater)
+- [Dimmer](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Dimmer) · [SoftM](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/SoftM) · [Bus-repeater](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Bus-repeater)
 - [Diagnostiek](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Diagnostiek) (`blxmonitor`) · [YAML](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/YAML)
 
 ## Ontwikkeling

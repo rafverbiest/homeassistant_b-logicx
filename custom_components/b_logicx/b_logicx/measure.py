@@ -1,23 +1,23 @@
-"""Decode multi-frame LDM / TSM measurements.
+"""Decode multi-frame LDM / TSM / WSM measurements.
 
 LDM light:
-  Value g.a (g != 11) → light payload
-  System G.A          → device id
-  raw = (g<<8)|a ; percent = raw * 100 / 1024
-
-The integer value measured in this way does not match the value
-displayed in BLConfig completely, but it's close enough and certainly
-yields a valid 'brightness' number that should be usable in HA
+  Value g.a → light count (g<<8)|a ; percent = count * 100 / 1024
+  System G.A → device id
+  Count 0 is Value 0.0. Count 1024, full scale, is Value 4.0.
+  The count does not match BLConfig completely, but it is close enough
+  to use as a brightness.
 
 TSM (exactly three frames; anything after is ignored):
   Value 11.x          → measured °C = address/2 (offset included)
   Settings i.s        → preset i, setpoint s/2 °C
   System G.A          → device id → commit reading
 
-Dual sticky Values: group 11 is TSM-only; other groups are LDM-only.
+WSM wind:
+  Value 14.X          → X is 0–100; km/h is X//2 (halves dropped)
+  System G.A          → device id
+  Group 14 starts at count 3584, past the light full scale of 1024.
 
-I currently have no other types of sensors to analyze.
-FIXME: BL-WSM coming soon!
+Three sticky Values: group 11 is TSM, group 14 is WSM, other groups are LDM.
 """
 
 from __future__ import annotations
@@ -30,6 +30,10 @@ LDM_REQUEST_DATA_ADDRESS = 2
 
 # TSM measured temperature uses Value group 11
 TSM_VALUE_GROUP = 11
+
+# WSM wind speed uses Value group 14. The address byte is 0–100.
+WSM_VALUE_GROUP = 14
+WSM_SPEED_MAX = 100
 
 TSM_PRESET_NAMES = {
     1: "Night",
@@ -64,6 +68,11 @@ def value_frame_to_percent(group: int, address: int) -> float:
 def value11_to_temperature_c(address: int) -> float:
     """TSM measured temperature from Value 11.x (½ °C steps, offset included)."""
     return int(address) / 2.0
+
+
+def value14_to_kmh(address: int) -> int:
+    """Wind speed in km/h. The wire value is twice that, and halves are dropped."""
+    return int(address) // 2
 
 
 def settings_to_preset(group: int, address: int) -> tuple[int, float, str]:
@@ -103,9 +112,24 @@ class TsmReading:
 
 
 @dataclass
-class MeasureBusState:
-    """Dual-sticky multi-frame decode (LDM Value ≠ TSM Value 11).
+class WsmReading:
+    """One wind reading. group and address are the System frame (the sensor).
 
+    raw is the Value 14 address byte, 0–100. kmh is that value divided by 2,
+    rounded down.
+    """
+
+    group: int
+    address: int
+    raw: int
+    kmh: int
+
+
+@dataclass
+class MeasureBusState:
+    """Sticky multi-frame decode.
+
+    Group 11 is temperature, group 14 is wind, any other group is light.
     TSM completes on the third frame (System device id) only.
     """
 
@@ -118,6 +142,9 @@ class MeasureBusState:
     tsm_value_address: int | None = None
     tsm_value_at: float = 0.0
 
+    wsm_raw: int | None = None
+    wsm_value_at: float = 0.0
+
     last_settings_index: int | None = None
     last_settings_setpoint: float | None = None
     last_settings_name: str | None = None
@@ -126,10 +153,13 @@ class MeasureBusState:
     preset_setpoint_cache: dict[int, float] = field(default_factory=dict)
 
     def note_value(self, group: int, address: int, now: float) -> None:
-        """Remember the latest Value. Group 11 is a temperature; any other group is light.
+        """Remember the latest Value in the slot for its group.
 
-        A newer Value of the same kind replaces the previous one. This does not
-        look at other commands, so an unrelated frame cannot wipe the slot.
+        Group 11 is a temperature. Group 14 with address 0–100 is a wind speed.
+        Any other group is light. A newer Value of the same kind replaces the
+        previous one. This does not look at other commands, so an unrelated
+        frame cannot wipe the slot. A wind frame does not replace a pending
+        light value, and a light frame does not replace a pending wind speed.
         """
         g = int(group) & 0x0F
         a = int(address) & 0xFF
@@ -137,6 +167,10 @@ class MeasureBusState:
             self.tsm_temp_c = value11_to_temperature_c(a)
             self.tsm_value_address = a
             self.tsm_value_at = now
+        elif g == WSM_VALUE_GROUP:
+            if a <= WSM_SPEED_MAX:
+                self.wsm_raw = a
+                self.wsm_value_at = now
         else:
             self.ldm_value_raw = value_frame_to_raw(g, a)
             self.ldm_value_group = g
@@ -205,4 +239,28 @@ class MeasureBusState:
             preset_index=self.last_settings_index,
             preset_name=self.last_settings_name,
             preset_setpoint=self.last_settings_setpoint,
+        )
+
+    def try_wsm_reading(
+        self,
+        system_group: int,
+        system_address: int,
+        now: float,
+        *,
+        max_age: float = VALUE_MAX_AGE_S,
+    ) -> WsmReading | None:
+        """Pair a System frame with a Value 14 from the last 2 seconds.
+
+        The Value is left in place, so a second System inside that window can
+        pair with it too. A Value older than max_age is ignored, not deleted.
+        """
+        if self.wsm_raw is None or self.wsm_value_at <= 0:
+            return None
+        if now - self.wsm_value_at > max_age:
+            return None
+        return WsmReading(
+            group=system_group,
+            address=system_address,
+            raw=self.wsm_raw,
+            kmh=value14_to_kmh(self.wsm_raw),
         )

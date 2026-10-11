@@ -74,6 +74,107 @@ def test_missing_addresses_key():
     assert err == "invalid_format"
 
 
+def test_wsm_yaml_defaults_and_roundtrip():
+    entries, err = parse_addresses_yaml(
+        "addresses:\n"
+        "  - type: wsm\n"
+        "    address: 12\n"
+    )
+    assert err is None
+    assert entries[0]["name"] == "Wind sensor"
+    assert entries[0]["group"] == 1
+    assert entries[0]["address"] == 12
+    assert entries[0]["check_status"] is False
+    again, err = parse_addresses_yaml(dump_addresses_yaml(entries))
+    assert err is None
+    assert again[0]["type"] == "wsm"
+    assert again[0]["check_status"] is False
+    asked, err = parse_addresses_yaml(
+        "addresses:\n"
+        "  - type: wsm\n"
+        "    name: Roof wind\n"
+        "    group: 1\n"
+        "    address: 12\n"
+        "    check_status: true\n"
+    )
+    assert err is None
+    assert asked[0]["check_status"] is True
+
+
+def test_bm8_yaml_defaults_and_roundtrip():
+    entries, err = parse_addresses_yaml(
+        "addresses:\n"
+        "  - type: bm8\n"
+        "    address: 8\n"
+    )
+    assert err is None
+    assert entries[0]["name"] == "Chime"
+    assert entries[0]["group"] == 1
+    assert entries[0]["address"] == 8
+    assert "check_status" not in entries[0]
+    again, err = parse_addresses_yaml(dump_addresses_yaml(entries))
+    assert err is None
+    assert again[0] == entries[0]
+    named, err = parse_addresses_yaml(
+        "addresses:\n"
+        "  - type: bm8\n"
+        "    name: Front door\n"
+        "    group: 1\n"
+        "    address: 8\n"
+        "    check_status: true\n"
+    )
+    assert err is None
+    assert named[0]["name"] == "Front door"
+    assert "check_status" not in named[0]
+
+
+def test_dimmer_yaml_defaults_and_roundtrip():
+    content = """
+addresses:
+  - type: dimmer
+    name: Table lamp
+    group: 5
+    address: 40
+"""
+    entries, err = parse_addresses_yaml(content)
+    assert err is None
+    assert entries[0]["remembers_level"] is False
+    assert "default_level" not in entries[0]
+    assert entries[0]["participates_in_moods"] is True
+    again, err = parse_addresses_yaml(dump_addresses_yaml(entries))
+    assert err is None
+    assert "default_level" not in again[0]
+    assert again[0]["participates_in_moods"] is True
+
+
+def test_dimmer_import_drops_a_default_level_key():
+    content = """
+addresses:
+  - type: dimmer
+    name: Table lamp
+    group: 5
+    address: 40
+    default_level: 40
+"""
+    entries, err = parse_addresses_yaml(content)
+    assert err is None
+    assert "default_level" not in entries[0]
+    dumped = dump_addresses_yaml(
+        [
+            {
+                "type": "dimmer",
+                "name": "Table lamp",
+                "group": 5,
+                "address": 40,
+                "remembers_level": False,
+                "default_level": 40,
+                "participates_in_moods": True,
+            }
+        ]
+    )
+    assert "default_level" not in dumped
+
+
 def test_unknown_type():
     content = """
 addresses:
@@ -231,6 +332,7 @@ addresses:
   - type: aud
     name: Living audio
     address: 3
+    controller: bhs
     source_1: Radio
     source_3: ""
 """
@@ -246,6 +348,118 @@ addresses:
     dumped = dump_addresses_yaml(entries)
     assert re.search(
         r"type: aud\n\s*name: Living audio\n\s*group: 4\n\s*address: 3\n"
-        r"\s*source_1: Radio\n",
+        r"\s*controller: bhs\n\s*source_1: Radio\n",
         dumped,
     )
+    assert aud["controller"] == "bhs"
+    assert "media_player" not in aud
+
+
+def test_aud_controller_must_be_bhs_or_ha():
+    for controller_line in ("", "    controller: both\n", "    controller:\n"):
+        entries, err = parse_addresses_yaml(
+            f"""
+addresses:
+  - type: aud
+    name: Living audio
+    address: 1
+{controller_line}"""
+        )
+        assert err == "invalid_format"
+        assert entries == []
+
+
+def test_aud_ha_actions_are_checked():
+    missing_stop, err = parse_addresses_yaml(
+        """
+addresses:
+  - type: aud
+    name: Living audio
+    address: 1
+    controller: ha
+    media_player: media_player.living_room
+"""
+    )
+    assert err == "invalid_format"
+    assert missing_stop == []
+    bad_step, err = parse_addresses_yaml(
+        """
+addresses:
+  - type: aud
+    name: Living audio
+    address: 1
+    controller: ha
+    media_player: media_player.living_room
+    stop_action: pause
+    volume_step: 25
+"""
+    )
+    assert err == "invalid_format"
+    assert bad_step == []
+    quiet_mute, err = parse_addresses_yaml(
+        """
+addresses:
+  - type: aud
+    name: Living audio
+    address: 1
+    controller: ha
+    media_player: media_player.living_room
+    stop_action: turn_off
+"""
+    )
+    assert err is None
+    assert "mute_action" not in quiet_mute[0]
+    assert "volume_step" not in quiet_mute[0]
+
+
+def test_aud_home_assistant_controller_requires_a_player():
+    entries, err = parse_addresses_yaml(
+        """
+addresses:
+  - type: aud
+    name: Living audio
+    group: 4
+    address: 1
+    controller: ha
+"""
+    )
+    assert err == "invalid_format"
+    assert entries == []
+    entries, err = parse_addresses_yaml(
+        """
+addresses:
+  - type: aud
+    name: Living audio
+    group: 4
+    address: 1
+    controller: ha
+    media_player: media_player.living_room
+    volume_step: 5
+    stop_action: pause
+    mute_action: volume
+    turn_on_with_play: true
+    source_1: Radio
+"""
+    )
+    assert err is None
+    aud = entries[0]
+    assert aud["controller"] == "ha"
+    assert aud["media_player"] == "media_player.living_room"
+    assert aud["volume_step"] == 5
+    assert aud["stop_action"] == "pause"
+    assert aud["mute_action"] == "volume"
+    assert aud["turn_on_with_play"] is True
+    assert aud["source_1"] == "Radio"
+    dumped = dump_addresses_yaml(entries)
+    assert "controller: ha" in dumped
+    assert "media_player: media_player.living_room" in dumped
+    assert "volume_step: 5" in dumped
+    assert "stop_action: pause" in dumped
+    bhs = dict(aud)
+    bhs["controller"] = "bhs"
+    dumped_bhs = dump_addresses_yaml([bhs])
+    assert "media_player" not in dumped_bhs
+    assert "volume_step" not in dumped_bhs
+    assert "stop_action" not in dumped_bhs
+    assert "mute_action" not in dumped_bhs
+    assert "turn_on_with_play" not in dumped_bhs

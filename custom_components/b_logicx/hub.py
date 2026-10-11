@@ -6,14 +6,15 @@ Each datagram is handled in this order:
 
 1. A Status query that is waiting for Set or Reset on this address.
 2. The SoftM virtual status module, which may answer on the bus.
-3. The LDM / TSM decoder.
-4. The BL-AUD decoder.
-5. Entity callbacks registered for this group.address.
+3. The LDM / TSM / WSM decoder.
+4. The dimmer decoder (Data/Timer level, Sfeer, Set/Reset).
+5. The BL-AUD decoder.
+6. Entity callbacks registered for this group.address.
 
-Status, an LDM request, a TSM request, a BL-AUD command, an RTC write, and a
-frame the repeater forwards all share one lock, so they cannot cut into each
-other. A SoftM reply does not take that lock: it is sent from the listener,
-and the listener is what a Status wait is blocked on.
+Status, an LDM request, a TSM request, a WSM request, a BL-BM8 chime, a BL-AUD
+command, an RTC write, and a frame the repeater forwards all share one lock, so
+they cannot cut into each other. A SoftM reply does not take that lock: it is sent
+from the listener, and the listener is what a Status wait is blocked on.
 """
 
 from __future__ import annotations
@@ -31,11 +32,17 @@ from .b_logicx.measure import (
     LdmReading,
     MeasureBusState,
     TsmReading,
+    WsmReading,
 )
-from .b_logicx.audio import AUD_MISC_GROUP, AudBusState, AudCommand
+from .b_logicx.audio import AUD_MISC_GROUP, AUD_OWN_ECHO_S, AudBusState, AudCommand
+from .b_logicx.dimmer import DIMMER_DATA_GROUP, DimmerBus, DimmerConfig, DimmerView
 from .b_logicx.softm_tracker import SoftMConfig, SoftMTracker
 from .bus_repeater import BusRepeater
-from .const import DEFAULT_BUS_REPEATER_PORT
+from .const import (
+    BM8_DATA_GROUP,
+    DEFAULT_BUS_REPEATER_PORT,
+    bm8_data_address_allowed,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -75,23 +82,34 @@ class BLogicxHub:
         # Last successful RTC sync per (group, address) → datetime (UTC-aware optional)
         self.rtc_last_sync: dict[tuple[int, int], object] = {}
         self._rtc_sync_callbacks: list = []
-        # LDM / TSM multi-frame decode
+        # LDM / TSM / WSM multi-frame decode
         self._measure = MeasureBusState()
         self._ldm_keys: set[tuple[int, int]] = set()
         self._tsm_keys: set[tuple[int, int]] = set()
+        self._wsm_keys: set[tuple[int, int]] = set()
         self._ldm_callbacks: dict[
             tuple[int, int], list[Callable[[LdmReading], None]]
         ] = {}
         self._tsm_callbacks: dict[
             tuple[int, int], list[Callable[[TsmReading], None]]
         ] = {}
+        self._wsm_callbacks: dict[
+            tuple[int, int], list[Callable[[WsmReading], None]]
+        ] = {}
         self._pending_ldm: dict[tuple[int, int], asyncio.Future] = {}
         self._pending_tsm: dict[tuple[int, int], asyncio.Future] = {}
+        self._pending_wsm: dict[tuple[int, int], asyncio.Future] = {}
+        self._dimmer = DimmerBus()
+        self._dimmer_callbacks: dict[
+            tuple[int, int], list[Callable[[DimmerView], None]]
+        ] = {}
         self._aud = AudBusState()
         self._aud_keys: set[tuple[int, int]] = set()
         self._aud_callbacks: dict[
             tuple[int, int], list[Callable[[AudCommand], None]]
         ] = {}
+        # (group, address, code) whose echo must not be forwarded again.
+        self._aud_own_echo: set[tuple[int, int, int]] = set()
         # SoftM virtual status tracking
         self._softm = SoftMTracker()
         self._softm_enabled = False
@@ -175,6 +193,24 @@ class BLogicxHub:
 
         return _unreg
 
+    def register_wsm(
+        self, group: int, address: int, callback: Callable[[WsmReading], None]
+    ) -> Callable[[], None]:
+        """A BL-WSM. System on this group.address commits the wind speed."""
+        key = (group, address)
+        self._wsm_keys.add(key)
+        self._wsm_callbacks.setdefault(key, []).append(callback)
+
+        def _unreg() -> None:
+            cbs = self._wsm_callbacks.get(key)
+            if cbs and callback in cbs:
+                cbs.remove(callback)
+            if not cbs:
+                self._wsm_callbacks.pop(key, None)
+                self._wsm_keys.discard(key)
+
+        return _unreg
+
     async def async_start(self) -> None:
         """Start listening to the bus.
 
@@ -228,6 +264,7 @@ class BLogicxHub:
                     await self._handle_softm_event(event)
 
                 self._handle_measure_event(event, now)
+                self._note_dimmer(event, now)
                 self._handle_aud_event(event, now)
 
                 if key in self._listeners:
@@ -336,7 +373,7 @@ class BLogicxHub:
                 _LOGGER.exception("SoftM timer Reset failed for %s.%s", group, address)
 
     def _handle_measure_event(self, event: BLXEvent, now: float) -> None:
-        """LDM: Value(≠11)+System. TSM: Value 11 + Settings + System only."""
+        """LDM: Value+System. TSM: Value 11 + Settings + System. WSM: Value 14+System."""
         cmd = event.command
         g, a = event.group, event.address
 
@@ -349,7 +386,7 @@ class BLogicxHub:
             return
 
         # Value and Settings were stored above. Only System can commit them,
-        # and only when this group.address is a registered LDM or TSM.
+        # and only when this group.address is a registered sensor.
         if cmd != "System":
             return
 
@@ -381,6 +418,82 @@ class BLogicxHub:
                 )
                 self._dispatch_tsm(key, reading)
             return
+
+        if key in self._wsm_keys:
+            wind = self._measure.try_wsm_reading(g, a, now)
+            if wind is not None:
+                _LOGGER.debug(
+                    "WSM %s.%s %s km/h (from Value 14.%s)",
+                    g,
+                    a,
+                    wind.kmh,
+                    wind.raw,
+                )
+                self._dispatch_wsm(key, wind)
+            return
+
+    def register_dimmer(
+        self,
+        config: DimmerConfig,
+        callback: Callable[[DimmerView], None],
+    ) -> Callable[[], None]:
+        """One dimmer. The callback receives the on/off and percent to show."""
+        self._dimmer.upsert(config)
+        key = config.key
+        self._dimmer_callbacks.setdefault(key, []).append(callback)
+
+        def _unreg() -> None:
+            cbs = self._dimmer_callbacks.get(key, [])
+            if callback in cbs:
+                cbs.remove(callback)
+            if not cbs:
+                self._dimmer_callbacks.pop(key, None)
+
+        return _unreg
+
+    def dimmer_view(self, group: int, address: int) -> DimmerView:
+        """Latest on/off and percent for this dimmer."""
+        return self._dimmer.view(group, address)
+
+    def _note_dimmer(self, event: BLXEvent, now: float) -> None:
+        """Fold one frame into the dimmer tracker and tell the lights that changed."""
+        for key in self._dimmer.apply(event, now):
+            view = self._dimmer.view(key[0], key[1])
+            for cb in list(self._dimmer_callbacks.get(key, ())):
+                try:
+                    cb(view)
+                except Exception:  # noqa: BLE001
+                    _LOGGER.exception("Dimmer callback error")
+
+    async def async_set_dimmer_level(self, group: int, address: int, percent: int) -> None:
+        """Send Data 0.<percent>, then Timer to this dimmer.
+
+        The pair takes the request lock, with 10 ms between the frames, so it
+        does not land inside an LDM, Status, audio, or clock exchange this
+        integration started. Other hardware on a busy bus can still collide
+        with the pair. That is outside our control.
+        """
+        level = max(0, min(100, int(percent)))
+        await self.async_send_sequence(
+            [
+                ("Data", DIMMER_DATA_GROUP, level),
+                ("Timer", int(group) & 0x0F, int(address) & 0xFF),
+            ]
+        )
+        now = time.monotonic()
+        self._note_dimmer(BLXEvent("Data", DIMMER_DATA_GROUP, level, b""), now)
+        self._note_dimmer(
+            BLXEvent("Timer", int(group) & 0x0F, int(address) & 0xFF, b""), now
+        )
+
+    async def async_set_dimmer_on(self, group: int, address: int, on: bool) -> None:
+        """Master on or off: Set or Reset, the same commands as an RLM."""
+        command = "Set" if on else "Reset"
+        await self.async_send(command, group, address)
+        self._note_dimmer(
+            BLXEvent(command, int(group) & 0x0F, int(address) & 0xFF, b""),
+            time.monotonic(),
+        )
 
     def register_aud(
         self,
@@ -434,6 +547,36 @@ class BLogicxHub:
             await asyncio.sleep(0.01)
             await self._conn.send("Select", group, address)
 
+    async def async_send_aud_own(self, group: int, address: int, code: int) -> None:
+        """Send a mirror command. Its echo is not forwarded to the linked player."""
+        key = (int(group) & 0x0F, int(address) & 0xFF, int(code) & 0xFF)
+        self._aud_own_echo.add(key)
+        try:
+            await self.async_send_aud(group, address, code)
+        except Exception:
+            self._aud_own_echo.discard(key)
+            raise
+        asyncio.create_task(
+            self._aud_own_echo_expire(key),
+            name=f"aud_own_echo_{key[0]}_{key[1]}_{key[2]}",
+        )
+
+    async def _aud_own_echo_expire(self, key: tuple[int, int, int]) -> None:
+        """Drop the mark after 150 ms if the gateway never echoed it."""
+        try:
+            await asyncio.sleep(AUD_OWN_ECHO_S)
+        except asyncio.CancelledError:
+            return
+        self._aud_own_echo.discard(key)
+
+    def consume_aud_own_echo(self, group: int, address: int, code: int) -> bool:
+        """True when this decoded command is the echo of a mirror send."""
+        key = (int(group) & 0x0F, int(address) & 0xFF, int(code) & 0xFF)
+        if key not in self._aud_own_echo:
+            return False
+        self._aud_own_echo.discard(key)
+        return True
+
     def _dispatch_ldm(self, key: tuple[int, int], reading: LdmReading) -> None:
         """Wake a waiting LDM request and tell every callback for this sensor."""
         fut = self._pending_ldm.get(key)
@@ -455,6 +598,17 @@ class BLogicxHub:
                 cb(reading)
             except Exception:  # noqa: BLE001
                 _LOGGER.exception("TSM callback error")
+
+    def _dispatch_wsm(self, key: tuple[int, int], reading: WsmReading) -> None:
+        """Wake a waiting WSM request and tell every callback for this sensor."""
+        fut = self._pending_wsm.get(key)
+        if fut is not None and not fut.done():
+            fut.set_result(reading)
+        for cb in list(self._wsm_callbacks.get(key, [])):
+            try:
+                cb(reading)
+            except Exception:  # noqa: BLE001
+                _LOGGER.exception("WSM callback error")
 
     async def async_stop(self) -> None:
         """Stop listening.
@@ -485,14 +639,23 @@ class BLogicxHub:
             if not fut.done():
                 fut.cancel()
         self._pending_tsm.clear()
+        for fut in list(self._pending_wsm.values()):
+            if not fut.done():
+                fut.cancel()
+        self._pending_wsm.clear()
         self._listeners.clear()
         self._ldm_callbacks.clear()
         self._tsm_callbacks.clear()
+        self._wsm_callbacks.clear()
         self._ldm_keys.clear()
         self._tsm_keys.clear()
+        self._wsm_keys.clear()
         self._aud_callbacks.clear()
         self._aud_keys.clear()
         self._aud = AudBusState()
+        self._aud_own_echo.clear()
+        self._dimmer_callbacks.clear()
+        self._dimmer = DimmerBus()
         for task in list(self._softm_timer_tasks.values()):
             if not task.done():
                 task.cancel()
@@ -560,6 +723,40 @@ class BLogicxHub:
                     await asyncio.sleep(inter_frame_delay)
                 await self._conn.send(command, group, address)
 
+    async def async_sound_bm8(
+        self, group: int, address: int, data_address: int
+    ) -> None:
+        """Sound one chime, or stop it: Data 0.<data_address>, 10 ms, then Select.
+
+        Chimes use data addresses 2 through 9. Stop uses 10. The module does
+        not answer, so nothing is waited for. The 100 ms pause stays inside
+        the lock. Data 0.2 is also how a light or wind reading starts, and
+        Select is what names this module, so the pair has to leave whole.
+        """
+        if not bm8_data_address_allowed(data_address):
+            raise ValueError(
+                "BL-BM8 data address must be 2..10 "
+                f"(got {data_address!r})"
+            )
+        async with self._request_lock:
+            if self._conn is None:
+                raise RuntimeError("Not connected")
+            try:
+                _LOGGER.debug(
+                    "BM8 → Data 0.%s + Select %s.%s",
+                    data_address,
+                    group,
+                    address,
+                )
+                await self._conn.send("Data", BM8_DATA_GROUP, data_address)
+                await asyncio.sleep(0.01)
+                await self._conn.send("Select", group, address)
+            finally:
+                try:
+                    await asyncio.sleep(_STATUS_GAP)
+                except asyncio.CancelledError:
+                    pass
+
     def register_rtc_sync_callback(self, callback) -> Callable[[], None]:
         """Notify HA entities when an RTC last_sync timestamp updates."""
         self._rtc_sync_callbacks.append(callback)
@@ -594,6 +791,7 @@ class BLogicxHub:
                 bool(self._pending_status)
                 or bool(self._pending_ldm)
                 or bool(self._pending_tsm)
+                or bool(self._pending_wsm)
                 or self._request_lock.locked()
             )
             if not busy:
@@ -694,6 +892,48 @@ class BLogicxHub:
             finally:
                 if self._pending_ldm.get(key) is fut:
                     self._pending_ldm.pop(key, None)
+                try:
+                    await asyncio.sleep(_STATUS_GAP)
+                except asyncio.CancelledError:
+                    pass
+
+    async def async_request_wsm(
+        self, group: int, address: int, *, timeout: float = _MEASURE_TIMEOUT
+    ) -> WsmReading | None:
+        """Ask a BL-WSM for a reading: Data 0.2, 10 ms, then Select, and wait.
+
+        The same pair an LDM uses. Select names this module. It answers with
+        Value 14 and then System. System commits the reading.
+        """
+        key = (group, address)
+        async with self._request_lock:
+            if self._conn is None:
+                raise RuntimeError("Not connected")
+            loop = asyncio.get_running_loop()
+            fut: asyncio.Future = loop.create_future()
+            old = self._pending_wsm.get(key)
+            if old is not None and not old.done():
+                old.cancel()
+            self._pending_wsm[key] = fut
+            try:
+                _LOGGER.debug("WSM request → Data 0.2 + Select %s.%s", group, address)
+                await self._conn.send(
+                    "Data", LDM_REQUEST_DATA_GROUP, LDM_REQUEST_DATA_ADDRESS
+                )
+                await asyncio.sleep(0.01)
+                await self._conn.send("Select", group, address)
+                reading: WsmReading = await asyncio.wait_for(fut, timeout=timeout)
+                return reading
+            except asyncio.TimeoutError:
+                _LOGGER.warning(
+                    "No WSM reply for %s.%s within %.1fs", group, address, timeout
+                )
+                return None
+            except asyncio.CancelledError:
+                return None
+            finally:
+                if self._pending_wsm.get(key) is fut:
+                    self._pending_wsm.pop(key, None)
                 try:
                     await asyncio.sleep(_STATUS_GAP)
                 except asyncio.CancelledError:

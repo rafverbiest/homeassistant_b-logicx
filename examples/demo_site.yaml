@@ -7,7 +7,7 @@
 #   group 3  — shutters / covers
 #   group 4  — audio (BL-AUD)
 #   group 10 — software members
-# Types: rlm | softm | aud | shutter | sfeer | readonly | rtc | ldm | tsm
+# Types: rlm | dimmer | softm | aud | shutter | sfeer | readonly | rtc | ldm | tsm | wsm | bm8
 
 addresses:
   - type: rlm
@@ -118,10 +118,22 @@ addresses:
     address: 45
     check_status: true
 
+  - type: wsm
+    name: Roof wind
+    group: 1
+    address: 12
+    check_status: false
+
+  - type: bm8
+    name: Front door
+    group: 1
+    address: 8
+
   - type: aud
     name: Living audio
     group: 4
     address: 1
+    controller: bhs
     source_1: Radio
     source_2: CD
     source_3: Bluetooth

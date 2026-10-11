@@ -9,6 +9,7 @@ from b_logicx.measure import (
     raw_to_percent,
     settings_to_preset,
     value11_to_temperature_c,
+    value14_to_kmh,
     value_frame_to_percent,
     value_frame_to_raw,
 )
@@ -120,3 +121,83 @@ def test_tsm_mid_burst_ldm_does_not_clobber_tsm_sticky():
     tsm = st.try_tsm_reading(1, 45, now + 0.04)
     assert ldm is not None and ldm.raw == 979
     assert tsm is not None and tsm.temperature_c == 24.0
+
+
+def test_ldm_counts_zero_and_full_scale():
+    # 0 is Value 0.0. 1024, full scale, is Value 4.0.
+    assert value_frame_to_raw(0, 0) == 0
+    assert value_frame_to_raw(4, 0) == 1024
+    assert raw_to_percent(0) == 0
+    assert raw_to_percent(1024) == 100
+    st = MeasureBusState()
+    now = time.monotonic()
+    st.note_value(0, 0, now)
+    zero = st.try_ldm_reading(1, 23, now + 0.1)
+    assert zero is not None and zero.raw == 0
+    st.note_value(4, 0, now + 0.2)
+    full = st.try_ldm_reading(1, 23, now + 0.3)
+    assert full is not None and full.raw == 1024
+
+
+def test_wsm_kmh_drops_halves():
+    assert value14_to_kmh(0) == 0
+    assert value14_to_kmh(1) == 0
+    assert value14_to_kmh(2) == 1
+    assert value14_to_kmh(50) == 25
+    assert value14_to_kmh(99) == 49
+    assert value14_to_kmh(100) == 50
+
+
+def test_wsm_pairs_value_14_and_leaves_light_alone():
+    st = MeasureBusState()
+    now = time.monotonic()
+    st.note_value(3, 211, now)
+    st.note_value(14, 50, now + 0.01)
+    wind = st.try_wsm_reading(1, 12, now + 0.02)
+    light = st.try_ldm_reading(1, 23, now + 0.03)
+    assert wind is not None and wind.raw == 50 and wind.kmh == 25
+    assert wind.group == 1 and wind.address == 12
+    assert light is not None and light.raw == 979
+
+
+def test_wsm_value_does_not_become_light_and_light_does_not_become_wind():
+    st = MeasureBusState()
+    now = time.monotonic()
+    st.note_value(14, 40, now)
+    assert st.try_ldm_reading(1, 23, now + 0.1) is None
+    assert st.try_wsm_reading(1, 12, now + 0.1).raw == 40
+    st.note_value(3, 211, now + 0.2)
+    assert st.try_wsm_reading(1, 12, now + 0.3).raw == 40
+    assert st.try_ldm_reading(1, 23, now + 0.3).raw == 979
+
+
+def test_wsm_ignores_address_above_100_and_keeps_zero():
+    st = MeasureBusState()
+    now = time.monotonic()
+    st.note_value(14, 101, now)
+    assert st.wsm_raw is None
+    assert st.try_wsm_reading(1, 12, now + 0.1) is None
+    assert st.try_ldm_reading(1, 23, now + 0.1) is None
+    st.note_value(14, 0, now + 0.2)
+    calm = st.try_wsm_reading(1, 12, now + 0.3)
+    assert calm is not None and calm.raw == 0 and calm.kmh == 0
+    st.note_value(14, 1, now + 0.4)
+    assert st.try_wsm_reading(1, 12, now + 0.5).kmh == 0
+
+
+def test_wsm_stale_value_is_ignored_and_not_deleted():
+    st = MeasureBusState()
+    now = time.monotonic()
+    st.note_value(14, 50, now)
+    assert st.try_wsm_reading(1, 12, now + 5.0, max_age=2.0) is None
+    assert st.wsm_raw == 50
+
+
+def test_wsm_temperature_and_wind_stay_separate():
+    st = MeasureBusState()
+    now = time.monotonic()
+    st.note_value(11, 48, now)
+    st.note_value(14, 100, now + 0.01)
+    assert st.try_tsm_reading(1, 45, now + 0.02).temperature_c == 24.0
+    assert st.try_wsm_reading(1, 12, now + 0.02).kmh == 50
+    assert st.try_ldm_reading(1, 23, now + 0.02) is None

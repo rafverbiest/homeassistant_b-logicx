@@ -51,6 +51,17 @@
           "check_status": "Ask the bus for current on/off when Home Assistant starts"
         }
       },
+      "add_dimmer": {
+        "title": "Add dimmer",
+        "description": "One dimmer, by its physical group and address. The group is the room. The slider sends a percent. On and off send Set and Reset.\n\nWhen “Remembers dim level when off” is on, the module returns to its last level on Set and the slider follows. When it is off, a plain Set shows 100%.\n\nWhen “Participates in Sfeer” is on, a Sfeer in this group clears the known percent. On or off follows the Set or Reset the dimmer itself sends back.",
+        "data": {
+          "name": "Name",
+          "group": "Group",
+          "address": "Address",
+          "remembers_level": "Remembers dim level when off",
+          "participates_in_moods": "Participates in Sfeer"
+        }
+      },
       "add_softm": {
         "title": "Add SoftM",
         "description": "A SoftM software member. Home Assistant controls it with Set and Reset.\n\nEnable the Virtual Status Module when Home Assistant should answer Toggle, Status and Timer for this address. Leave it off when a hardware status module already tracks this SoftM. The master switch in Integration settings must also be on. The timer and the remembered on/off apply only while the Virtual Status Module is enabled.",
@@ -66,11 +77,25 @@
       },
       "add_aud": {
         "title": "Add BL-AUD (audio)",
-        "description": "Audio module, usually group 4. Home Assistant shows a media player: eight sources, play, stop, volume up/down and mute. Give each source a name. An empty name is stored as Source 1 … Source 8.",
+        "description": "Audio module, usually group 4. Choose who acts on commands sent to this address.\n\nBHS keeps the eight source names as labels on this card and controls the real player itself.\n\nHome Assistant links this address to another media player. The next screens pick that player and then one of its sources for each of the eight BL-DSM buttons.",
         "data": {
           "name": "Name",
           "group": "Group (usually 4)",
           "address": "Address",
+          "controller": "Controlled by"
+        }
+      },
+      "add_aud_player": {
+        "title": "Link a media player",
+        "description": "Pick the player Home Assistant should control when a command arrives for this BL-AUD. The next screen lists the sources that player is reporting. If it reports none, turn it on and open this screen again. Editing that same player while it is quiet keeps the sources already saved.",
+        "data": {
+          "media_player": "Media player"
+        }
+      },
+      "add_aud_sources": {
+        "title": "BL-AUD source names",
+        "description": "Names shown for the eight sources. An empty name is stored as Source 1 … Source 8. BHS keeps control of the real player.",
+        "data": {
           "source_1": "Source 1 name",
           "source_2": "Source 2 name",
           "source_3": "Source 3 name",
@@ -79,6 +104,24 @@
           "source_6": "Source 6 name",
           "source_7": "Source 7 name",
           "source_8": "Source 8 name"
+        }
+      },
+      "add_aud_links": {
+        "title": "Link the eight sources",
+        "description": "Each BL-DSM source number uses one source from the linked player. The same source can be chosen more than once. Stop and mute use a command this player supports.\n\n{mute_note}",
+        "data": {
+          "stop_action": "Stop uses",
+          "mute_action": "Mute uses",
+          "volume_step": "Volume per press",
+          "turn_on_with_play": "Turn on with play",
+          "source_1": "Source 1",
+          "source_2": "Source 2",
+          "source_3": "Source 3",
+          "source_4": "Source 4",
+          "source_5": "Source 5",
+          "source_6": "Source 6",
+          "source_7": "Source 7",
+          "source_8": "Source 8"
         }
       },
       "add_rtc": {
@@ -113,6 +156,25 @@
           "group": "Group",
           "address": "Address",
           "check_status": "Read temperature when Home Assistant starts (also adds a Refresh button)"
+        }
+      },
+      "add_wsm": {
+        "title": "Add WSM (wind speed)",
+        "description": "Wind speed on the bus, in km/h. Readings also arrive on their own when the sensor updates.\n\nIf “read on startup” is on, Home Assistant requests a reading at start and adds a Refresh button.",
+        "data": {
+          "name": "Name",
+          "group": "Group",
+          "address": "Address",
+          "check_status": "Read wind speed when Home Assistant starts (also adds a Refresh button)"
+        }
+      },
+      "add_bm8": {
+        "title": "Add BL-BM8 (doorbell)",
+        "description": "Doorbell with eight built-in chimes. Home Assistant adds a button for each chime, and a Stop button. A press sounds that chime. The group is usually 1.",
+        "data": {
+          "name": "Name",
+          "group": "Group",
+          "address": "Address"
         }
       },
       "add_shutter": {
@@ -224,20 +286,45 @@
       "softm_check_conflict": "SoftM tracking already answers Status for this address. Turn off “Ask the bus … when Home Assistant starts”. Also skip SoftM tracking here if a hardware BL-STA already tracks this SoftM.",
       "softm_command_conflict": "SoftM tracking answers Toggle on the bus. Set “Command to turn on” to Set and “Command to turn off” to Reset — other commands (such as Toggle) would flip the SoftM twice.",
       "softm_timer_needs_vsm": "The SoftM timer is answered by the Virtual Status Module. Enable it for this address, or set the timer to 0.",
-      "invalid_subnet": "Allowed subnet must be a CIDR such as 192.168.50.0/24."
+      "invalid_subnet": "Allowed subnet must be a CIDR such as 192.168.50.0/24.",
+      "aud_no_sources": "This player is not reporting any sources. Turn it on and open this screen again.",
+      "aud_no_stop": "This player has no stop, pause, or turn off, so it cannot be linked.",
+      "aud_no_features": "This player is not reporting what it can do. Turn it on and open this screen again."
     }
   },
   "selector": {
     "address_type": {
       "options": {
         "rlm": "Switch (RLM)",
+        "dimmer": "Dimmer",
         "softm": "SoftM (software member)",
         "aud": "BL-AUD (audio module)",
         "readonly": "Read-only address (observe only, no control)",
         "shutter": "Cover / roller / shutter (open + close addresses)",
         "rtc": "RTC (bus clock)",
         "ldm": "LDM (light sensor)",
-        "tsm": "TSM (temperature / thermostat)"
+        "tsm": "TSM (temperature / thermostat)",
+        "wsm": "WSM (wind speed)",
+        "bm8": "BL-BM8 (doorbell)"
+      }
+    },
+    "aud_controller": {
+      "options": {
+        "bhs": "BHS",
+        "ha": "Home Assistant"
+      }
+    },
+    "aud_stop_action": {
+      "options": {
+        "stop": "Stop",
+        "pause": "Pause",
+        "turn_off": "Turn off"
+      }
+    },
+    "aud_mute_action": {
+      "options": {
+        "mute": "Mute",
+        "volume": "Volume to 0"
       }
     }
   },
@@ -251,6 +338,15 @@
       },
       "refresh_temperature": {
         "name": "Refresh"
+      },
+      "refresh_wind": {
+        "name": "Refresh wind speed"
+      },
+      "chime": {
+        "name": "Chime {number}"
+      },
+      "chime_stop": {
+        "name": "Stop"
       }
     },
     "sensor": {
@@ -259,6 +355,9 @@
       },
       "light_level": {
         "name": "Light level"
+      },
+      "wind_speed": {
+        "name": "Wind speed"
       },
       "temperature": {
         "name": "Temperature"

@@ -51,6 +51,17 @@
           "check_status": "Vraag de bus naar de huidige aan/uit-stand wanneer Home Assistant start"
         }
       },
+      "add_dimmer": {
+        "title": "Dimmer toevoegen",
+        "description": "Eén dimmer, op zijn fysieke groep en adres. De groep is de kamer. De schuifregelaar stuurt een percentage. Aan en uit sturen Set en Reset.\n\nStaat “Onthoudt het dimniveau bij uit” aan, dan keert de module bij Set terug naar het laatste niveau en volgt de schuifregelaar. Staat het uit, dan toont een gewone Set 100%.\n\nStaat “Neemt deel aan sferen” aan, dan wist een sfeer in deze groep het bekende percentage. Aan of uit volgt de Set of Reset die de dimmer zelf terugstuurt.",
+        "data": {
+          "name": "Naam",
+          "group": "Groep",
+          "address": "Adres",
+          "remembers_level": "Onthoudt het dimniveau bij uit",
+          "participates_in_moods": "Neemt deel aan sferen"
+        }
+      },
       "add_softm": {
         "title": "SoftM toevoegen",
         "description": "Een SoftM (software member). Home Assistant stuurt Set en Reset.\n\nSchakel de virtuele statusmodule in als Home Assistant Toggle, Status en Timer voor dit adres moet beantwoorden. Laat die uit als een hardware-statusmodule deze SoftM al volgt. De hoofdschakelaar bij Integratie-instellingen moet dan ook aan staan. De timer en de onthouden aan/uit-stand gelden alleen terwijl de virtuele statusmodule aan staat.",
@@ -66,11 +77,25 @@
       },
       "add_aud": {
         "title": "BL-AUD toevoegen (audio)",
-        "description": "Audiomodule, meestal groep 4. Home Assistant toont een mediaspeler: acht bronnen, afspelen, stop, volume omhoog/omlaag en dempen. Geef elke bron een naam. Een lege naam wordt bewaard als Source 1 … Source 8.",
+        "description": "Audiomodule, meestal groep 4. Kies wie de commando's naar dit adres uitvoert.\n\nBHS houdt de acht bronnamen als labels op deze kaart en bedient zelf de echte speler.\n\nHome Assistant koppelt dit adres aan een andere mediaspeler. De volgende schermen kiezen die speler en daarna een van zijn bronnen voor elk van de acht BL-DSM-knoppen.",
         "data": {
           "name": "Naam",
           "group": "Groep (meestal 4)",
           "address": "Adres",
+          "controller": "Bediening"
+        }
+      },
+      "add_aud_player": {
+        "title": "Mediaspeler koppelen",
+        "description": "Kies de speler die Home Assistant moet bedienen wanneer een commando voor dit BL-AUD binnenkomt. Het volgende scherm toont de bronnen die die speler meldt. Meldt hij er geen, zet hem dan aan en open dit scherm opnieuw. Bij het wijzigen van diezelfde speler, terwijl hij niets meldt, blijven de eerder bewaarde bronnen beschikbaar.",
+        "data": {
+          "media_player": "Mediaspeler"
+        }
+      },
+      "add_aud_sources": {
+        "title": "BL-AUD-bronnamen",
+        "description": "Namen voor de acht bronnen. Een lege naam wordt bewaard als Source 1 … Source 8. BHS blijft de echte speler bedienen.",
+        "data": {
           "source_1": "Naam bron 1",
           "source_2": "Naam bron 2",
           "source_3": "Naam bron 3",
@@ -79,6 +104,24 @@
           "source_6": "Naam bron 6",
           "source_7": "Naam bron 7",
           "source_8": "Naam bron 8"
+        }
+      },
+      "add_aud_links": {
+        "title": "De acht bronnen koppelen",
+        "description": "Elk BL-DSM-bronnummer gebruikt een bron van de gekoppelde speler. Dezelfde bron mag meer dan eens gekozen worden. Stop en dempen gebruiken een commando dat deze speler ondersteunt.\n\n{mute_note}",
+        "data": {
+          "stop_action": "Stop gebruikt",
+          "mute_action": "Dempen gebruikt",
+          "volume_step": "Volume per druk",
+          "turn_on_with_play": "Aanzetten bij afspelen",
+          "source_1": "Bron 1",
+          "source_2": "Bron 2",
+          "source_3": "Bron 3",
+          "source_4": "Bron 4",
+          "source_5": "Bron 5",
+          "source_6": "Bron 6",
+          "source_7": "Bron 7",
+          "source_8": "Bron 8"
         }
       },
       "add_rtc": {
@@ -113,6 +156,25 @@
           "group": "Groep",
           "address": "Adres",
           "check_status": "Lees temperatuur wanneer Home Assistant start (voegt ook een Vernieuwen-knop toe)"
+        }
+      },
+      "add_wsm": {
+        "title": "WSM toevoegen (windsnelheid)",
+        "description": "Windsnelheid op de bus, in km/h. Metingen komen ook vanzelf binnen wanneer de sensor bijwerkt.\n\nAls “lezen bij opstarten” aan staat, vraagt Home Assistant bij start een meting en voegt een Vernieuwen-knop toe.",
+        "data": {
+          "name": "Naam",
+          "group": "Groep",
+          "address": "Adres",
+          "check_status": "Lees windsnelheid wanneer Home Assistant start (voegt ook een Vernieuwen-knop toe)"
+        }
+      },
+      "add_bm8": {
+        "title": "BL-BM8 toevoegen (deurbel)",
+        "description": "Deurbel met acht ingebouwde beltonen. Home Assistant maakt een knop voor elke beltoon en een Stop-knop. Een druk laat die beltoon klinken. De groep is meestal 1.",
+        "data": {
+          "name": "Naam",
+          "group": "Groep",
+          "address": "Adres"
         }
       },
       "add_shutter": {
@@ -224,20 +286,45 @@
       "softm_check_conflict": "SoftM tracking beantwoordt Status al voor dit adres. Zet “Vraag de bus … wanneer Home Assistant start” uit. Sla SoftM tracking hier ook over als een hardware BL-STA deze SoftM al volgt.",
       "softm_command_conflict": "SoftM tracking beantwoordt Toggle op de bus. Zet “Commando om aan te zetten” op Set en “Commando om uit te zetten” op Reset — andere commando’s (zoals Toggle) zouden de SoftM twee keer omschakelen.",
       "softm_timer_needs_vsm": "De SoftM-timer wordt beantwoord door de virtuele statusmodule. Schakel die in voor dit adres, of zet de timer op 0.",
-      "invalid_subnet": "Toegelaten subnet moet een CIDR zijn, bijvoorbeeld 192.168.50.0/24."
+      "invalid_subnet": "Toegelaten subnet moet een CIDR zijn, bijvoorbeeld 192.168.50.0/24.",
+      "aud_no_sources": "Deze speler meldt geen bronnen. Zet hem aan en open dit scherm opnieuw.",
+      "aud_no_stop": "Deze speler heeft geen stop, pauze of uitzetten, dus koppelen kan niet.",
+      "aud_no_features": "Deze speler meldt niet wat hij kan. Zet hem aan en open dit scherm opnieuw."
     }
   },
   "selector": {
     "address_type": {
       "options": {
         "rlm": "Schakelaar (RLM)",
+        "dimmer": "Dimmer",
         "softm": "SoftM (software member)",
         "aud": "BL-AUD (audiomodule)",
         "readonly": "Alleen-lezen adres (alleen volgen, geen bediening)",
         "shutter": "Rolluik (open- + sluitadres)",
         "rtc": "RTC (busklok)",
         "ldm": "LDM (lichtsensor)",
-        "tsm": "TSM (temperatuur / thermostaat)"
+        "tsm": "TSM (temperatuur / thermostaat)",
+        "wsm": "WSM (windsnelheid)",
+        "bm8": "BL-BM8 (deurbel)"
+      }
+    },
+    "aud_controller": {
+      "options": {
+        "bhs": "BHS",
+        "ha": "Home Assistant"
+      }
+    },
+    "aud_stop_action": {
+      "options": {
+        "stop": "Stop",
+        "pause": "Pauze",
+        "turn_off": "Uitzetten"
+      }
+    },
+    "aud_mute_action": {
+      "options": {
+        "mute": "Dempen",
+        "volume": "Volume op 0"
       }
     }
   },
@@ -251,6 +338,15 @@
       },
       "refresh_temperature": {
         "name": "Vernieuwen"
+      },
+      "refresh_wind": {
+        "name": "Windsnelheid vernieuwen"
+      },
+      "chime": {
+        "name": "Beltoon {number}"
+      },
+      "chime_stop": {
+        "name": "Stop"
       }
     },
     "sensor": {
@@ -259,6 +355,9 @@
       },
       "light_level": {
         "name": "Lichtniveau"
+      },
+      "wind_speed": {
+        "name": "Windsnelheid"
       },
       "temperature": {
         "name": "Temperatuur"

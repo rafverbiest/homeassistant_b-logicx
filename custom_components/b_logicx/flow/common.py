@@ -32,6 +32,7 @@ _SAFE_PLACEHOLDERS: dict[str, str] = {
     "intro": "",
     "step_title": "",
     "step_body": "",
+    "mute_note": "",
 }
 
 
@@ -82,6 +83,8 @@ def _entry_key(entry: dict) -> str:
         )
     if t == ADDRESS_TYPE_SFEER:
         return f"sfeer:{entry.get('name', '')}"
+    if t == ADDRESS_TYPE_DIMMER:
+        return f"dimmer:{entry['group']}.{entry['address']}"
     return f"addr:{entry['group']}.{entry['address']}"
 
 

@@ -7,7 +7,7 @@ title: B-Logicx for Home Assistant
 
 [Nederlands](index.html) · **English**
 
-Custom integration that connects Home Assistant directly to a **B-Logicx BL-NWM / BL-NWX** bus gateway — no BHS Home Server required.
+Custom integration that connects Home Assistant directly to a **B-Logicx BL-NWM / BL-NWX** bus gateway — the BL-BHS Home Server is optional and not a requirement.
 
 ## Links
 
@@ -18,12 +18,12 @@ Custom integration that connects Home Assistant directly to a **B-Logicx BL-NWM 
 
 ## Features
 
-- Switches (RLM / SoftM) and **read-only** addresses  
+- Switches (RLM / SoftM), **dimmers**, and **read-only** addresses  
 - **Covers** (dual RLM) and **Sfeer** selection  
-- **BL-AUD** as a media player (sources, volume up/down, mute)  
+- **BL-AUD** as a media player (sources, volume up/down, mute). BHS can keep the real player, or Home Assistant can pass each command on to another media player, using the stop, mute, and volume step chosen for that player. Play can turn that player on while it is off or in standby. A known source, play, stop, or mute on that player is written back so the displays follow.  
 - **SoftM** virtual status module (VSM) inside Home Assistant  
 - **TCP bus repeater** — share the single NWM link with BLConfig / blxmonitor  
-- **RTC** sync (incl. DST), **LDM** light sensor, **TSM** thermostat  
+- **RTC** sync (incl. DST), **LDM** light sensor, **TSM** thermostat, **WSM** wind speed (km/h), **BL-BM8** doorbell  
 - YAML import/export of addresses  
 
 ## Documentation
@@ -32,6 +32,7 @@ More detail lives in the [wiki](https://github.com/rafverbiest/homeassistant_b-l
 
 [Installation](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Installation) ·
 [Configuration](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Configuration) ·
+[Dimmer](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Dimmer-en) ·
 [SoftM](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/SoftM-en) ·
 [Bus repeater](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Bus-repeater-en) ·
 [Diagnostics](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Diagnostics) ·

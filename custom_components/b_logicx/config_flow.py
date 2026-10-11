@@ -14,7 +14,8 @@ the options dict back unchanged, so closing it does not clear the SoftM
 switch or the repeater.
 
 Shared form helpers live in flow/common.py. Each address type lives in
-flow/: rlm, softm, aud, readonly, ldm, tsm, rtc, shutter, and sfeer.
+flow/: rlm, dimmer, softm, aud, readonly, ldm, tsm, wsm, bm8, rtc, shutter,
+and sfeer.
 This file keeps setup, the menu, settings, edit, remove, and YAML.
 """
 
@@ -46,6 +47,7 @@ from .address_config import (
 )
 from .const import *
 from .flow.aud import AudSteps
+from .flow.dimmer import DimmerSteps
 from .flow.common import (
     _download_link,
     _entry_key,
@@ -56,7 +58,9 @@ from .flow.common import (
     _upsert_by_key,
     _yaml_template,
 )
+from .flow.bm8 import Bm8Steps
 from .flow.ldm import LdmSteps
+from .flow.wsm import WsmSteps
 from .flow.readonly import ReadonlySteps
 from .flow.rlm import RlmSteps
 from .flow.rtc import RtcSteps
@@ -150,9 +154,12 @@ class BLogicxOptionsFlow(
     RtcSteps,
     TsmSteps,
     LdmSteps,
+    WsmSteps,
+    Bm8Steps,
     ReadonlySteps,
     AudSteps,
     SoftmSteps,
+    DimmerSteps,
     RlmSteps,
     OptionsFlowWithConfigEntry,
 ):
@@ -313,10 +320,16 @@ class BLogicxOptionsFlow(
                 return await self.async_step_add_ldm()
             if t == ADDRESS_TYPE_TSM:
                 return await self.async_step_add_tsm()
+            if t == ADDRESS_TYPE_WSM:
+                return await self.async_step_add_wsm()
+            if t == ADDRESS_TYPE_BM8:
+                return await self.async_step_add_bm8()
             if t == ADDRESS_TYPE_AUD:
                 return await self.async_step_add_aud()
             if t == ADDRESS_TYPE_SOFTM:
                 return await self.async_step_add_softm()
+            if t == ADDRESS_TYPE_DIMMER:
+                return await self.async_step_add_dimmer()
             return await self.async_step_add_rlm()
 
         return self.async_show_form(
@@ -329,6 +342,7 @@ class BLogicxOptionsFlow(
                         selector.SelectSelectorConfig(
                             options=[
                                 ADDRESS_TYPE_RLM,
+                                ADDRESS_TYPE_DIMMER,
                                 ADDRESS_TYPE_SOFTM,
                                 ADDRESS_TYPE_AUD,
                                 ADDRESS_TYPE_READONLY,
@@ -336,6 +350,8 @@ class BLogicxOptionsFlow(
                                 ADDRESS_TYPE_RTC,
                                 ADDRESS_TYPE_LDM,
                                 ADDRESS_TYPE_TSM,
+                                ADDRESS_TYPE_WSM,
+                                ADDRESS_TYPE_BM8,
                             ],
                             # selector.address_type.options, viewer's language.
                             translation_key="address_type",
@@ -369,10 +385,16 @@ class BLogicxOptionsFlow(
                 return await self.async_step_add_ldm()
             if t == ADDRESS_TYPE_TSM:
                 return await self.async_step_add_tsm()
+            if t == ADDRESS_TYPE_WSM:
+                return await self.async_step_add_wsm()
+            if t == ADDRESS_TYPE_BM8:
+                return await self.async_step_add_bm8()
             if t == ADDRESS_TYPE_AUD:
                 return await self.async_step_add_aud()
             if t == ADDRESS_TYPE_SOFTM or is_softm_address(entry):
                 return await self.async_step_add_softm()
+            if t == ADDRESS_TYPE_DIMMER:
+                return await self.async_step_add_dimmer()
             return await self.async_step_add_rlm()
 
         current = self.config_entry.data.get(CONF_ADDRESSES, [])

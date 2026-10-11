@@ -7,7 +7,7 @@ title: B-Logicx voor Home Assistant
 
 **Nederlands** · [English](en.html)
 
-Custom integration die Home Assistant rechtstreeks koppelt aan een **B-Logicx BL-NWM / BL-NWX** bus-gateway — zonder BHS Home Server.
+Custom integration die Home Assistant rechtstreeks koppelt aan een **B-Logicx BL-NWM / BL-NWX** bus-gateway — BL-BHS Home Server is optioneel en geen vereiste.
 
 ## Links
 
@@ -18,12 +18,12 @@ Custom integration die Home Assistant rechtstreeks koppelt aan een **B-Logicx BL
 
 ## Functies
 
-- Schakelaars (RLM / SoftM) en **alleen-lezen** adressen  
+- Schakelaars (RLM / SoftM), **dimmers** en **alleen-lezen** adressen  
 - **Rolluiken** (dubbele RLM) en **Sfeer**-selectie  
-- **BL-AUD** als mediaspeler (bronnen, volume omhoog/omlaag, dempen)  
+- **BL-AUD** als mediaspeler (bronnen, volume omhoog/omlaag, dempen). BHS kan de echte speler houden, of Home Assistant geeft de commando's door aan een andere mediaspeler, met de stop, het dempen en de volumestap die voor die speler gekozen zijn. Afspelen kan die speler aanzetten terwijl hij uit of in standby staat. Een gekende bron, afspelen, stoppen of dempen van die speler wordt teruggeschreven zodat de schermen volgen.  
 - **SoftM** virtuele statusmodule (VSM) in Home Assistant  
 - **TCP bus repeater** — deel de ene NWM-verbinding met BLConfig / blxmonitor  
-- **RTC**-synchronisatie (incl. DST), **LDM**-lichtsensor, **TSM**-thermostaat  
+- **RTC**-synchronisatie (incl. DST), **LDM**-lichtsensor, **TSM**-thermostaat, **WSM**-windsnelheid (km/h), **BL-BM8**-deurbel  
 - YAML import/export van adressen  
 
 ## Documentatie
@@ -32,6 +32,7 @@ Meer uitleg staat in de [wiki](https://github.com/rafverbiest/homeassistant_b-lo
 
 [Installatie](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Installatie) ·
 [Configuratie](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Configuratie) ·
+[Dimmer](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Dimmer) ·
 [SoftM](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/SoftM) ·
 [Bus-repeater](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Bus-repeater) ·
 [Diagnostiek](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Diagnostiek) ·

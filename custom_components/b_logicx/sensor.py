@@ -2,7 +2,8 @@
 
 One RTC shows when this integration last wrote the clock. One LDM shows the
 light level in percent. One TSM becomes the temperature, the active preset,
-the active setpoint, and one cached setpoint for each preset name.
+the active setpoint, and one cached setpoint for each preset name. One WSM
+shows the wind speed in km/h.
 """
 
 from __future__ import annotations
@@ -16,16 +17,17 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE, UnitOfTemperature
+from homeassistant.const import PERCENTAGE, UnitOfSpeed, UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .b_logicx.measure import LdmReading, TsmReading
+from .b_logicx.measure import LdmReading, TsmReading, WsmReading
 from .const import (
     ADDRESS_TYPE_LDM,
     ADDRESS_TYPE_RTC,
     ADDRESS_TYPE_TSM,
+    ADDRESS_TYPE_WSM,
     CONF_ADDRESSES,
     CONF_HOST,
     DOMAIN,
@@ -36,6 +38,8 @@ from .const import (
     get_rtc_unique_id,
     get_tsm_device_identifiers,
     get_tsm_unique_id,
+    get_wsm_device_identifiers,
+    get_wsm_unique_id,
 )
 from .hub import BLogicxHub
 
@@ -76,6 +80,19 @@ async def async_setup_entry(
                         address=int(addr["address"]),
                         name=addr.get(
                             "name", f"LDM {addr['group']}.{addr['address']}"
+                        ),
+                        check_status=bool(addr.get("check_status", False)),
+                    )
+                )
+            elif t == ADDRESS_TYPE_WSM:
+                entities.append(
+                    BLogicxWsmWindSensor(
+                        hub=hub,
+                        host=host,
+                        group=int(addr["group"]),
+                        address=int(addr["address"]),
+                        name=addr.get(
+                            "name", f"WSM {addr['group']}.{addr['address']}"
                         ),
                         check_status=bool(addr.get("check_status", False)),
                     )
@@ -222,6 +239,71 @@ class BLogicxLdmLightSensor(SensorEntity):
         self._unsub = self._hub.register_ldm(self._group, self._address, _on_reading)
         if self._check_status:
             reading = await self._hub.async_request_ldm(self._group, self._address)
+            if reading is not None:
+                _on_reading(reading)
+
+    async def async_will_remove_from_hass(self) -> None:
+        if self._unsub:
+            self._unsub()
+            self._unsub = None
+
+
+# ----- WSM -----------------------------------------------------------------
+
+
+class BLogicxWsmWindSensor(SensorEntity):
+    """BL-WSM wind speed in km/h (from Value 14 + System)."""
+
+    _attr_should_poll = False
+    _attr_has_entity_name = True
+    _attr_translation_key = "wind_speed"
+    _attr_device_class = SensorDeviceClass.WIND_SPEED
+    _attr_native_unit_of_measurement = UnitOfSpeed.KILOMETERS_PER_HOUR
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_suggested_display_precision = 0
+    _attr_icon = "mdi:weather-windy"
+
+    def __init__(
+        self,
+        hub: BLogicxHub,
+        host: str,
+        group: int,
+        address: int,
+        name: str,
+        check_status: bool = False,
+    ) -> None:
+        self._hub = hub
+        self._group = group
+        self._address = address
+        self._check_status = check_status
+        self._unsub = None
+        self._raw: int | None = None
+        self._attr_unique_id = f"{get_wsm_unique_id(host, group, address)}_wind"
+        self._attr_device_info = DeviceInfo(
+            identifiers=get_wsm_device_identifiers(host, group, address),
+            name=name,
+            manufacturer="B-Logicx",
+            model=f"BL-WSM {group}.{address}",
+        )
+        self._attr_native_value = None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        attrs: dict[str, Any] = {}
+        if self._raw is not None:
+            attrs["raw"] = self._raw
+        return attrs
+
+    async def async_added_to_hass(self) -> None:
+        @callback
+        def _on_reading(reading: WsmReading) -> None:
+            self._raw = reading.raw
+            self._attr_native_value = reading.kmh
+            self.async_write_ha_state()
+
+        self._unsub = self._hub.register_wsm(self._group, self._address, _on_reading)
+        if self._check_status:
+            reading = await self._hub.async_request_wsm(self._group, self._address)
             if reading is not None:
                 _on_reading(reading)
 

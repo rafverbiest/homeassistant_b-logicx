@@ -39,10 +39,22 @@ ADDRESS_TYPE_READONLY = "readonly"
 ADDRESS_TYPE_RTC = "rtc"
 ADDRESS_TYPE_LDM = "ldm"
 ADDRESS_TYPE_TSM = "tsm"
+ADDRESS_TYPE_WSM = "wsm"
+ADDRESS_TYPE_BM8 = "bm8"
+ADDRESS_TYPE_DIMMER = "dimmer"
 
-# LDM / TSM defaults (listen / request sensors)
+# LDM / TSM / WSM defaults (listen / request sensors)
 DEFAULT_LDM_GROUP = 1
 DEFAULT_TSM_GROUP = 1
+DEFAULT_WSM_GROUP = 1
+
+# BL-BM8 doorbell. Group is usually 1. Chime 1 is Data 0.2; chime 8 is Data 0.9.
+# Stop is Data 0.10. Each of those is followed by Select <group>.<address>.
+DEFAULT_BM8_GROUP = 1
+BM8_CHIME_COUNT = 8
+BM8_DATA_GROUP = 0
+BM8_FIRST_DATA_ADDRESS = 2
+BM8_STOP_DATA_ADDRESS = 10
 
 TSM_PRESET_LABELS = ("Night", "Day", "Away", "Holiday")
 
@@ -80,6 +92,9 @@ DEFAULT_READONLY_GROUP = 1
 
 # BL-AUD audio module — usually group 4
 DEFAULT_AUD_GROUP = 4
+# Who acts on Misc/Select for this address. bhs leaves the real player to BHS.
+AUD_CONTROLLER_BHS = "bhs"
+AUD_CONTROLLER_HA = "ha"
 
 # RTC (bus clock) — Program write sequence; default group 1 / address 1
 DEFAULT_RTC_GROUP = 1
@@ -127,6 +142,19 @@ DEFAULT_CLOSE_TIME = 30.0  # seconds for full close travel
 #   "on_command": "Set",
 #   "off_command": "Reset",
 #   "check_status": False,
+# }
+#
+# Dimmer. The slider sends Data 0.<percent> then Timer to this address.
+# Set and Reset are the master on and off. remembers_level is how the
+# module was programmed: it keeps its level across off and on. When that
+# is off, a plain Set shows 100%. A Sfeer answer does not.
+# {
+#   "name": "Table lamp",
+#   "type": "dimmer",
+#   "group": 5,
+#   "address": 40,
+#   "remembers_level": False,
+#   "participates_in_moods": True,
 # }
 #
 # SoftM. Tracking on means Home Assistant is the virtual status module
@@ -188,7 +216,12 @@ DEFAULT_CLOSE_TIME = 30.0  # seconds for full close travel
 #   "dst_delay_minutes": 1,
 # }
 #
-# BL-AUD. source_1 … source_8 are the names shown for Misc 0.1 … 0.8.
+# BL-AUD. controller is required: bhs or ha. source_1 … source_8 are the names shown
+# for Misc 0.1 … 0.8. With ha, media_player is the linked player and each
+# source name is one of that player's sources. stop_action, mute_action,
+# volume_step, and turn_on_with_play are chosen while configuring that player.
+# A known source, play, stop, or mute on that player is written back as Misc
+# and Select. Volume is left on the player.
 # LDM and TSM are the same shape as a read-only address: group, address,
 # and check_status to ask for a reading when Home Assistant starts.
 
@@ -312,6 +345,16 @@ def get_ldm_device_identifiers(host: str, group: int, address: int) -> set[tuple
     return {(DOMAIN, get_ldm_unique_id(host, group, address))}
 
 
+def get_dimmer_unique_id(host: str, group: int, address: int) -> str:
+    """Stable unique_id for one dimmer. Separate from an RLM at the same numbers."""
+    return f"{host}_dimmer_{group}_{address}"
+
+
+def get_dimmer_device_identifiers(host: str, group: int, address: int) -> set[tuple[str, str]]:
+    """Device registry id for one dimmer."""
+    return {(DOMAIN, get_dimmer_unique_id(host, group, address))}
+
+
 def get_tsm_unique_id(host: str, group: int, address: int) -> str:
     """Stable unique_id for one thermostat."""
     return f"{host}_tsm_{group}_{address}"
@@ -320,6 +363,42 @@ def get_tsm_unique_id(host: str, group: int, address: int) -> str:
 def get_tsm_device_identifiers(host: str, group: int, address: int) -> set[tuple[str, str]]:
     """Device registry id for one thermostat."""
     return {(DOMAIN, get_tsm_unique_id(host, group, address))}
+
+
+def get_wsm_unique_id(host: str, group: int, address: int) -> str:
+    """Stable unique_id for one wind sensor."""
+    return f"{host}_wsm_{group}_{address}"
+
+
+def get_wsm_device_identifiers(host: str, group: int, address: int) -> set[tuple[str, str]]:
+    """Device registry id for one wind sensor."""
+    return {(DOMAIN, get_wsm_unique_id(host, group, address))}
+
+
+def bm8_chime_data_address(chime: int) -> int:
+    """Data address for one built-in chime. Chime 1 is 2, chime 8 is 9."""
+    if isinstance(chime, bool) or not isinstance(chime, int):
+        raise ValueError("chime must be a whole number from 1 to 8")
+    if chime < 1 or chime > BM8_CHIME_COUNT:
+        raise ValueError("chime must be a whole number from 1 to 8")
+    return chime + 1
+
+
+def bm8_data_address_allowed(data_address: int) -> bool:
+    """True for Data 0.2 through Data 0.9 (the chimes) and Data 0.10 (stop)."""
+    if isinstance(data_address, bool) or not isinstance(data_address, int):
+        return False
+    return BM8_FIRST_DATA_ADDRESS <= data_address <= BM8_STOP_DATA_ADDRESS
+
+
+def get_bm8_unique_id(host: str, group: int, address: int) -> str:
+    """Stable unique_id for one doorbell. Separate from a sensor on the same numbers."""
+    return f"{host}_bm8_{group}_{address}"
+
+
+def get_bm8_device_identifiers(host: str, group: int, address: int) -> set[tuple[str, str]]:
+    """Device registry id for one doorbell."""
+    return {(DOMAIN, get_bm8_unique_id(host, group, address))}
 
 
 def address_device(host: str, addr: dict) -> tuple[set[tuple[str, str]], str, str]:
@@ -370,6 +449,24 @@ def address_device(host: str, addr: dict) -> tuple[set[tuple[str, str]], str, st
         )
         name = addr.get("name", f"TSM {addr['group']}.{addr['address']}")
         model = f"TSM {addr['group']}.{addr['address']}"
+    elif addr.get("type") == ADDRESS_TYPE_WSM:
+        identifiers = get_wsm_device_identifiers(
+            host, int(addr["group"]), int(addr["address"])
+        )
+        name = addr.get("name", f"WSM {addr['group']}.{addr['address']}")
+        model = f"BL-WSM {addr['group']}.{addr['address']}"
+    elif addr.get("type") == ADDRESS_TYPE_BM8:
+        identifiers = get_bm8_device_identifiers(
+            host, int(addr["group"]), int(addr["address"])
+        )
+        name = addr.get("name", f"Chime {addr['group']}.{addr['address']}")
+        model = f"BL-BM8 {addr['group']}.{addr['address']}"
+    elif addr.get("type") == ADDRESS_TYPE_DIMMER:
+        identifiers = get_dimmer_device_identifiers(
+            host, int(addr["group"]), int(addr["address"])
+        )
+        name = addr.get("name", f"Dimmer {addr['group']}.{addr['address']}")
+        model = f"Dimmer {addr['group']}.{addr['address']}"
     else:
         # RLM and SoftM switches share one device shape.
         identifiers = get_device_identifiers(host, addr["group"], addr["address"])
