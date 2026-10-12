@@ -35,7 +35,13 @@ from .b_logicx.measure import (
     WsmReading,
 )
 from .b_logicx.audio import AUD_MISC_GROUP, AUD_OWN_ECHO_S, AudBusState, AudCommand
-from .b_logicx.dimmer import DIMMER_DATA_GROUP, DimmerBus, DimmerConfig, DimmerView
+from .b_logicx.dimmer import (
+    DIMMER_DATA_GROUP,
+    DimmerBus,
+    DimmerConfig,
+    DimmerView,
+    dimmer_toggle_frames,
+)
 from .b_logicx.softm_tracker import SoftMConfig, SoftMTracker
 from .bus_repeater import BusRepeater
 from .const import (
@@ -103,6 +109,7 @@ class BLogicxHub:
         self._dimmer_callbacks: dict[
             tuple[int, int], list[Callable[[DimmerView], None]]
         ] = {}
+        self._dimmer_hold_tasks: dict[tuple[int, int], asyncio.Task] = {}
         self._aud = AudBusState()
         self._aud_keys: set[tuple[int, int]] = set()
         self._aud_callbacks: dict[
@@ -455,15 +462,46 @@ class BLogicxHub:
         """Latest on/off and percent for this dimmer."""
         return self._dimmer.view(group, address)
 
+    def _publish_dimmer(self, key: tuple[int, int]) -> None:
+        view = self._dimmer.view(key[0], key[1])
+        for cb in list(self._dimmer_callbacks.get(key, ())):
+            try:
+                cb(view)
+            except Exception:  # noqa: BLE001
+                _LOGGER.exception("Dimmer callback error")
+
     def _note_dimmer(self, event: BLXEvent, now: float) -> None:
         """Fold one frame into the dimmer tracker and tell the lights that changed."""
         for key in self._dimmer.apply(event, now):
-            view = self._dimmer.view(key[0], key[1])
-            for cb in list(self._dimmer_callbacks.get(key, ())):
-                try:
-                    cb(view)
-                except Exception:  # noqa: BLE001
-                    _LOGGER.exception("Dimmer callback error")
+            self._publish_dimmer(key)
+        for key in self._dimmer.take_new_holds():
+            self._arm_dimmer_hold(key)
+
+    def _arm_dimmer_hold(self, key: tuple[int, int]) -> None:
+        """Clear the percent if this start is still open after the tap window."""
+        old = self._dimmer_hold_tasks.pop(key, None)
+        if old is not None and not old.done():
+            old.cancel()
+        self._dimmer_hold_tasks[key] = asyncio.create_task(
+            self._commit_dimmer_hold(key),
+            name=f"dimmer_hold_{key[0]}_{key[1]}",
+        )
+
+    async def _commit_dimmer_hold(self, key: tuple[int, int]) -> None:
+        try:
+            while True:
+                delay = self._dimmer.hold_delay(key, time.monotonic())
+                if delay is None:
+                    return
+                if delay > 0:
+                    await asyncio.sleep(delay)
+                    continue
+                if self._dimmer.commit_hold(key, time.monotonic()):
+                    self._publish_dimmer(key)
+                if self._dimmer.hold_delay(key, time.monotonic()) is None:
+                    return
+        except asyncio.CancelledError:
+            return
 
     async def async_set_dimmer_level(self, group: int, address: int, percent: int) -> None:
         """Send Data 0.<percent>, then Timer to this dimmer.
@@ -486,14 +524,16 @@ class BLogicxHub:
             BLXEvent("Timer", int(group) & 0x0F, int(address) & 0xFF, b""), now
         )
 
-    async def async_set_dimmer_on(self, group: int, address: int, on: bool) -> None:
-        """Master on or off: Set or Reset, the same commands as an RLM."""
-        command = "Set" if on else "Reset"
-        await self.async_send(command, group, address)
-        self._note_dimmer(
-            BLXEvent(command, int(group) & 0x0F, int(address) & 0xFF, b""),
-            time.monotonic(),
-        )
+    async def async_toggle_dimmer(self, group: int, address: int) -> None:
+        """Tap the dimmer: Dimmer on its address, then Dimmer <group>.220.
+
+        On and off are the same pair. The module answers with Set or Reset,
+        and the card waits for that. The echoed pair must not clear the percent.
+        """
+        g = int(group) & 0x0F
+        a = int(address) & 0xFF
+        self._dimmer.note_own_toggle(g, a, time.monotonic())
+        await self.async_send_sequence(dimmer_toggle_frames(g, a))
 
     def register_aud(
         self,
@@ -654,6 +694,10 @@ class BLogicxHub:
         self._aud_keys.clear()
         self._aud = AudBusState()
         self._aud_own_echo.clear()
+        for task in list(self._dimmer_hold_tasks.values()):
+            if not task.done():
+                task.cancel()
+        self._dimmer_hold_tasks.clear()
         self._dimmer_callbacks.clear()
         self._dimmer = DimmerBus()
         for task in list(self._softm_timer_tasks.values()):

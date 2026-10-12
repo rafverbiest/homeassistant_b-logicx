@@ -8,7 +8,9 @@ shows the wind speed in km/h.
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import time
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -22,7 +24,12 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .b_logicx.measure import LdmReading, TsmReading, WsmReading
+from .b_logicx.measure import (
+    LdmReading,
+    TsmReading,
+    WsmReading,
+    wsm_should_confirm_quiet,
+)
 from .const import (
     ADDRESS_TYPE_LDM,
     ADDRESS_TYPE_RTC,
@@ -44,6 +51,9 @@ from .const import (
 from .hub import BLogicxHub
 
 _LOGGER = logging.getLogger(__name__)
+
+# How often to look at a stuck breeze. The ask itself waits a quarter hour.
+_WSM_QUIET_CHECK_S = 60.0
 
 
 async def async_setup_entry(
@@ -278,6 +288,9 @@ class BLogicxWsmWindSensor(SensorEntity):
         self._check_status = check_status
         self._unsub = None
         self._raw: int | None = None
+        self._updated_at: float | None = None
+        self._quiet_stop = asyncio.Event()
+        self._quiet_task: asyncio.Task | None = None
         self._attr_unique_id = f"{get_wsm_unique_id(host, group, address)}_wind"
         self._attr_device_info = DeviceInfo(
             identifiers=get_wsm_device_identifiers(host, group, address),
@@ -294,20 +307,54 @@ class BLogicxWsmWindSensor(SensorEntity):
             attrs["raw"] = self._raw
         return attrs
 
+    def _show_reading(self, reading: WsmReading) -> None:
+        self._raw = reading.raw
+        self._attr_native_value = reading.kmh
+        self._updated_at = time.monotonic()
+        self.async_write_ha_state()
+
     async def async_added_to_hass(self) -> None:
         @callback
         def _on_reading(reading: WsmReading) -> None:
-            self._raw = reading.raw
-            self._attr_native_value = reading.kmh
-            self.async_write_ha_state()
+            self._show_reading(reading)
 
         self._unsub = self._hub.register_wsm(self._group, self._address, _on_reading)
         if self._check_status:
             reading = await self._hub.async_request_wsm(self._group, self._address)
             if reading is not None:
                 _on_reading(reading)
+        self._quiet_task = self.hass.async_create_task(self._confirm_quiet())
+
+    async def _confirm_quiet(self) -> None:
+        """Ask again when a breeze has sat still. A calm zero is left alone."""
+        while not self._quiet_stop.is_set():
+            try:
+                await asyncio.wait_for(
+                    self._quiet_stop.wait(), timeout=_WSM_QUIET_CHECK_S
+                )
+                return
+            except asyncio.TimeoutError:
+                pass
+            updated = self._updated_at
+            if updated is None:
+                continue
+            age = time.monotonic() - updated
+            if not wsm_should_confirm_quiet(self._attr_native_value, age):
+                continue
+            reading = await self._hub.async_request_wsm(self._group, self._address)
+            if self._quiet_stop.is_set():
+                return
+            if reading is not None:
+                self._show_reading(reading)
+            else:
+                # No answer. Wait the full quiet interval before asking again.
+                self._updated_at = time.monotonic()
 
     async def async_will_remove_from_hass(self) -> None:
+        self._quiet_stop.set()
+        if self._quiet_task is not None and not self._quiet_task.done():
+            self._quiet_task.cancel()
+            self._quiet_task = None
         if self._unsub:
             self._unsub()
             self._unsub = None

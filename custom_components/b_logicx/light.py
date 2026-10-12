@@ -1,8 +1,9 @@
 """One light per dimmer: master on/off, and a slider for the percent.
 
-Set and Reset are the master switch. The slider sends Data 0.<percent>
-and then Timer to this dimmer. A Sfeer in the group clears the known
-percent; the dimmer's own Set or Reset updates on or off.
+On and off send Dimmer on this address, then Dimmer <group>.220. The
+dimmer answers with Set or Reset, and that answer is the on/off state.
+The slider sends Data 0.<percent> and then Timer to this dimmer. A Sfeer
+in the group clears the known percent.
 """
 
 from __future__ import annotations
@@ -135,7 +136,7 @@ class BLogicxDimmer(LightEntity):
             self._attr_color_mode = None
 
     async def async_turn_on(self, **kwargs) -> None:
-        """Slider movement sends a percent. A plain on sends Set."""
+        """Slider movement sends a percent. A plain on sends the tap pair."""
         brightness = kwargs.get(ATTR_BRIGHTNESS)
         if brightness is not None:
             await self._hub.async_set_dimmer_level(
@@ -144,8 +145,8 @@ class BLogicxDimmer(LightEntity):
                 brightness_to_percent(int(brightness)),
             )
             return
-        await self._hub.async_set_dimmer_on(self._group, self._address, True)
+        await self._hub.async_toggle_dimmer(self._group, self._address)
 
     async def async_turn_off(self, **kwargs) -> None:
-        """Master off is Reset."""
-        await self._hub.async_set_dimmer_on(self._group, self._address, False)
+        """Master off sends the same tap pair as on. The module answers."""
+        await self._hub.async_toggle_dimmer(self._group, self._address)

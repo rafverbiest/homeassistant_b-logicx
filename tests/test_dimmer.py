@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from b_logicx.dimmer import (
+    DIMMER_STOP_ADDRESS,
+    DIMMER_TAP_WINDOW_S,
     DimmerBus,
     DimmerConfig,
     DimmerView,
     brightness_to_percent,
+    dimmer_toggle_frames,
     percent_to_brightness,
 )
 from b_logicx.models import BLXEvent
@@ -200,10 +203,68 @@ def test_press_and_hold_clears_only_the_percent():
     bus = _bus(_cfg(remembers_level=True))
     _feed(bus, [("Data", 0, 40), ("Timer", 5, 40), ("Dimmer", 5, 40)])
     assert bus.view(5, 40).is_on is True
+    assert bus.view(5, 40).percent == 40
+    assert bus.commit_hold((5, 40), 11.0)
+    assert bus.view(5, 40).is_on is True
     assert bus.view(5, 40).percent is None
     _feed(bus, [("Reset", 5, 40), ("Set", 5, 40)], now=20.0)
     assert bus.view(5, 40).is_on is True
     assert bus.view(5, 40).percent is None
+
+
+def test_close_dimmer_pair_keeps_the_percent():
+    bus = _bus(_cfg(remembers_level=True))
+    _feed(bus, [("Data", 0, 40), ("Timer", 5, 40), ("Dimmer", 5, 40), ("Dimmer", 5, 220)])
+    assert bus.view(5, 40) == DimmerView(True, 40)
+    assert bus.hold_delay((5, 40), 10.05) is None
+    assert dimmer_toggle_frames(5, 40) == [
+        ("Dimmer", 5, 40),
+        ("Dimmer", 5, DIMMER_STOP_ADDRESS),
+    ]
+
+
+def test_late_stop_clears_the_percent_and_does_not_restore_it():
+    bus = _bus(_cfg())
+    _feed(bus, [("Data", 0, 40), ("Timer", 5, 40)])
+    bus.apply(_ev("Dimmer", 5, 40), 10.0)
+    bus.apply(_ev("Dimmer", 5, 220), 10.0 + DIMMER_TAP_WINDOW_S + 0.05)
+    assert bus.view(5, 40).is_on is True
+    assert bus.view(5, 40).percent is None
+    bus.apply(_ev("Dimmer", 5, 220), 12.0)
+    assert bus.view(5, 40).percent is None
+
+
+def test_stop_alone_leaves_the_percent():
+    bus = _bus(_cfg())
+    _feed(bus, [("Data", 0, 40), ("Timer", 5, 40), ("Dimmer", 5, 220)])
+    assert bus.view(5, 40).percent == 40
+
+
+def test_own_toggle_echo_does_not_clear_the_percent():
+    bus = _bus(_cfg())
+    _feed(bus, [("Data", 0, 40), ("Timer", 5, 40)])
+    bus.note_own_toggle(5, 40, 10.0)
+    bus.apply(_ev("Dimmer", 5, 40), 10.02)
+    bus.apply(_ev("Dimmer", 5, 220), 10.03)
+    assert bus.take_new_holds() == []
+    assert bus.commit_hold((5, 40), 10.0 + DIMMER_TAP_WINDOW_S + 0.05) is False
+    assert bus.view(5, 40).percent == 40
+
+
+def test_stop_closes_every_fresh_start_in_the_group():
+    bus = _bus(_cfg(address=40), _cfg(address=41), _cfg(group=6, address=40))
+    _feed(bus, [("Data", 0, 40), ("Timer", 5, 40)])
+    _feed(bus, [("Data", 0, 55), ("Timer", 5, 41)], now=11.0)
+    _feed(bus, [("Data", 0, 70), ("Timer", 6, 40)], now=12.0)
+    bus.apply(_ev("Dimmer", 5, 40), 13.0)
+    bus.apply(_ev("Dimmer", 5, 41), 13.01)
+    bus.apply(_ev("Dimmer", 6, 40), 13.01)
+    bus.apply(_ev("Dimmer", 5, 220), 13.02)
+    assert bus.view(5, 40).percent == 40
+    assert bus.view(5, 41).percent == 55
+    assert bus.hold_delay((6, 40), 13.02) is not None
+    assert bus.commit_hold((6, 40), 13.02 + DIMMER_TAP_WINDOW_S + 0.02)
+    assert bus.view(6, 40).percent is None
 
 
 def test_second_set_after_sfeer_does_not_invent_a_level():

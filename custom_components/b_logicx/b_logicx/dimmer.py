@@ -3,7 +3,14 @@
 A level is two frames, the same pair BLConfig sends: Data 0.<percent>,
 then Timer on the dimmer's own group and address. Percent is 0–100.
 
-Set turns that dimmer on. Reset turns it off.
+Set turns that dimmer on. Reset turns it off. Those frames come from the
+module. This integration does not send them to switch the lamp.
+
+A tap is Dimmer on the dimmer's own address, then Dimmer <group>.220, with
+barely any time between them. 220 means stop dimming. Together they act like
+Toggle and the known percent stays. Dimmer on the dimmer's own address with
+no stop inside that short window is a hold: the level moved, so the percent
+is cleared. A later stop does not bring it back.
 
 A Sfeer is Dimmer to an address from 221 through 228 in the dimmer's group.
 The dimmer module answers on its own address with Set or Reset. That answer
@@ -29,6 +36,11 @@ from .models import BLXEvent
 # Filed Sfeer addresses. Eight moods per room, in the room's group.
 SFEER_ADDRESS_MIN = 221
 SFEER_ADDRESS_MAX = 228
+
+# Dimmer <group>.220 stops dimming. Start plus this stop inside the window
+# is a tap. Start left alone past the window is a hold.
+DIMMER_STOP_ADDRESS = 220
+DIMMER_TAP_WINDOW_S = 0.15
 
 # Data 0.<percent>: group 0, address byte is the percent.
 DIMMER_DATA_GROUP = 0
@@ -88,6 +100,13 @@ def brightness_to_percent(brightness: int) -> int:
     return min(DIMMER_PERCENT_MAX, max(1, round(b * 100 / 255)))
 
 
+def dimmer_toggle_frames(group: int, address: int) -> list[tuple[str, int, int]]:
+    """One tap: start dimming this module, then stop."""
+    g = int(group) & 0x0F
+    a = int(address) & 0xFF
+    return [("Dimmer", g, a), ("Dimmer", g, DIMMER_STOP_ADDRESS)]
+
+
 class DimmerBus:
     """Pending Data percent, and one slot per configured dimmer."""
 
@@ -95,6 +114,11 @@ class DimmerBus:
         self._slots: dict[tuple[int, int], _Slot] = {}
         self._pending: int | None = None
         self._pending_at: float | None = None
+        # Dimmer on a module's own address, waiting for stop or for the window.
+        self._dim_started: dict[tuple[int, int], float] = {}
+        # Taps this integration just sent. Their echo must not clear the percent.
+        self._own_toggle: dict[tuple[int, int], float] = {}
+        self._new_holds: list[tuple[int, int]] = []
 
     def upsert(self, config: DimmerConfig) -> None:
         """Add or replace one dimmer's flags. An existing level is kept."""
@@ -140,7 +164,7 @@ class DimmerBus:
             self._note_timer(group, address, now)
             return
         if cmd == "Dimmer":
-            self._note_dimmer(group, address)
+            self._note_dimmer(group, address, now)
             return
         if cmd == "Set":
             self._note_set(group, address)
@@ -174,23 +198,96 @@ class DimmerBus:
         slot.is_on = True
         slot.mood_pending = False
 
-    def _note_dimmer(self, group: int, address: int) -> None:
+    def note_own_toggle(self, group: int, address: int, now: float) -> None:
+        """Remember a tap we are about to send, so its echo keeps the percent."""
+        key = (int(group) & 0x0F, int(address) & 0xFF)
+        self._own_toggle[key] = now
+
+    def take_new_holds(self) -> list[tuple[int, int]]:
+        """Starts recorded since the last call. The hub times these out."""
+        new = self._new_holds
+        self._new_holds = []
+        return new
+
+    def hold_delay(self, key: tuple[int, int], now: float) -> float | None:
+        """Seconds until this start is past the tap window. None if it closed."""
+        started = self._dim_started.get(key)
+        if started is None:
+            return None
+        if now - started > DIMMER_TAP_WINDOW_S:
+            return 0.0
+        # Wake just past the boundary, so a stop at 150 ms still counts as a tap.
+        return (started + DIMMER_TAP_WINDOW_S) - now + 0.001
+
+    def commit_hold(self, key: tuple[int, int], now: float) -> bool:
+        """Clear the percent when a start was left alone past the tap window.
+
+        A start that is still inside the window stays pending. Returns whether
+        the shown percent changed.
+        """
+        started = self._dim_started.get(key)
+        if started is None:
+            return False
+        if now - started <= DIMMER_TAP_WINDOW_S:
+            return False
+        self._dim_started.pop(key, None)
+        slot = self._slots.get(key)
+        if slot is None:
+            return False
+        changed = slot.percent is not None
+        self._forget_level(slot)
+        return changed
+
+    def _note_dimmer(self, group: int, address: int, now: float) -> None:
         if SFEER_ADDRESS_MIN <= address <= SFEER_ADDRESS_MAX:
-            for slot in self._slots.values():
-                if slot.config.group != group:
+            for key, slot in self._slots.items():
+                if key[0] != group:
                     continue
                 if not slot.config.participates_in_moods:
                     continue
                 slot.percent = None
                 slot.memory = None
                 slot.mood_pending = True
+                self._dim_started.pop(key, None)
             return
-        slot = self._slots.get((group, address))
-        if slot is None:
+        if address == DIMMER_STOP_ADDRESS:
+            self._close_starts(group, now)
             return
-        # Press-and-hold on this dimmer. The level moved. On/off did not.
+        self._begin_start(group, address, now)
+
+    def _begin_start(self, group: int, address: int, now: float) -> None:
+        key = (group, address)
+        if key not in self._slots:
+            return
+        if self._own_toggle_covers(key, now):
+            return
+        self._dim_started[key] = now
+        self._new_holds.append(key)
+
+    def _close_starts(self, group: int, now: float) -> None:
+        """Stop dimming in this group. A fresh start was a tap. An old one was a hold."""
+        for key, started in list(self._dim_started.items()):
+            if key[0] != group:
+                continue
+            self._dim_started.pop(key, None)
+            if now - started <= DIMMER_TAP_WINDOW_S:
+                continue
+            slot = self._slots.get(key)
+            if slot is not None:
+                self._forget_level(slot)
+
+    def _forget_level(self, slot: _Slot) -> None:
         slot.percent = None
         slot.memory = None
+
+    def _own_toggle_covers(self, key: tuple[int, int], now: float) -> bool:
+        started = self._own_toggle.get(key)
+        if started is None:
+            return False
+        if now - started > DIMMER_TAP_WINDOW_S:
+            self._own_toggle.pop(key, None)
+            return False
+        return True
 
     def _note_set(self, group: int, address: int) -> None:
         slot = self._slots.get((group, address))

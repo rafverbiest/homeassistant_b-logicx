@@ -75,6 +75,32 @@ def value14_to_kmh(address: int) -> int:
     return int(address) // 2
 
 
+# A quiet module often stops reporting once the speed is only a breeze.
+# 1 km/h on the graph for hours is that silence, not a steady wind.
+# Ask again after a quarter of an hour so the trace can fall back to 0.
+WSM_QUIET_MAX_KMH = 2
+WSM_QUIET_ASK_AFTER_S = 15 * 60
+
+
+def wsm_should_confirm_quiet(
+    kmh: int | None,
+    age_s: float,
+    *,
+    after_s: float = WSM_QUIET_ASK_AFTER_S,
+    max_kmh: int = WSM_QUIET_MAX_KMH,
+) -> bool:
+    """True when a low non-zero speed has sat still long enough to ask again.
+
+    Zero is already calm. A higher speed is left to the module, which reports
+    on its own while it is actually windy.
+    """
+    if isinstance(kmh, bool) or not isinstance(kmh, int):
+        return False
+    if kmh <= 0 or kmh > max_kmh:
+        return False
+    return age_s >= after_s
+
+
 def settings_to_preset(group: int, address: int) -> tuple[int, float, str]:
     """Return (preset_index, setpoint_c, name)."""
     idx = int(group) & 0x0F

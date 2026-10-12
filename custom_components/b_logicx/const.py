@@ -145,7 +145,8 @@ DEFAULT_CLOSE_TIME = 30.0  # seconds for full close travel
 # }
 #
 # Dimmer. The slider sends Data 0.<percent> then Timer to this address.
-# Set and Reset are the master on and off. remembers_level is how the
+# On and off send Dimmer <group>.<address> then Dimmer <group>.220.
+# The module answers with Set or Reset. remembers_level is how the
 # module was programmed: it keeps its level across off and on. When that
 # is off, a plain Set shows 100%. A Sfeer answer does not.
 # {

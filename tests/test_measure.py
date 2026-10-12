@@ -9,9 +9,11 @@ from b_logicx.measure import (
     raw_to_percent,
     settings_to_preset,
     value11_to_temperature_c,
+    WSM_QUIET_ASK_AFTER_S,
     value14_to_kmh,
     value_frame_to_percent,
     value_frame_to_raw,
+    wsm_should_confirm_quiet,
 )
 
 
@@ -137,6 +139,16 @@ def test_ldm_counts_zero_and_full_scale():
     st.note_value(4, 0, now + 0.2)
     full = st.try_ldm_reading(1, 23, now + 0.3)
     assert full is not None and full.raw == 1024
+
+
+def test_wsm_quiet_breeze_is_asked_again_and_calm_is_not():
+    assert wsm_should_confirm_quiet(None, WSM_QUIET_ASK_AFTER_S) is False
+    assert wsm_should_confirm_quiet(0, WSM_QUIET_ASK_AFTER_S) is False
+    assert wsm_should_confirm_quiet(1, WSM_QUIET_ASK_AFTER_S - 1) is False
+    assert wsm_should_confirm_quiet(1, WSM_QUIET_ASK_AFTER_S) is True
+    assert wsm_should_confirm_quiet(2, WSM_QUIET_ASK_AFTER_S) is True
+    assert wsm_should_confirm_quiet(3, WSM_QUIET_ASK_AFTER_S) is False
+    assert wsm_should_confirm_quiet(25, 24 * 60 * 60) is False
 
 
 def test_wsm_kmh_drops_halves():
