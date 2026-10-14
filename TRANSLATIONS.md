@@ -18,6 +18,7 @@ Home Assistant language **Nederlands** loads `nl.json` for config/options flows,
 | Concept | English UI | Dutch UI |
 |---------|------------|----------|
 | SoftM, Sfeer, LDM, TSM, WSM, RTC, NWM, STM | Unchanged product names | Unchanged |
+| Dimmer remembers level (`remembers_level`) | Memo | Memo |
 | Read-only address | Read-only address | Alleen-lezen adres |
 | Status / Set / Reset / Toggle / Dimmer | Protocol English | Protocol English |
 | Group / Address | Group / Address | Groep / Adres |

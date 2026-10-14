@@ -53,12 +53,12 @@
       },
       "add_dimmer": {
         "title": "Add dimmer",
-        "description": "One dimmer, by its physical group and address. The group is the room. The slider sends a percent. On and off send Set and Reset.\n\nWhen “Remembers dim level when off” is on, the module returns to its last level on Set and the slider follows. When it is off, a plain Set shows 100%.\n\nWhen “Participates in Sfeer” is on, a Sfeer in this group clears the known percent. On or off follows the Set or Reset the dimmer itself sends back.",
+        "description": "One dimmer, by its physical group and address. The group is the room. The slider sends a percent. On and off send Set and Reset.\n\nMemo means the module remembers the dim level when off. When Memo is on, the module returns to its last level on Set and the slider follows. When it is off, a plain Set shows 100%.\n\nWhen “Participates in Sfeer” is on, a Sfeer in this group clears the known percent. On or off follows the Set or Reset the dimmer itself sends back.",
         "data": {
           "name": "Name",
           "group": "Group",
           "address": "Address",
-          "remembers_level": "Remembers dim level when off",
+          "remembers_level": "Memo",
           "participates_in_moods": "Participates in Sfeer"
         }
       },

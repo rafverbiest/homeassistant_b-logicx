@@ -53,12 +53,12 @@
       },
       "add_dimmer": {
         "title": "Dimmer toevoegen",
-        "description": "Eén dimmer, op zijn fysieke groep en adres. De groep is de kamer. De schuifregelaar stuurt een percentage. Aan en uit sturen Set en Reset.\n\nStaat “Onthoudt het dimniveau bij uit” aan, dan keert de module bij Set terug naar het laatste niveau en volgt de schuifregelaar. Staat het uit, dan toont een gewone Set 100%.\n\nStaat “Neemt deel aan sferen” aan, dan wist een sfeer in deze groep het bekende percentage. Aan of uit volgt de Set of Reset die de dimmer zelf terugstuurt.",
+        "description": "Eén dimmer, op zijn fysieke groep en adres. De groep is de kamer. De schuifregelaar stuurt een percentage. Aan en uit sturen Set en Reset.\n\nMemo wil zeggen dat de module het dimniveau onthoudt bij uit. Staat Memo aan, dan keert ze bij Set terug naar het laatste niveau en volgt de schuifregelaar. Staat het uit, dan toont een gewone Set 100%.\n\nStaat “Neemt deel aan sferen” aan, dan wist een sfeer in deze groep het bekende percentage. Aan of uit volgt de Set of Reset die de dimmer zelf terugstuurt.",
         "data": {
           "name": "Naam",
           "group": "Groep",
           "address": "Adres",
-          "remembers_level": "Onthoudt het dimniveau bij uit",
+          "remembers_level": "Memo",
           "participates_in_moods": "Neemt deel aan sferen"
         }
       },
