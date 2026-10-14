@@ -9,7 +9,7 @@ last_modified_at: 2026-10-14
 
 **Nederlands** · [English](en.html)
 
-Custom integration die Home Assistant rechtstreeks koppelt aan een **[B-Logicx](https://b-logicx.be/) [NWM / NWX](https://b-logicx.be/Manual/BLConfig/HTML/Netwerkverbinding.html)** bus-gateway — [BHS](https://b-logicx.be/Manual/BLConfig/HTML/BHS.html) Home Server is optioneel en geen vereiste.
+Custom integration die Home Assistant rechtstreeks koppelt aan een **[B-Logicx](https://b-logicx.be/) [NWM](https://b-logicx.be/DataSheet/DS_NWM.pdf) / NWX** bus-gateway — [BHS](https://b-logicx.be/DataSheet/DS_BHS.pdf) Home Server is optioneel en geen vereiste.
 
 ## Links
 
@@ -21,12 +21,12 @@ Custom integration die Home Assistant rechtstreeks koppelt aan een **[B-Logicx](
 
 ## Functies
 
-- Schakelaars ([RLM](https://b-logicx.be/Manual/BLConfig/HTML/RLM.html) / [SoftM](https://b-logicx.be/Manual/BLConfig/HTML/STM.html)), **[dimmers](https://b-logicx.be/Manual/BLConfig/HTML/DIM1K.html)** en **alleen-lezen** adressen  
-- **[Rolluiken](https://b-logicx.be/Manual/BLConfig/HTML/ReeksRolluiken.html)** (dubbele RLM) en **[Sfeer](https://b-logicx.be/Manual/BLConfig/HTML/Sferen.html)**-selectie  
-- **[AUD](https://b-logicx.be/Manual/BLConfig/HTML/AUD.html)** als mediaspeler (bronnen, volume omhoog/omlaag, dempen). [BHS](https://b-logicx.be/Manual/BLConfig/HTML/BHS.html) kan de fysieke speler bedienen, of de volledige controle kan langs Home Assistant. Een gekende bron, afspelen, stoppen of dempen van die speler wordt teruggeschreven zodat de [DSM](https://b-logicx.be/Manual/BLConfig/HTML/DSM.html) schermen volgen.  
-- **[SoftM](https://b-logicx.be/Manual/BLConfig/HTML/STM.html)** virtuele statusmodule (VSM) in Home Assistant  
-- **TCP bus repeater** — deel de ene [NWM](https://b-logicx.be/Manual/BLConfig/HTML/Netwerkverbinding.html)-verbinding met [BLConfig](https://b-logicx.be/Manual/BLConfig/HTML/Introductie.html) / blxmonitor  
-- **[RTC](https://b-logicx.be/Manual/BLConfig/HTML/RTC.html)**-synchronisatie (incl. DST), **[LDM](https://b-logicx.be/Manual/BLConfig/HTML/LDM.html)**-lichtsensor, **[TSM](https://b-logicx.be/Manual/BLConfig/HTML/TSM.html)**-thermostaat, **[WSM](https://b-logicx.be/Manual/BLConfig/HTML/WSM.html)**-windsnelheid (km/h), **[BM8](https://b-logicx.be/Manual/BLConfig/HTML/BM8.html)**-deurbel  
+- Schakelaars ([RLM](https://b-logicx.be/DataSheet/DS_RLM.pdf) / SoftM), **dimmers** en **alleen-lezen** adressen  
+- **[Rolluiken](https://b-logicx.be/DataSheet/DS_Rolluik.pdf)** (dubbele RLM) en **Sfeer**-selectie  
+- **AUD** als mediaspeler (bronnen, volume omhoog/omlaag, dempen). [BHS](https://b-logicx.be/DataSheet/DS_BHS.pdf) kan de fysieke speler bedienen, of de volledige controle kan langs Home Assistant. Een gekende bron, afspelen, stoppen of dempen van die speler wordt teruggeschreven zodat de [DSM](https://b-logicx.be/DataSheet/DS_DSM.pdf) schermen volgen.  
+- **SoftM** virtuele statusmodule (VSM) in Home Assistant  
+- **TCP bus repeater** — deel de ene [NWM](https://b-logicx.be/DataSheet/DS_NWM.pdf)-verbinding met [BLConfig](https://b-logicx.be/Manual/BLConfig/HTML/Introductie.html) / blxmonitor  
+- **[RTC](https://b-logicx.be/DataSheet/DS_RTC.pdf)**-synchronisatie (incl. DST), **[LDM](https://b-logicx.be/DataSheet/DS_LDM.pdf)**-lichtsensor, **[TSM](https://b-logicx.be/DataSheet/DS_TSM.pdf)**-thermostaat, **[WSM](https://b-logicx.be/DataSheet/DS_WSM.pdf)**-windsnelheid (km/h), **[BM8](https://b-logicx.be/DataSheet/DS_BM8.pdf)**-deurbel  
 - YAML import/export van adressen  
 
 ## Documentatie
