@@ -7,10 +7,11 @@ title: B-Logicx voor Home Assistant
 
 **Nederlands** · [English](en.html)
 
-Custom integration die Home Assistant rechtstreeks koppelt aan een **B-Logicx BL-NWM / BL-NWX** bus-gateway — BL-BHS Home Server is optioneel en geen vereiste.
+Custom integration die Home Assistant rechtstreeks koppelt aan een **[B-Logicx](https://b-logicx.be/) BL-NWM / BL-NWX** bus-gateway — BL-BHS Home Server is optioneel en geen vereiste.
 
 ## Links
 
+- [**B-Logicx**](https://b-logicx.be/) — website van de fabrikant
 - [**GitHub-repository**](https://github.com/rafverbiest/homeassistant_b-logicx)
 - [**Wiki (documentatie)**](https://github.com/rafverbiest/homeassistant_b-logicx/wiki)
 - [**Releases**](https://github.com/rafverbiest/homeassistant_b-logicx/releases)

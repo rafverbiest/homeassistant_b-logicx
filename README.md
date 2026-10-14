@@ -2,8 +2,9 @@
 
 **Nederlands** | [English](README.en.md)
 
-Custom integration voor de **B-Logicx (BL-NWM / BL-NWX)** bus-gateway: schakelaars, dimmers, rolluiken, Sfeer, alleen-lezen adressen, SoftM VSM, RTC, LDM/TSM/WSM, BL-BM8 en een optionele TCP bus repeater.
+Custom integration voor de **[B-Logicx](https://b-logicx.be/) (BL-NWM / BL-NWX)** bus-gateway: RLM's, dimmers, rolluiksturingen, sferen, readonly adressen, SoftM VSM, RTC, LDM/TSM/WSM, BL-BM8 en een TCP bus repeater. Onafhankelijk van de fabrikant.
 
+**B-Logicx:** [b-logicx.be](https://b-logicx.be/) ·
 **Site:** [b-logicx.rafverbiest.be](https://b-logicx.rafverbiest.be) ·
 **Wiki:** [documentatie](https://github.com/rafverbiest/homeassistant_b-logicx/wiki) ·
 **Releases:** [changelog](https://github.com/rafverbiest/homeassistant_b-logicx/releases)

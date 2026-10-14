@@ -9,10 +9,11 @@ description: Home Assistant integration for the B-Logicx bus gateway (BL-NWM / B
 
 [Nederlands](index.html) · **English**
 
-Custom integration that connects Home Assistant directly to a **B-Logicx BL-NWM / BL-NWX** bus gateway — the BL-BHS Home Server is optional and not a requirement.
+Custom integration that connects Home Assistant directly to a **[B-Logicx](https://b-logicx.be/) BL-NWM / BL-NWX** bus gateway — the BL-BHS Home Server is optional and not a requirement.
 
 ## Links
 
+- [**B-Logicx**](https://b-logicx.be/) — the manufacturer's website
 - [**GitHub repository**](https://github.com/rafverbiest/homeassistant_b-logicx)
 - [**Wiki (documentation)**](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Home-en)
 - [**Releases**](https://github.com/rafverbiest/homeassistant_b-logicx/releases)
