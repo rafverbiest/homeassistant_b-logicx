@@ -24,7 +24,7 @@ Custom integration that connects Home Assistant directly to a **[B-Logicx](https
 
 - Switches ([RLM](https://b-logicx.be/DataSheet/DS_RLM.pdf) / SoftM), **dimmers**, and **read-only** addresses  
 - **[Covers](https://b-logicx.be/DataSheet/DS_Rolluik.pdf)** (dual RLM) and **Sfeer** selection  
-- **AUD** as a media player (sources, volume up/down, mute). [BHS](https://b-logicx.be/DataSheet/DS_BHS.pdf) can control the physical player, or full control can go through Home Assistant. A known source, play, stop, or mute on that player is written back so the [DSM](https://b-logicx.be/DataSheet/DS_DSM.pdf) displays follow.  
+- **AUD** media players (sources, volume up/down, mute). [BHS](https://b-logicx.be/DataSheet/DS_BHS.pdf) can control the physical player; that was tested with a [NuVoP](https://b-logicx.be/Manual/BLConfig/HTML/NuVoP.html). NUV, AUD, ASD, and ART24 use the same bus shape. Full control can also go through Home Assistant; that was tested with Spotify and should work with any player Home Assistant can link. A known source, play, stop, or mute is written back so the [DSM](https://b-logicx.be/DataSheet/DS_DSM.pdf) displays follow.  
 - **SoftM** virtual status module (VSM) inside Home Assistant  
 - **TCP bus repeater** — share the single [NWM](https://b-logicx.be/DataSheet/DS_NWM.pdf) link with [BLConfig](https://b-logicx.be/Manual/BLConfig/HTML/Introductie.html) / blxmonitor  
 - **[RTC](https://b-logicx.be/DataSheet/DS_RTC.pdf)** sync (incl. DST), **[LDM](https://b-logicx.be/DataSheet/DS_LDM.pdf)** light sensor, **[TSM](https://b-logicx.be/DataSheet/DS_TSM.pdf)** thermostat, **[WSM](https://b-logicx.be/DataSheet/DS_WSM.pdf)** wind speed (km/h), **[BM8](https://b-logicx.be/DataSheet/DS_BM8.pdf)** doorbell  
