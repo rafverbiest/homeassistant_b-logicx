@@ -1,6 +1,8 @@
 ---
 layout: default
+lang: nl
 title: B-Logicx voor Home Assistant
+last_modified_at: 2026-10-14
 ---
 
 # B-Logicx voor Home Assistant

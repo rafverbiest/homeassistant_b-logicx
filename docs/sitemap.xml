@@ -1,0 +1,22 @@
+---
+layout: null
+---
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+{%- assign home = site.html_pages | where: "name", "index.md" | first -%}
+{%- assign english = site.html_pages | where: "name", "en.md" | first -%}
+  <url>
+    <loc>{{ "/" | absolute_url }}</loc>
+    <lastmod>{{ home.last_modified_at | date_to_xmlschema }}</lastmod>
+    <xhtml:link rel="alternate" hreflang="nl" href="{{ "/" | absolute_url }}" />
+    <xhtml:link rel="alternate" hreflang="en" href="{{ "/en.html" | absolute_url }}" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="{{ "/" | absolute_url }}" />
+  </url>
+  <url>
+    <loc>{{ "/en.html" | absolute_url }}</loc>
+    <lastmod>{{ english.last_modified_at | date_to_xmlschema }}</lastmod>
+    <xhtml:link rel="alternate" hreflang="nl" href="{{ "/" | absolute_url }}" />
+    <xhtml:link rel="alternate" hreflang="en" href="{{ "/en.html" | absolute_url }}" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="{{ "/" | absolute_url }}" />
+  </url>
+</urlset>

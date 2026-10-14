@@ -3,6 +3,7 @@ layout: default
 lang: en
 title: B-Logicx for Home Assistant
 description: Home Assistant integration for the B-Logicx bus gateway (BL-NWM / BL-NWX)
+last_modified_at: 2026-10-14
 ---
 
 # B-Logicx for Home Assistant
