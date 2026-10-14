@@ -1,4 +1,4 @@
-"""One TCP client for a BL-NWM gateway.
+"""One TCP client for a NWM gateway.
 
 The gateway accepts a single connection and sends one stream of 2-byte
 datagrams. This module keeps one client per host and port, and one background
@@ -45,7 +45,7 @@ class BLXConnection:
     datagram, which is what you usually want in the bus monitor.
 
     Special care is taken so that we never try to open more than a single connection
-    to the BL-NWM/NWX (it is limited to just a single slot)
+    to the NWM/NWX (it is limited to just a single slot)
     """
 
     # Class-level registry: only one live instance per (host, port).

@@ -1,6 +1,6 @@
 """B-Logicx async library.
 
-Reusable library for communicating with B-Logicx BL-NWM gateways.
+Reusable library for communicating with B-Logicx NWM gateways.
 Can be used from command-line tools as well as Home Assistant.
 
 By default, Program datagrams and the two following ones are filtered

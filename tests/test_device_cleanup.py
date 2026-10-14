@@ -36,7 +36,7 @@ def test_address_device_matches_the_per_type_identifiers():
     assert address_device(HOST, softm)[2] == "Bus Device 10.1"
 
     aud = {"type": ADDRESS_TYPE_AUD, "group": 4, "address": 1}
-    assert address_device(HOST, aud)[1:] == ("Audio 4.1", "BL-AUD 4.1")
+    assert address_device(HOST, aud)[1:] == ("Audio 4.1", "AUD 4.1")
 
     cover = {
         "type": ADDRESS_TYPE_SHUTTER,
@@ -70,11 +70,11 @@ def test_address_device_matches_the_per_type_identifiers():
 
     wsm = {"type": ADDRESS_TYPE_WSM, "name": "Roof", "group": 1, "address": 12}
     assert address_device(HOST, wsm)[0] == get_wsm_device_identifiers(HOST, 1, 12)
-    assert address_device(HOST, wsm)[1:] == ("Roof", "BL-WSM 1.12")
+    assert address_device(HOST, wsm)[1:] == ("Roof", "WSM 1.12")
 
     bm8 = {"type": ADDRESS_TYPE_BM8, "name": "Front door", "group": 1, "address": 8}
     assert address_device(HOST, bm8)[0] == get_bm8_device_identifiers(HOST, 1, 8)
-    assert address_device(HOST, bm8)[1:] == ("Front door", "BL-BM8 1.8")
+    assert address_device(HOST, bm8)[1:] == ("Front door", "BM8 1.8")
     assert address_device(HOST, bm8)[0] != get_device_identifiers(HOST, 1, 8)
     assert address_device(HOST, bm8)[0] != get_wsm_device_identifiers(HOST, 1, 8)
 

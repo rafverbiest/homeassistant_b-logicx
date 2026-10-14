@@ -1,8 +1,8 @@
 """B-Logicx RTC (bus clock) Program sequence.
 
-BL-RTC is not DST-aware and the clock drifts away quite a lot.
+RTC is not DST-aware and the clock drifts away quite a lot.
 Aditionally, it does not contain a battery backup so every power failure
-*requires* the BL-RTC to be reprogrammed with the date/time
+*requires* the RTC to be reprogrammed with the date/time
 
 This file describes how to program the clock.
 """

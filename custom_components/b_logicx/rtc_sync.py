@@ -1,4 +1,4 @@
-"""When to write a BL-RTC.
+"""When to write a RTC.
 
 Startup waits until Status probes have gone quiet, then writes the clock if
 that module asks for it. Each module then has an interval task.

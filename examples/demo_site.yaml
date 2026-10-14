@@ -5,7 +5,7 @@
 # Conventions used here (typical B-Logicx layout, not a real site):
 #   group 2  — lights / outlets
 #   group 3  — shutters / covers
-#   group 4  — audio (BL-AUD)
+#   group 4  — audio (AUD)
 #   group 10 — software members
 # Types: rlm | dimmer | softm | aud | shutter | sfeer | readonly | rtc | ldm | tsm | wsm | bm8
 
@@ -155,7 +155,7 @@ addresses:
   # Also enable Integration settings → SoftM status tracking.
   # on/off must be Set/Reset (Toggle is rejected with SoftM tracking).
   - type: softm
-    name: Software member example, status tracked by this integration (virtual BL-STM)
+    name: Software member example, status tracked by this integration (virtual STM)
     group: 10
     address: 201
     on_command: Set

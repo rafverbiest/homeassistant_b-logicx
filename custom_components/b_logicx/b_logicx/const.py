@@ -5,7 +5,7 @@ a number from 0 to 15. The rest of the integration uses these names
 ("Set", "Status", "Select", …) rather than the numbers.
 """
 
-# TCP port of a BL-NWM / BL-NWX gateway.
+# TCP port of a NWM / NWX gateway.
 BLX_TCP_PORT = 10001
 
 # High half of byte 1 → command name. See protocol.py for the byte layout.

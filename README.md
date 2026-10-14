@@ -2,7 +2,7 @@
 
 **Nederlands** | [English](README.en.md)
 
-Custom integration voor de **[B-Logicx](https://b-logicx.be/) (BL-NWM / BL-NWX)** bus-gateway: RLM's, dimmers, rolluiksturingen, sferen, readonly adressen, SoftM VSM, RTC, LDM/TSM/WSM, BL-BM8 en een TCP bus repeater. Onafhankelijk van de fabrikant.
+Custom integration voor de **[B-Logicx](https://b-logicx.be/) (NWM / NWX)** bus-gateway: RLM's, dimmers, rolluiksturingen, sferen, readonly adressen, SoftM VSM, RTC, LDM/TSM/WSM, BM8 en een TCP bus repeater. Onafhankelijk van de fabrikant.
 
 **B-Logicx:** [b-logicx.be](https://b-logicx.be/) ·
 **Site:** [b-logicx.rafverbiest.be](https://b-logicx.rafverbiest.be) ·

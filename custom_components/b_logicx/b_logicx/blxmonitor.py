@@ -134,7 +134,7 @@ def parse_args() -> argparse.Namespace:
         "--ip-address",
         required=True,
         dest="ip",
-        help="IP address of the BL-NWM",
+        help="IP address of the NWM",
     )
     parser.add_argument(
         "-p",

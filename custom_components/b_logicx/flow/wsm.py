@@ -1,4 +1,4 @@
-"""The BL-WSM add and edit screen. Edit opens this same step."""
+"""The WSM add and edit screen. Edit opens this same step."""
 
 from __future__ import annotations
 

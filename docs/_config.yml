@@ -1,5 +1,5 @@
 title: B-Logicx voor Home Assistant
-description: Home Assistant-integratie voor de B-Logicx bus-gateway (BL-NWM / BL-NWX)
+description: Home Assistant-integratie voor de B-Logicx bus-gateway (NWM / NWX)
 url: https://b-logicx.rafverbiest.be
 lang: nl
 theme: jekyll-theme-minimal

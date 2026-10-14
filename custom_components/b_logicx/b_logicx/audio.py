@@ -1,4 +1,4 @@
-"""BL-AUD command pairing (pure, no HA).
+"""AUD command pairing (pure, no HA).
 
 A command is Misc 0.N followed immediately by Select <group>.<address>.
 Other datagrams in between do not cancel the pending Misc

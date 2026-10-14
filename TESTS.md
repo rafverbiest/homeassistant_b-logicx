@@ -1,7 +1,7 @@
 # Offline tests (v0.9)
 
 These tests exercise the B-Logicx library and YAML config against an in-process
-**FakeGateway** (TCP, same 2-byte datagram protocol as a real BL-NWM).  
+**FakeGateway** (TCP, same 2-byte datagram protocol as a real NWM).  
 They do **not** require Home Assistant or a physical gateway.
 
 SoftM tracker + YAML SoftM fields: `tests/test_softm.py`. Bus repeater subnet
@@ -124,7 +124,7 @@ pytest tests/test_protocol.py::test_status_reply_set_reset -v
 | `tests/test_rtc.py` | RTC Program packing (legacy byte identity), schedule phase, FakeGateway send of 9 frames |
 | `tests/test_measure.py` | LDM/TSM codecs + sticky pairing (Value+System, TSM burst) |
 | `tests/test_ldm_gateway.py` | LDM request TX (Data 0.2 + Select); Status drop / non-response |
-| `tests/fake_gateway.py` | Adversarial TCP fake BL-NWM |
+| `tests/fake_gateway.py` | Adversarial TCP fake NWM |
 | `tests/fixtures/` | YAML edge-case fixtures |
 | `b_logicx/bus_format.py` | Shared line format with blxmonitor |
 | `b_logicx/rtc.py` | RTC hex4 packing + `next_phased_sync` |

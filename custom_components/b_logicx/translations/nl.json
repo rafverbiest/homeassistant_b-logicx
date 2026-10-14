@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "B-Logicx gateway",
-        "description": "Maak verbinding met je BL-NWM (of compatibele) gateway op het lokale netwerk.",
+        "description": "Maak verbinding met je NWM (of compatibele) gateway op het lokale netwerk.",
         "data": {
           "host": "IP-adres of hostnaam",
           "port": "TCP-poort (standaard 10001)"
@@ -76,8 +76,8 @@
         }
       },
       "add_aud": {
-        "title": "BL-AUD toevoegen (audio)",
-        "description": "Audiomodule, meestal groep 4. Kies wie de commando's naar dit adres uitvoert.\n\nBHS houdt de acht bronnamen als labels op deze kaart en bedient zelf de echte speler.\n\nHome Assistant koppelt dit adres aan een andere mediaspeler. De volgende schermen kiezen die speler en daarna een van zijn bronnen voor elk van de acht BL-DSM-knoppen.",
+        "title": "AUD toevoegen (audio)",
+        "description": "Audiomodule, meestal groep 4. Kies wie de commando's naar dit adres uitvoert.\n\nBHS houdt de acht bronnamen als labels op deze kaart en bedient zelf de echte speler.\n\nHome Assistant koppelt dit adres aan een andere mediaspeler. De volgende schermen kiezen die speler en daarna een van zijn bronnen voor elk van de acht DSM-knoppen.",
         "data": {
           "name": "Naam",
           "group": "Groep (meestal 4)",
@@ -87,13 +87,13 @@
       },
       "add_aud_player": {
         "title": "Mediaspeler koppelen",
-        "description": "Kies de speler die Home Assistant moet bedienen wanneer een commando voor dit BL-AUD binnenkomt. Het volgende scherm toont de bronnen die die speler meldt. Meldt hij er geen, zet hem dan aan en open dit scherm opnieuw. Bij het wijzigen van diezelfde speler, terwijl hij niets meldt, blijven de eerder bewaarde bronnen beschikbaar.",
+        "description": "Kies de speler die Home Assistant moet bedienen wanneer een commando voor dit AUD binnenkomt. Het volgende scherm toont de bronnen die die speler meldt. Meldt hij er geen, zet hem dan aan en open dit scherm opnieuw. Bij het wijzigen van diezelfde speler, terwijl hij niets meldt, blijven de eerder bewaarde bronnen beschikbaar.",
         "data": {
           "media_player": "Mediaspeler"
         }
       },
       "add_aud_sources": {
-        "title": "BL-AUD-bronnamen",
+        "title": "AUD-bronnamen",
         "description": "Namen voor de acht bronnen. Een lege naam wordt bewaard als Source 1 … Source 8. BHS blijft de echte speler bedienen.",
         "data": {
           "source_1": "Naam bron 1",
@@ -108,7 +108,7 @@
       },
       "add_aud_links": {
         "title": "De acht bronnen koppelen",
-        "description": "Elk BL-DSM-bronnummer gebruikt een bron van de gekoppelde speler. Dezelfde bron mag meer dan eens gekozen worden. Stop en dempen gebruiken een commando dat deze speler ondersteunt.\n\n{mute_note}",
+        "description": "Elk DSM-bronnummer gebruikt een bron van de gekoppelde speler. Dezelfde bron mag meer dan eens gekozen worden. Stop en dempen gebruiken een commando dat deze speler ondersteunt.\n\n{mute_note}",
         "data": {
           "stop_action": "Stop gebruikt",
           "mute_action": "Dempen gebruikt",
@@ -169,7 +169,7 @@
         }
       },
       "add_bm8": {
-        "title": "BL-BM8 toevoegen (deurbel)",
+        "title": "BM8 toevoegen (deurbel)",
         "description": "Deurbel met acht ingebouwde beltonen. Home Assistant maakt een knop voor elke beltoon en een Stop-knop. Een druk laat die beltoon klinken. De groep is meestal 1.",
         "data": {
           "name": "Naam",
@@ -252,7 +252,7 @@
       },
       "integration_settings": {
         "title": "Integratie-instellingen",
-        "description": "SoftM tracking (hoofdschakelaar): als dit aan staat, kan Home Assistant Toggle/Status beantwoorden voor adressen waar SoftM tracking ook per adres aan staat. Gebruik geen hardware BL-STM op diezelfde adressen.\n\nBus repeater: Home Assistant houdt de ene gateway-verbinding open en luistert op deze host (standaard poort 10001) zodat BLConfig of blxmonitor de bus kunnen delen. Richt die tools op het IP van Home Assistant, niet op het gateway-IP. Toegelaten subnet is een CIDR (bijvoorbeeld 192.168.50.0/24). Localhost is altijd toegelaten. Laat het subnet leeg om het oude gedrag te houden (de /24 van de gateway).",
+        "description": "SoftM tracking (hoofdschakelaar): als dit aan staat, kan Home Assistant Toggle/Status beantwoorden voor adressen waar SoftM tracking ook per adres aan staat. Gebruik geen hardware STM op diezelfde adressen.\n\nBus repeater: Home Assistant houdt de ene gateway-verbinding open en luistert op deze host (standaard poort 10001) zodat BLConfig of blxmonitor de bus kunnen delen. Richt die tools op het IP van Home Assistant, niet op het gateway-IP. Toegelaten subnet is een CIDR (bijvoorbeeld 192.168.50.0/24). Localhost is altijd toegelaten. Laat het subnet leeg om het oude gedrag te houden (de /24 van de gateway).",
         "data": {
           "softm_tracking_enabled": "SoftM status tracking inschakelen",
           "bus_repeater_enabled": "Bus repeater inschakelen",
@@ -283,7 +283,7 @@
       "template_missing": "Het sjabloonbestand is niet gevonden.",
       "invalid_format": "De YAML-structuur of een of meer items is ongeldig.",
       "required": "Dit veld is verplicht.",
-      "softm_check_conflict": "SoftM tracking beantwoordt Status al voor dit adres. Zet “Vraag de bus … wanneer Home Assistant start” uit. Sla SoftM tracking hier ook over als een hardware BL-STM deze SoftM al volgt.",
+      "softm_check_conflict": "SoftM tracking beantwoordt Status al voor dit adres. Zet “Vraag de bus … wanneer Home Assistant start” uit. Sla SoftM tracking hier ook over als een hardware STM deze SoftM al volgt.",
       "softm_command_conflict": "SoftM tracking beantwoordt Toggle op de bus. Zet “Commando om aan te zetten” op Set en “Commando om uit te zetten” op Reset — andere commando’s (zoals Toggle) zouden de SoftM twee keer omschakelen.",
       "softm_timer_needs_vsm": "De SoftM-timer wordt beantwoord door de virtuele statusmodule. Schakel die in voor dit adres, of zet de timer op 0.",
       "invalid_subnet": "Toegelaten subnet moet een CIDR zijn, bijvoorbeeld 192.168.50.0/24.",
@@ -298,14 +298,14 @@
         "rlm": "Schakelaar (RLM)",
         "dimmer": "Dimmer",
         "softm": "SoftM (software member)",
-        "aud": "BL-AUD (audiomodule)",
+        "aud": "AUD (audiomodule)",
         "readonly": "Alleen-lezen adres (alleen volgen, geen bediening)",
         "shutter": "Rolluik (open- + sluitadres)",
         "rtc": "RTC (busklok)",
         "ldm": "LDM (lichtsensor)",
         "tsm": "TSM (temperatuur / thermostaat)",
         "wsm": "WSM (windsnelheid)",
-        "bm8": "BL-BM8 (deurbel)"
+        "bm8": "BM8 (deurbel)"
       }
     },
     "aud_controller": {

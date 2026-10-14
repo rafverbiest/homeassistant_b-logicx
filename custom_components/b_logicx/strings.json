@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "B-Logicx gateway",
-        "description": "Connect to your BL-NWM (or compatible) gateway on the local network.",
+        "description": "Connect to your NWM (or compatible) gateway on the local network.",
         "data": {
           "host": "IP address or hostname",
           "port": "TCP port (default 10001)"
@@ -76,8 +76,8 @@
         }
       },
       "add_aud": {
-        "title": "Add BL-AUD (audio)",
-        "description": "Audio module, usually group 4. Choose who acts on commands sent to this address.\n\nBHS keeps the eight source names as labels on this card and controls the real player itself.\n\nHome Assistant links this address to another media player. The next screens pick that player and then one of its sources for each of the eight BL-DSM buttons.",
+        "title": "Add AUD (audio)",
+        "description": "Audio module, usually group 4. Choose who acts on commands sent to this address.\n\nBHS keeps the eight source names as labels on this card and controls the real player itself.\n\nHome Assistant links this address to another media player. The next screens pick that player and then one of its sources for each of the eight DSM buttons.",
         "data": {
           "name": "Name",
           "group": "Group (usually 4)",
@@ -87,13 +87,13 @@
       },
       "add_aud_player": {
         "title": "Link a media player",
-        "description": "Pick the player Home Assistant should control when a command arrives for this BL-AUD. The next screen lists the sources that player is reporting. If it reports none, turn it on and open this screen again. Editing that same player while it is quiet keeps the sources already saved.",
+        "description": "Pick the player Home Assistant should control when a command arrives for this AUD. The next screen lists the sources that player is reporting. If it reports none, turn it on and open this screen again. Editing that same player while it is quiet keeps the sources already saved.",
         "data": {
           "media_player": "Media player"
         }
       },
       "add_aud_sources": {
-        "title": "BL-AUD source names",
+        "title": "AUD source names",
         "description": "Names shown for the eight sources. An empty name is stored as Source 1 … Source 8. BHS keeps control of the real player.",
         "data": {
           "source_1": "Source 1 name",
@@ -108,7 +108,7 @@
       },
       "add_aud_links": {
         "title": "Link the eight sources",
-        "description": "Each BL-DSM source number uses one source from the linked player. The same source can be chosen more than once. Stop and mute use a command this player supports.\n\n{mute_note}",
+        "description": "Each DSM source number uses one source from the linked player. The same source can be chosen more than once. Stop and mute use a command this player supports.\n\n{mute_note}",
         "data": {
           "stop_action": "Stop uses",
           "mute_action": "Mute uses",
@@ -169,7 +169,7 @@
         }
       },
       "add_bm8": {
-        "title": "Add BL-BM8 (doorbell)",
+        "title": "Add BM8 (doorbell)",
         "description": "Doorbell with eight built-in chimes. Home Assistant adds a button for each chime, and a Stop button. A press sounds that chime. The group is usually 1.",
         "data": {
           "name": "Name",
@@ -252,7 +252,7 @@
       },
       "integration_settings": {
         "title": "Integration settings",
-        "description": "SoftM tracking (master switch): when enabled, Home Assistant can answer Toggle/Status for addresses that also have SoftM tracking turned on. Do not use a hardware BL-STM on those same addresses.\n\nBus repeater: Home Assistant keeps the single gateway link and listens on this host (default port 10001) so BLConfig or blxmonitor can share the bus. Point those tools at the Home Assistant IP, not the gateway IP. Allowed subnet is a CIDR (for example 192.168.50.0/24). Localhost is always allowed. Leave the subnet empty to keep the previous behaviour (the gateway’s /24).",
+        "description": "SoftM tracking (master switch): when enabled, Home Assistant can answer Toggle/Status for addresses that also have SoftM tracking turned on. Do not use a hardware STM on those same addresses.\n\nBus repeater: Home Assistant keeps the single gateway link and listens on this host (default port 10001) so BLConfig or blxmonitor can share the bus. Point those tools at the Home Assistant IP, not the gateway IP. Allowed subnet is a CIDR (for example 192.168.50.0/24). Localhost is always allowed. Leave the subnet empty to keep the previous behaviour (the gateway’s /24).",
         "data": {
           "softm_tracking_enabled": "Enable SoftM status tracking",
           "bus_repeater_enabled": "Enable bus repeater",
@@ -283,7 +283,7 @@
       "template_missing": "The template file could not be found.",
       "invalid_format": "The YAML structure or one or more entries is invalid.",
       "required": "This field is required.",
-      "softm_check_conflict": "SoftM tracking already answers Status for this address. Turn off “Ask the bus … when Home Assistant starts”. Also skip SoftM tracking here if a hardware BL-STM already tracks this SoftM.",
+      "softm_check_conflict": "SoftM tracking already answers Status for this address. Turn off “Ask the bus … when Home Assistant starts”. Also skip SoftM tracking here if a hardware STM already tracks this SoftM.",
       "softm_command_conflict": "SoftM tracking answers Toggle on the bus. Set “Command to turn on” to Set and “Command to turn off” to Reset — other commands (such as Toggle) would flip the SoftM twice.",
       "softm_timer_needs_vsm": "The SoftM timer is answered by the Virtual Status Module. Enable it for this address, or set the timer to 0.",
       "invalid_subnet": "Allowed subnet must be a CIDR such as 192.168.50.0/24.",
@@ -298,14 +298,14 @@
         "rlm": "Switch (RLM)",
         "dimmer": "Dimmer",
         "softm": "SoftM (software member)",
-        "aud": "BL-AUD (audio module)",
+        "aud": "AUD (audio module)",
         "readonly": "Read-only address (observe only, no control)",
         "shutter": "Cover / roller / shutter (open + close addresses)",
         "rtc": "RTC (bus clock)",
         "ldm": "LDM (light sensor)",
         "tsm": "TSM (temperature / thermostat)",
         "wsm": "WSM (wind speed)",
-        "bm8": "BL-BM8 (doorbell)"
+        "bm8": "BM8 (doorbell)"
       }
     },
     "aud_controller": {

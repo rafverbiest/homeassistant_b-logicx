@@ -1,4 +1,4 @@
-"""BL-BM8 chime numbers and the Data address each one sends."""
+"""BM8 chime numbers and the Data address each one sends."""
 
 import pytest
 

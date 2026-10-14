@@ -92,7 +92,7 @@ class BLogicxConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Ask for the BL-NWM IP address (gateway)."""
+        """Ask for the NWM IP address (gateway)."""
         errors: dict[str, str] = {}
 
         if user_input is not None:

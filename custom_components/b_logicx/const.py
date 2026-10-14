@@ -48,7 +48,7 @@ DEFAULT_LDM_GROUP = 1
 DEFAULT_TSM_GROUP = 1
 DEFAULT_WSM_GROUP = 1
 
-# BL-BM8 doorbell. Group is usually 1. Chime 1 is Data 0.2; chime 8 is Data 0.9.
+# BM8 doorbell. Group is usually 1. Chime 1 is Data 0.2; chime 8 is Data 0.9.
 # Stop is Data 0.10. Each of those is followed by Select <group>.<address>.
 DEFAULT_BM8_GROUP = 1
 BM8_CHIME_COUNT = 8
@@ -90,7 +90,7 @@ def sfeer_room_group(entry: dict) -> int:
 # Read-only address — listen-only binary sensor (observe Set/Reset; never control)
 DEFAULT_READONLY_GROUP = 1
 
-# BL-AUD audio module — usually group 4
+# AUD audio module — usually group 4
 DEFAULT_AUD_GROUP = 4
 # Who acts on Misc/Select for this address. bhs leaves the real player to BHS.
 AUD_CONTROLLER_BHS = "bhs"
@@ -159,7 +159,7 @@ DEFAULT_CLOSE_TIME = 30.0  # seconds for full close travel
 # }
 #
 # SoftM. Tracking on means Home Assistant is the virtual status module
-# (Set/Reset only). Tracking off means a hardware BL-STM already tracks it.
+# (Set/Reset only). Tracking off means a hardware STM already tracks it.
 # {
 #   "name": "Hall light",
 #   "type": "softm",
@@ -217,7 +217,7 @@ DEFAULT_CLOSE_TIME = 30.0  # seconds for full close travel
 #   "dst_delay_minutes": 1,
 # }
 #
-# BL-AUD. controller is required: bhs or ha. source_1 … source_8 are the names shown
+# AUD. controller is required: bhs or ha. source_1 … source_8 are the names shown
 # for Misc 0.1 … 0.8. With ha, media_player is the linked player and each
 # source name is one of that player's sources. stop_action, mute_action,
 # volume_step, and turn_on_with_play are chosen while configuring that player.
@@ -231,7 +231,7 @@ def is_softm_address(entry: dict) -> bool:
     """True when Home Assistant's Virtual Status Module answers this address.
 
     Type softm only means the address is a software member. A hardware
-    BL-STM may already track it, in which case the per-address flag is off.
+    STM may already track it, in which case the per-address flag is off.
     """
     return (
         str(entry.get("type") or "").strip().lower() == ADDRESS_TYPE_SOFTM
@@ -443,7 +443,7 @@ def address_device(host: str, addr: dict) -> tuple[set[tuple[str, str]], str, st
             host, int(addr["group"]), int(addr["address"])
         )
         name = addr.get("name", f"Audio {addr['group']}.{addr['address']}")
-        model = f"BL-AUD {addr['group']}.{addr['address']}"
+        model = f"AUD {addr['group']}.{addr['address']}"
     elif addr.get("type") == ADDRESS_TYPE_TSM:
         identifiers = get_tsm_device_identifiers(
             host, int(addr["group"]), int(addr["address"])
@@ -455,13 +455,13 @@ def address_device(host: str, addr: dict) -> tuple[set[tuple[str, str]], str, st
             host, int(addr["group"]), int(addr["address"])
         )
         name = addr.get("name", f"WSM {addr['group']}.{addr['address']}")
-        model = f"BL-WSM {addr['group']}.{addr['address']}"
+        model = f"WSM {addr['group']}.{addr['address']}"
     elif addr.get("type") == ADDRESS_TYPE_BM8:
         identifiers = get_bm8_device_identifiers(
             host, int(addr["group"]), int(addr["address"])
         )
         name = addr.get("name", f"Chime {addr['group']}.{addr['address']}")
-        model = f"BL-BM8 {addr['group']}.{addr['address']}"
+        model = f"BM8 {addr['group']}.{addr['address']}"
     elif addr.get("type") == ADDRESS_TYPE_DIMMER:
         identifiers = get_dimmer_device_identifiers(
             host, int(addr["group"]), int(addr["address"])

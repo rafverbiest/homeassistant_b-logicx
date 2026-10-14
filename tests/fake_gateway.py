@@ -1,4 +1,4 @@
-"""Adversarial fake BL-NWM TCP gateway for offline tests.
+"""Adversarial fake NWM TCP gateway for offline tests.
 
 Speaks the same 2-byte datagram protocol. Can answer Status from a state map,
 simulate Sfeer exclusivity, delay replies, drop Status, and inject scripted
@@ -25,7 +25,7 @@ BusLogCallback = Callable[[str], None]
 
 @dataclass
 class FakeGateway:
-    """TCP server pretending to be a BL-NWM."""
+    """TCP server pretending to be a NWM."""
 
     host: str = "127.0.0.1"
     port: int = 0  # 0 = ephemeral

@@ -1,4 +1,4 @@
-"""Home Assistant's one voice on a single BL-NWM gateway.
+"""Home Assistant's one voice on a single NWM gateway.
 
 This is the "Pièce de résistance" of this implentation :)
 
@@ -8,10 +8,10 @@ Each datagram is handled in this order:
 2. The SoftM virtual status module, which may answer on the bus.
 3. The LDM / TSM / WSM decoder.
 4. The dimmer decoder (Data/Timer level, Sfeer, Set/Reset).
-5. The BL-AUD decoder.
+5. The AUD decoder.
 6. Entity callbacks registered for this group.address.
 
-Status, an LDM request, a TSM request, a WSM request, a BL-BM8 chime, a BL-AUD
+Status, an LDM request, a TSM request, a WSM request, a BM8 chime, a AUD
 command, an RTC write, and a frame the repeater forwards all share one lock, so
 they cannot cut into each other. A SoftM reply does not take that lock: it is sent
 from the listener, and the listener is what a Status wait is blocked on.
@@ -203,7 +203,7 @@ class BLogicxHub:
     def register_wsm(
         self, group: int, address: int, callback: Callable[[WsmReading], None]
     ) -> Callable[[], None]:
-        """A BL-WSM. System on this group.address commits the wind speed."""
+        """A WSM. System on this group.address commits the wind speed."""
         key = (group, address)
         self._wsm_keys.add(key)
         self._wsm_callbacks.setdefault(key, []).append(callback)
@@ -541,7 +541,7 @@ class BLogicxHub:
         address: int,
         callback: Callable[[AudCommand], None],
     ) -> Callable[[], None]:
-        """A BL-AUD. Select on this group.address commits the pending Misc."""
+        """A AUD. Select on this group.address commits the pending Misc."""
         key = (group, address)
         self._aud_keys.add(key)
         self._aud_callbacks.setdefault(key, []).append(callback)
@@ -779,7 +779,7 @@ class BLogicxHub:
         """
         if not bm8_data_address_allowed(data_address):
             raise ValueError(
-                "BL-BM8 data address must be 2..10 "
+                "BM8 data address must be 2..10 "
                 f"(got {data_address!r})"
             )
         async with self._request_lock:
@@ -944,7 +944,7 @@ class BLogicxHub:
     async def async_request_wsm(
         self, group: int, address: int, *, timeout: float = _MEASURE_TIMEOUT
     ) -> WsmReading | None:
-        """Ask a BL-WSM for a reading: Data 0.2, 10 ms, then Select, and wait.
+        """Ask a WSM for a reading: Data 0.2, 10 ms, then Select, and wait.
 
         The same pair an LDM uses. Select names this module. It answers with
         Value 14 and then System. System commits the reading.

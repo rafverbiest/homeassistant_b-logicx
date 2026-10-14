@@ -12,7 +12,7 @@ async_setup_entry:
 A reload stops the listener and leaves the TCP socket open, so it does not
 open a second connection. The socket closes when Home Assistant itself stops.
 Without this, connection errors would appear on reload, since
-BL-NWM has just a single slot available.
+NWM has just a single slot available.
 """
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-"""The BL-AUD add and edit screens.
+"""The AUD add and edit screens.
 
 The first screen asks whether BHS or Home Assistant acts on this address.
 BHS then asks for eight source names, as before. Home Assistant asks for a
@@ -46,7 +46,7 @@ def _stored_volume_step(raw: object) -> int | None:
 
 
 class AudSteps:
-    """Add or edit screens for one BL-AUD.
+    """Add or edit screens for one AUD.
 
     Mixed into BLogicxOptionsFlow, which saves through _commit_address.
     """
@@ -87,7 +87,7 @@ class AudSteps:
         return self._aud_draft
 
     def _aud_exclude_players(self) -> list[str]:
-        """BL-AUD entities of this entry, so a player is not linked to itself."""
+        """AUD entities of this entry, so a player is not linked to itself."""
         registry = er.async_get(self.hass)
         return [
             entry.entity_id
@@ -295,7 +295,7 @@ class AudSteps:
     async def async_step_add_aud_links(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """One dropdown per BL-DSM source, filled from the linked player."""
+        """One dropdown per DSM source, filled from the linked player."""
         draft = self._aud_begin()
         options: list[str] = list(draft.get("_link_sources") or [])
         if user_input is not None:

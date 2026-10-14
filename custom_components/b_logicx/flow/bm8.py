@@ -1,4 +1,4 @@
-"""The BL-BM8 add and edit screen. Edit opens this same step."""
+"""The BM8 add and edit screen. Edit opens this same step."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ class Bm8Steps:
     async def async_step_add_bm8(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Add or edit a BL-BM8. A press on one of its buttons is the whole action."""
+        """Add or edit a BM8. A press on one of its buttons is the whole action."""
         if user_input is not None:
             new_addr = {
                 "name": user_input["name"].strip() or "Chime",

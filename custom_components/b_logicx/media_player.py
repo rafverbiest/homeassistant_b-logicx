@@ -1,10 +1,10 @@
-"""BL-AUD media player virtual module
+"""AUD media player virtual module
 
-To understand BL-AUD, it is helpful to think of it as a sort of 'software member'
+To understand AUD, it is helpful to think of it as a sort of 'software member'
 because there is no real hardware involved. It's normally assigned an address in group 4.
-It is being sent commands through BL-DSM media control screens (or using normal INM's)
+It is being sent commands through DSM media control screens (or using normal INM's)
 
-These commands to the BL-AUD address are monitored by whoever was chosen for
+These commands to the AUD address are monitored by whoever was chosen for
 this address. BHS drives a player over Ethernet or RS232 and this card only
 shows the command. Home Assistant drives another media player: each of the
 eight sources is one source that player reports, and play, stop, volume
@@ -88,7 +88,7 @@ async def async_setup_entry(
         controller = str(addr.get("controller") or "").strip().lower()
         if controller not in (AUD_CONTROLLER_BHS, AUD_CONTROLLER_HA):
             _LOGGER.error(
-                "BL-AUD %s.%s has no controller; delete that address and add it again",
+                "AUD %s.%s has no controller; delete that address and add it again",
                 group,
                 address,
             )
@@ -102,7 +102,7 @@ async def async_setup_entry(
             target = str(addr.get("media_player") or "").strip()
             if not target:
                 _LOGGER.error(
-                    "BL-AUD %s.%s is controlled by Home Assistant but has no media player",
+                    "AUD %s.%s is controlled by Home Assistant but has no media player",
                     group,
                     address,
                 )
@@ -134,7 +134,7 @@ async def async_setup_entry(
 
 class BLogicxAudMediaPlayer(MediaPlayerEntity, RestoreEntity):
     """
-    One BL-AUD address presents itself as a Home Assistant media player.
+    One AUD address presents itself as a Home Assistant media player.
 
     With a linked player, a bus command is also sent on to that player.
     The echo of our own card is the bus command, so the forward happens once.
@@ -283,7 +283,7 @@ class BLogicxAudMediaPlayer(MediaPlayerEntity, RestoreEntity):
                 await self._hub.async_send_aud_own(self._group, self._address, code)
             except Exception:  # noqa: BLE001
                 _LOGGER.exception(
-                    "BL-AUD %s.%s could not mirror code %s onto the bus",
+                    "AUD %s.%s could not mirror code %s onto the bus",
                     self._group,
                     self._address,
                     code,
@@ -345,7 +345,7 @@ class BLogicxAudMediaPlayer(MediaPlayerEntity, RestoreEntity):
                 )
             except Exception:  # noqa: BLE001
                 _LOGGER.exception(
-                    "BL-AUD %s.%s could not call %s on %s",
+                    "AUD %s.%s could not call %s on %s",
                     self._group,
                     self._address,
                     result.prelude.service,
@@ -370,7 +370,7 @@ class BLogicxAudMediaPlayer(MediaPlayerEntity, RestoreEntity):
             )
         except Exception:  # noqa: BLE001
             _LOGGER.exception(
-                "BL-AUD %s.%s could not call %s on %s",
+                "AUD %s.%s could not call %s on %s",
                 self._group,
                 self._address,
                 call.service,

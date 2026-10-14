@@ -262,7 +262,7 @@ class BLogicxLdmLightSensor(SensorEntity):
 
 
 class BLogicxWsmWindSensor(SensorEntity):
-    """BL-WSM wind speed in km/h (from Value 14 + System)."""
+    """WSM wind speed in km/h (from Value 14 + System)."""
 
     _attr_should_poll = False
     _attr_has_entity_name = True
@@ -296,7 +296,7 @@ class BLogicxWsmWindSensor(SensorEntity):
             identifiers=get_wsm_device_identifiers(host, group, address),
             name=name,
             manufacturer="B-Logicx",
-            model=f"BL-WSM {group}.{address}",
+            model=f"WSM {group}.{address}",
         )
         self._attr_native_value = None
 

@@ -2,7 +2,7 @@
 
 Every RTC gets a sync button. An LDM, a TSM, or a WSM gets a refresh button
 only when check_status is on, the same flag that asks for a reading at startup.
-A BL-BM8 gets eight chime buttons and a stop button. A press sends that pair
+A BM8 gets eight chime buttons and a stop button. A press sends that pair
 and does not stay on.
 """
 
@@ -233,7 +233,7 @@ class BLogicxWsmRefreshButton(ButtonEntity):
             identifiers=get_wsm_device_identifiers(host, group, address),
             name=name,
             manufacturer="B-Logicx",
-            model=f"BL-WSM {group}.{address}",
+            model=f"WSM {group}.{address}",
         )
 
     async def async_press(self) -> None:
@@ -272,7 +272,7 @@ class BLogicxTsmRefreshButton(ButtonEntity):
 
 
 class BLogicxBm8Button(ButtonEntity):
-    """One BL-BM8 chime, or the stop control for that module.
+    """One BM8 chime, or the stop control for that module.
 
     chime is 1 through 8. None is stop. The button does not stay on: the
     module never says when the sound has finished.
@@ -309,7 +309,7 @@ class BLogicxBm8Button(ButtonEntity):
             identifiers=get_bm8_device_identifiers(host, group, address),
             name=name,
             manufacturer="B-Logicx",
-            model=f"BL-BM8 {group}.{address}",
+            model=f"BM8 {group}.{address}",
         )
 
     async def async_press(self) -> None:

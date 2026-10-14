@@ -1,4 +1,4 @@
-"""BL-AUD Misc/Select pairing and player-state effects (no Home Assistant)."""
+"""AUD Misc/Select pairing and player-state effects (no Home Assistant)."""
 
 from __future__ import annotations
 
