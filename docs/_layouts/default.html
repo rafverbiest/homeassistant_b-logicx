@@ -62,5 +62,11 @@
       </footer>
     </div>
     <script src="{{ "/assets/js/scale.fix.js" | relative_url }}"></script>
+    <script>
+      document.querySelectorAll('a[href^="https://b-logicx.be"], a[href^="https://www.b-logicx.be"], a[href^="https://www.home-assistant.io"], a[href^="https://home-assistant.io"]').forEach(function (link) {
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+      });
+    </script>
   </body>
 </html>
