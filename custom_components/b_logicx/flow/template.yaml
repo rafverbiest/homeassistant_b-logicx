@@ -94,7 +94,7 @@ addresses:
     source_7: AirPlay
     source_8: Aux
 
-  # SoftM without virtual status tracking (BL-STA answers Toggle/Status).
+  # SoftM without virtual status tracking (BL-STM answers Toggle/Status).
   - type: softm
     name: Software Member Example
     group: 10

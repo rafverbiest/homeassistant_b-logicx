@@ -10,7 +10,7 @@ last_modified_at: 2026-10-14
 
 [Nederlands](index.html) · **English**
 
-Custom integration that connects Home Assistant directly to a **[B-Logicx](https://b-logicx.be/) BL-NWM / BL-NWX** bus gateway — the BL-BHS Home Server is optional and not a requirement.
+Custom integration that connects Home Assistant directly to a **[B-Logicx](https://b-logicx.be/) [BL-NWM / BL-NWX](https://b-logicx.be/Manual/BLConfig/HTML/Netwerkverbinding.html)** bus gateway — the [BL-BHS](https://b-logicx.be/Manual/BLConfig/HTML/BHS.html) Home Server is optional and not a requirement.
 
 ## Links
 
@@ -22,12 +22,12 @@ Custom integration that connects Home Assistant directly to a **[B-Logicx](https
 
 ## Features
 
-- Switches (RLM / SoftM), **dimmers**, and **read-only** addresses  
-- **Covers** (dual RLM) and **Sfeer** selection  
-- **BL-AUD** as a media player (sources, volume up/down, mute). BHS can keep the real player, or Home Assistant can pass each command on to another media player, using the stop, mute, and volume step chosen for that player. Play can turn that player on while it is off or in standby. A known source, play, stop, or mute on that player is written back so the displays follow.  
-- **SoftM** virtual status module (VSM) inside Home Assistant  
-- **TCP bus repeater** — share the single NWM link with BLConfig / blxmonitor  
-- **RTC** sync (incl. DST), **LDM** light sensor, **TSM** thermostat, **WSM** wind speed (km/h), **BL-BM8** doorbell  
+- Switches ([RLM](https://b-logicx.be/Manual/BLConfig/HTML/RLM.html) / [SoftM](https://b-logicx.be/Manual/BLConfig/HTML/STM.html)), **[dimmers](https://b-logicx.be/Manual/BLConfig/HTML/DIM1K.html)**, and **read-only** addresses  
+- **[Covers](https://b-logicx.be/Manual/BLConfig/HTML/ReeksRolluiken.html)** (dual RLM) and **[Sfeer](https://b-logicx.be/Manual/BLConfig/HTML/Sferen.html)** selection  
+- **[BL-AUD](https://b-logicx.be/Manual/BLConfig/HTML/AUD.html)** as a media player (sources, volume up/down, mute). [BHS](https://b-logicx.be/Manual/BLConfig/HTML/BHS.html) can keep the real player, or Home Assistant can pass each command on to another media player, using the stop, mute, and volume step chosen for that player. Play can turn that player on while it is off or in standby. A known source, play, stop, or mute on that player is written back so the displays follow.  
+- **[SoftM](https://b-logicx.be/Manual/BLConfig/HTML/STM.html)** virtual status module (VSM) inside Home Assistant  
+- **TCP bus repeater** — share the single [NWM](https://b-logicx.be/Manual/BLConfig/HTML/Netwerkverbinding.html) link with [BLConfig](https://b-logicx.be/Manual/BLConfig/HTML/Introductie.html) / blxmonitor  
+- **[RTC](https://b-logicx.be/Manual/BLConfig/HTML/RTC.html)** sync (incl. DST), **[LDM](https://b-logicx.be/Manual/BLConfig/HTML/LDM.html)** light sensor, **[TSM](https://b-logicx.be/Manual/BLConfig/HTML/TSM.html)** thermostat, **[WSM](https://b-logicx.be/Manual/BLConfig/HTML/WSM.html)** wind speed (km/h), **[BL-BM8](https://b-logicx.be/Manual/BLConfig/HTML/BM8.html)** doorbell  
 - YAML import/export of addresses  
 
 ## Documentation
@@ -46,7 +46,7 @@ More detail lives in the [wiki](https://github.com/rafverbiest/homeassistant_b-l
 ## Important
 
 This integration was produced independently. I am **not** affiliated with [B-Logicx](https://b-logicx.be/).  
-**BLConfig** remains required to program hardware; this HA integration monitors and controls the bus after it is configured.
+**[BLConfig](https://b-logicx.be/Manual/BLConfig/HTML/Introductie.html)** remains required to program hardware; this HA integration monitors and controls the bus after it is configured.
 
 ## License
 

@@ -146,7 +146,7 @@ def test_softm_vsm_flag_can_stay_off():
     content = """
 addresses:
   - type: softm
-    name: Hardware STA
+    name: Hardware STM
     group: 10
     address: 9
     enable_softm_status_tracking: false

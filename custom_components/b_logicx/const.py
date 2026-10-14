@@ -159,7 +159,7 @@ DEFAULT_CLOSE_TIME = 30.0  # seconds for full close travel
 # }
 #
 # SoftM. Tracking on means Home Assistant is the virtual status module
-# (Set/Reset only). Tracking off means a hardware BL-STA already tracks it.
+# (Set/Reset only). Tracking off means a hardware BL-STM already tracks it.
 # {
 #   "name": "Hall light",
 #   "type": "softm",
@@ -231,7 +231,7 @@ def is_softm_address(entry: dict) -> bool:
     """True when Home Assistant's Virtual Status Module answers this address.
 
     Type softm only means the address is a software member. A hardware
-    BL-STA may already track it, in which case the per-address flag is off.
+    BL-STM may already track it, in which case the per-address flag is off.
     """
     return (
         str(entry.get("type") or "").strip().lower() == ADDRESS_TYPE_SOFTM

@@ -155,7 +155,7 @@ addresses:
   # Also enable Integration settings → SoftM status tracking.
   # on/off must be Set/Reset (Toggle is rejected with SoftM tracking).
   - type: softm
-    name: Software member example, status tracked by this integration (virtual BL-STA)
+    name: Software member example, status tracked by this integration (virtual BL-STM)
     group: 10
     address: 201
     on_command: Set

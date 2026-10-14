@@ -252,7 +252,7 @@
       },
       "integration_settings": {
         "title": "Integratie-instellingen",
-        "description": "SoftM tracking (hoofdschakelaar): als dit aan staat, kan Home Assistant Toggle/Status beantwoorden voor adressen waar SoftM tracking ook per adres aan staat. Gebruik geen hardware BL-STA op diezelfde adressen.\n\nBus repeater: Home Assistant houdt de ene gateway-verbinding open en luistert op deze host (standaard poort 10001) zodat BLConfig of blxmonitor de bus kunnen delen. Richt die tools op het IP van Home Assistant, niet op het gateway-IP. Toegelaten subnet is een CIDR (bijvoorbeeld 192.168.50.0/24). Localhost is altijd toegelaten. Laat het subnet leeg om het oude gedrag te houden (de /24 van de gateway).",
+        "description": "SoftM tracking (hoofdschakelaar): als dit aan staat, kan Home Assistant Toggle/Status beantwoorden voor adressen waar SoftM tracking ook per adres aan staat. Gebruik geen hardware BL-STM op diezelfde adressen.\n\nBus repeater: Home Assistant houdt de ene gateway-verbinding open en luistert op deze host (standaard poort 10001) zodat BLConfig of blxmonitor de bus kunnen delen. Richt die tools op het IP van Home Assistant, niet op het gateway-IP. Toegelaten subnet is een CIDR (bijvoorbeeld 192.168.50.0/24). Localhost is altijd toegelaten. Laat het subnet leeg om het oude gedrag te houden (de /24 van de gateway).",
         "data": {
           "softm_tracking_enabled": "SoftM status tracking inschakelen",
           "bus_repeater_enabled": "Bus repeater inschakelen",
@@ -283,7 +283,7 @@
       "template_missing": "Het sjabloonbestand is niet gevonden.",
       "invalid_format": "De YAML-structuur of een of meer items is ongeldig.",
       "required": "Dit veld is verplicht.",
-      "softm_check_conflict": "SoftM tracking beantwoordt Status al voor dit adres. Zet “Vraag de bus … wanneer Home Assistant start” uit. Sla SoftM tracking hier ook over als een hardware BL-STA deze SoftM al volgt.",
+      "softm_check_conflict": "SoftM tracking beantwoordt Status al voor dit adres. Zet “Vraag de bus … wanneer Home Assistant start” uit. Sla SoftM tracking hier ook over als een hardware BL-STM deze SoftM al volgt.",
       "softm_command_conflict": "SoftM tracking beantwoordt Toggle op de bus. Zet “Commando om aan te zetten” op Set en “Commando om uit te zetten” op Reset — andere commando’s (zoals Toggle) zouden de SoftM twee keer omschakelen.",
       "softm_timer_needs_vsm": "De SoftM-timer wordt beantwoord door de virtuele statusmodule. Schakel die in voor dit adres, of zet de timer op 0.",
       "invalid_subnet": "Toegelaten subnet moet een CIDR zijn, bijvoorbeeld 192.168.50.0/24.",

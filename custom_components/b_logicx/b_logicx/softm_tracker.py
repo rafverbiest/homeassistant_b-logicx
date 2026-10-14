@@ -1,19 +1,19 @@
 """Virtual SoftM status tracking (pure logic, no HA).
 
-Mirrors a hardware Status Module (BL-STA) for Software Members:
+Mirrors a hardware Status Module (BL-STM) for Software Members:
   Toggle → flip + emit Set/Reset
   Status → reply Set/Reset from memory
   Set/Reset → update memory only
   Timer (optional) → Set, wait, Reset
 
-  The Timer is not available in hardware BL-STA, rather it is called
+  The Timer is not available in hardware BL-STM, rather it is called
   Software Member Timer, a part of B-INM based logic.
 
   The Software Member Timer implemented here is designed to be superior
   since it also obeys a Reset command (SoftM timers from INM's don't)
 
   Of course, here in Linux/Python we are also not bound by a maximum
-  amount of SoftM's (as BL-STA is because of its hardware limitations)
+  amount of SoftM's (as BL-STM is because of its hardware limitations)
 """
 
 from __future__ import annotations

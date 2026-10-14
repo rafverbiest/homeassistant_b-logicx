@@ -9,7 +9,7 @@ last_modified_at: 2026-10-14
 
 **Nederlands** · [English](en.html)
 
-Custom integration die Home Assistant rechtstreeks koppelt aan een **[B-Logicx](https://b-logicx.be/) BL-NWM / BL-NWX** bus-gateway — BL-BHS Home Server is optioneel en geen vereiste.
+Custom integration die Home Assistant rechtstreeks koppelt aan een **[B-Logicx](https://b-logicx.be/) [BL-NWM / BL-NWX](https://b-logicx.be/Manual/BLConfig/HTML/Netwerkverbinding.html)** bus-gateway — [BL-BHS](https://b-logicx.be/Manual/BLConfig/HTML/BHS.html) Home Server is optioneel en geen vereiste.
 
 ## Links
 
@@ -21,12 +21,12 @@ Custom integration die Home Assistant rechtstreeks koppelt aan een **[B-Logicx](
 
 ## Functies
 
-- Schakelaars (RLM / SoftM), **dimmers** en **alleen-lezen** adressen  
-- **Rolluiken** (dubbele RLM) en **Sfeer**-selectie  
-- **BL-AUD** als mediaspeler (bronnen, volume omhoog/omlaag, dempen). BHS kan de echte speler houden, of Home Assistant geeft de commando's door aan een andere mediaspeler, met de stop, het dempen en de volumestap die voor die speler gekozen zijn. Afspelen kan die speler aanzetten terwijl hij uit of in standby staat. Een gekende bron, afspelen, stoppen of dempen van die speler wordt teruggeschreven zodat de schermen volgen.  
-- **SoftM** virtuele statusmodule (VSM) in Home Assistant  
-- **TCP bus repeater** — deel de ene NWM-verbinding met BLConfig / blxmonitor  
-- **RTC**-synchronisatie (incl. DST), **LDM**-lichtsensor, **TSM**-thermostaat, **WSM**-windsnelheid (km/h), **BL-BM8**-deurbel  
+- Schakelaars ([RLM](https://b-logicx.be/Manual/BLConfig/HTML/RLM.html) / [SoftM](https://b-logicx.be/Manual/BLConfig/HTML/STM.html)), **[dimmers](https://b-logicx.be/Manual/BLConfig/HTML/DIM1K.html)** en **alleen-lezen** adressen  
+- **[Rolluiken](https://b-logicx.be/Manual/BLConfig/HTML/ReeksRolluiken.html)** (dubbele RLM) en **[Sfeer](https://b-logicx.be/Manual/BLConfig/HTML/Sferen.html)**-selectie  
+- **[BL-AUD](https://b-logicx.be/Manual/BLConfig/HTML/AUD.html)** als mediaspeler (bronnen, volume omhoog/omlaag, dempen). [BHS](https://b-logicx.be/Manual/BLConfig/HTML/BHS.html) kan de fysieke speler bedienen, of de volledige controle kan langs Home Assistant. Een gekende bron, afspelen, stoppen of dempen van die speler wordt teruggeschreven zodat de [DSM](https://b-logicx.be/Manual/BLConfig/HTML/DSM.html) schermen volgen.  
+- **[SoftM](https://b-logicx.be/Manual/BLConfig/HTML/STM.html)** virtuele statusmodule (VSM) in Home Assistant  
+- **TCP bus repeater** — deel de ene [NWM](https://b-logicx.be/Manual/BLConfig/HTML/Netwerkverbinding.html)-verbinding met [BLConfig](https://b-logicx.be/Manual/BLConfig/HTML/Introductie.html) / blxmonitor  
+- **[RTC](https://b-logicx.be/Manual/BLConfig/HTML/RTC.html)**-synchronisatie (incl. DST), **[LDM](https://b-logicx.be/Manual/BLConfig/HTML/LDM.html)**-lichtsensor, **[TSM](https://b-logicx.be/Manual/BLConfig/HTML/TSM.html)**-thermostaat, **[WSM](https://b-logicx.be/Manual/BLConfig/HTML/WSM.html)**-windsnelheid (km/h), **[BL-BM8](https://b-logicx.be/Manual/BLConfig/HTML/BM8.html)**-deurbel  
 - YAML import/export van adressen  
 
 ## Documentatie
@@ -45,7 +45,7 @@ Meer uitleg staat in de [wiki](https://github.com/rafverbiest/homeassistant_b-lo
 ## Belangrijk
 
 Deze integratie is onafhankelijk geproduceerd. Ik ben zelf **niet** gelieerd aan [B-Logicx](https://b-logicx.be/).  
-**BLConfig** blijft nodig om hardware te programmeren; deze HA-integratie bestuurt en monitort de bus nadat die geconfigureerd is.
+**[BLConfig](https://b-logicx.be/Manual/BLConfig/HTML/Introductie.html)** blijft nodig om hardware te programmeren; deze HA-integratie bestuurt en monitort de bus nadat die geconfigureerd is.
 
 ## Licentie
 
@@ -53,7 +53,7 @@ Zie [LICENSE](https://github.com/rafverbiest/homeassistant_b-logicx/blob/main/LI
 
 ## Auteur
 
-Ik heb dit ontwikkeld, oorspronkelijk voor eigen gebruik, en om te vermijden dat B-Logicx verouderd zou raken door de opkomst van modernere systemen.
+Ik heb dit ontwikkeld, oorspronkelijk voor eigen gebruik, en om te vermijden dat B-Logicx verouderd zou raken door de opkomst van modernere en performantere systemen.
 
 In mijn visie is Home Assistant de motor van *The Internet of Things*; dingen die er niet (goed) mee integreren zullen op termijn verdwijnen.
 

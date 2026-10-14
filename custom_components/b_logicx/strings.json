@@ -252,7 +252,7 @@
       },
       "integration_settings": {
         "title": "Integration settings",
-        "description": "SoftM tracking (master switch): when enabled, Home Assistant can answer Toggle/Status for addresses that also have SoftM tracking turned on. Do not use a hardware BL-STA on those same addresses.\n\nBus repeater: Home Assistant keeps the single gateway link and listens on this host (default port 10001) so BLConfig or blxmonitor can share the bus. Point those tools at the Home Assistant IP, not the gateway IP. Allowed subnet is a CIDR (for example 192.168.50.0/24). Localhost is always allowed. Leave the subnet empty to keep the previous behaviour (the gateway’s /24).",
+        "description": "SoftM tracking (master switch): when enabled, Home Assistant can answer Toggle/Status for addresses that also have SoftM tracking turned on. Do not use a hardware BL-STM on those same addresses.\n\nBus repeater: Home Assistant keeps the single gateway link and listens on this host (default port 10001) so BLConfig or blxmonitor can share the bus. Point those tools at the Home Assistant IP, not the gateway IP. Allowed subnet is a CIDR (for example 192.168.50.0/24). Localhost is always allowed. Leave the subnet empty to keep the previous behaviour (the gateway’s /24).",
         "data": {
           "softm_tracking_enabled": "Enable SoftM status tracking",
           "bus_repeater_enabled": "Enable bus repeater",
@@ -283,7 +283,7 @@
       "template_missing": "The template file could not be found.",
       "invalid_format": "The YAML structure or one or more entries is invalid.",
       "required": "This field is required.",
-      "softm_check_conflict": "SoftM tracking already answers Status for this address. Turn off “Ask the bus … when Home Assistant starts”. Also skip SoftM tracking here if a hardware BL-STA already tracks this SoftM.",
+      "softm_check_conflict": "SoftM tracking already answers Status for this address. Turn off “Ask the bus … when Home Assistant starts”. Also skip SoftM tracking here if a hardware BL-STM already tracks this SoftM.",
       "softm_command_conflict": "SoftM tracking answers Toggle on the bus. Set “Command to turn on” to Set and “Command to turn off” to Reset — other commands (such as Toggle) would flip the SoftM twice.",
       "softm_timer_needs_vsm": "The SoftM timer is answered by the Virtual Status Module. Enable it for this address, or set the timer to 0.",
       "invalid_subnet": "Allowed subnet must be a CIDR such as 192.168.50.0/24.",

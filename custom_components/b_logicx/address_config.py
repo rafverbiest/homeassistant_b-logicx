@@ -283,7 +283,7 @@ def normalize_yaml_entry(item: Any) -> dict:
         if not name:
             raise ValueError("name required")
         if t == ADDRESS_TYPE_SOFTM:
-            # Omitted flag stays on. False is explicit: a hardware BL-STA
+            # Omitted flag stays on. False is explicit: a hardware BL-STM
             # already tracks this software member.
             softm_track = bool(item.get("enable_softm_status_tracking", True))
         else:
