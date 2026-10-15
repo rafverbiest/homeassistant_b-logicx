@@ -14,8 +14,6 @@ permalink: /Dimmer-en.html
 
 A dimmer is a bus member on a physical group and a physical address. That group is the room, the same group as that room's Sfeer entries. Home Assistant shows one light: a master switch and a slider from 0 to 100. On and off send a short `Dimmer` tap to that address, followed by `Dimmer` to 220. The dimmer answers with `Set` or `Reset`.
 
-<img class="dimmer-card" src="/images/dimmer-en.png" alt="More-info for Table lamp: brightness 70 percent, with the vertical bar and power button">
-
 There are 3 ways to control dimmers:
 
 1. With Sfeer

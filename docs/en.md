@@ -34,13 +34,6 @@ Custom integration that connects [Home Assistant](https://www.home-assistant.io/
 - **[RTC](https://b-logicx.be/DataSheet/DS_RTC.pdf)** sync (incl. DST), **[LDM](https://b-logicx.be/DataSheet/DS_LDM.pdf)** light sensor, **[TSM](https://b-logicx.be/DataSheet/DS_TSM.pdf)** thermostat, **[WSM](https://b-logicx.be/DataSheet/DS_WSM.pdf)** wind speed (km/h), **[BM8](https://b-logicx.be/DataSheet/DS_BM8.pdf)** doorbell  
 - YAML import/export of addresses  
 
-<div class="ha-cards">
-<img src="/images/card-dimmer-en.png" alt="More-info for Table lamp: brightness 70 percent, with the vertical bar and power button">
-<img src="/images/card-cover-en.png" alt="More-info for Roller shutter: open, with up, stop, and down buttons stacked">
-<img src="/images/card-sfeer-en.png" alt="More-info for Sfeer: menu set to Evening">
-<img src="/images/card-aud-en.png" alt="More-info for AUD: Spotify is playing, with a pause button and volume bar">
-</div>
-
 ## Documentation
 
 [Installation](/Installation.html) ·

@@ -33,13 +33,6 @@ Custom integration die [Home Assistant](https://www.home-assistant.io/) rechtstr
 - **[RTC](https://b-logicx.be/DataSheet/DS_RTC.pdf)**-synchronisatie (incl. DST), **[LDM](https://b-logicx.be/DataSheet/DS_LDM.pdf)**-lichtsensor, **[TSM](https://b-logicx.be/DataSheet/DS_TSM.pdf)**-thermostaat, **[WSM](https://b-logicx.be/DataSheet/DS_WSM.pdf)**-windsnelheid (km/h), **[BM8](https://b-logicx.be/DataSheet/DS_BM8.pdf)**-deurbel  
 - YAML import/export van adressen  
 
-<div class="ha-cards">
-<img src="/images/kaart-dimmer-nl.png" alt="Meer-info van Tafellamp: helderheid 70 procent, met verticale balk en aan/uit-knop">
-<img src="/images/kaart-rolluik-nl.png" alt="Meer-info van Rolluik: open, met knoppen omhoog, stop en omlaag onder elkaar">
-<img src="/images/kaart-sfeer-nl.png" alt="Meer-info van Sfeer: keuzelijst op Avond">
-<img src="/images/kaart-aud-nl.png" alt="Meer-info van AUD: Spotify speelt, met pauzeknop en volumebalk">
-</div>
-
 ## Documentatie
 
 [Installatie](/Installatie.html) ·

@@ -14,8 +14,6 @@ permalink: /Dimmer.html
 
 Een dimmer is een busmember op een fysieke groep en een fysiek adres. Die groep is de kamer, dezelfde groep als de sferen van die kamer. Home Assistant toont één lamp: een hoofdschakelaar en een schuifregelaar van 0 tot 100. Aan en uit gaat met een korte `Dimmer`-puls naar dat adres, gevolgd door `Dimmer` naar 220. De dimmer antwoordt zelf met `Set` of `Reset`.
 
-<img class="dimmer-card" src="/images/dimmer-nl.png" alt="Meer-info van Tafellamp: helderheid 70 procent, met verticale balk en aan/uit-knop">
-
 Er zijn 3 manieren om dimmers te besturen:
 1. Met Sferen
 2. Individueel
