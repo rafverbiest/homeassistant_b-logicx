@@ -2,7 +2,8 @@
 layout: default
 lang: nl
 title: B-Logicx voor Home Assistant
-last_modified_at: 2026-10-14
+last_modified_at: 2026-10-15
+alternate: /en.html
 ---
 
 # B-Logicx voor Home Assistant
@@ -11,11 +12,14 @@ last_modified_at: 2026-10-14
 
 Custom integration die [Home Assistant](https://www.home-assistant.io/) rechtstreeks koppelt aan een **[B-Logicx](https://b-logicx.be/) [NWM](https://b-logicx.be/DataSheet/DS_NWM.pdf) / NWX** bus-gateway — [BHS](https://b-logicx.be/DataSheet/DS_BHS.pdf) Home Server is optioneel en geen vereiste.
 
+## Over dit project
+
+[B-Logicx](https://b-logicx.be/) is een Belgische producent van domotica (Heist-op-den-Berg). Hun bus gebruikt EIB/KNX-bekabeling en 24 V DC (zwart = 0, rood = +24 V, geel = bussignaal). Het protocol is eenvoudig: elk datagram is **twee bytes** (commando + groep, adres).
+
 ## Links
 
 - [**B-Logicx**](https://b-logicx.be/) — website van de fabrikant
 - [**GitHub-repository**](https://github.com/rafverbiest/homeassistant_b-logicx)
-- [**Wiki (documentatie)**](https://github.com/rafverbiest/homeassistant_b-logicx/wiki)
 - [**Releases**](https://github.com/rafverbiest/homeassistant_b-logicx/releases)
 - [**Installeren via HACS**](https://github.com/rafverbiest/homeassistant_b-logicx#installeren-met-hacs-custom-repository)
 
@@ -29,18 +33,23 @@ Custom integration die [Home Assistant](https://www.home-assistant.io/) rechtstr
 - **[RTC](https://b-logicx.be/DataSheet/DS_RTC.pdf)**-synchronisatie (incl. DST), **[LDM](https://b-logicx.be/DataSheet/DS_LDM.pdf)**-lichtsensor, **[TSM](https://b-logicx.be/DataSheet/DS_TSM.pdf)**-thermostaat, **[WSM](https://b-logicx.be/DataSheet/DS_WSM.pdf)**-windsnelheid (km/h), **[BM8](https://b-logicx.be/DataSheet/DS_BM8.pdf)**-deurbel  
 - YAML import/export van adressen  
 
+<div class="ha-cards">
+<img src="/images/kaart-dimmer-nl.png" alt="Meer-info van Tafellamp: helderheid 70 procent, met verticale balk en aan/uit-knop">
+<img src="/images/kaart-rolluik-nl.png" alt="Meer-info van Rolluik: open, met knoppen omhoog, stop en omlaag onder elkaar">
+<img src="/images/kaart-sfeer-nl.png" alt="Meer-info van Sfeer: keuzelijst op Avond">
+<img src="/images/kaart-aud-nl.png" alt="Meer-info van AUD: Spotify speelt, met pauzeknop en volumebalk">
+</div>
+
 ## Documentatie
 
-Meer uitleg staat in de [wiki](https://github.com/rafverbiest/homeassistant_b-logicx/wiki):
-
-[Installatie](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Installatie) ·
-[Configuratie](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Configuratie) ·
-[Dimmer](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Dimmer) ·
-[SoftM](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/SoftM) ·
-[Bus-repeater](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Bus-repeater) ·
-[Diagnostiek](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Diagnostiek) ·
-[YAML](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/YAML) ·
-[B-Logicx upgrades](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Alternatieven)
+[Installatie](/Installatie.html) ·
+[Configuratie](/Configuratie.html) ·
+[Dimmer](/Dimmer.html) ·
+[SoftM](/SoftM.html) ·
+[Bus-repeater](/Bus-repeater.html) ·
+[Diagnostiek](/Diagnostiek.html) ·
+[YAML](/YAML.html) ·
+[B-Logicx upgrades](/Alternatieven.html)
 
 ## Belangrijk
 

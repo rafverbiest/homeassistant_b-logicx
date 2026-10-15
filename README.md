@@ -6,7 +6,6 @@ Custom integration voor de **[B-Logicx](https://b-logicx.be/) (NWM / NWX)** bus-
 
 **B-Logicx:** [b-logicx.be](https://b-logicx.be/) ·
 **Site:** [b-logicx.rafverbiest.be](https://b-logicx.rafverbiest.be) ·
-**Wiki:** [documentatie](https://github.com/rafverbiest/homeassistant_b-logicx/wiki) ·
 **Releases:** [changelog](https://github.com/rafverbiest/homeassistant_b-logicx/releases)
 
 ## Installeren met HACS (custom repository)
@@ -30,11 +29,11 @@ Configureer adressen in de integratie-opties (UI) of via YAML-import. Sjabloon: 
 
 Kopieer `custom_components/b_logicx` naar je HA-`config/custom_components/`, herstart, en voeg de integratie toe zoals hierboven.
 
-## Verder lezen (wiki)
+## Verder lezen
 
-- [Installatie](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Installatie) · [Configuratie](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Configuratie)
-- [Dimmer](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Dimmer) · [SoftM](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/SoftM) · [Bus-repeater](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Bus-repeater)
-- [Diagnostiek](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Diagnostiek) (`blxmonitor`) · [YAML](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/YAML)
+- [Installatie](https://b-logicx.rafverbiest.be/Installatie.html) · [Configuratie](https://b-logicx.rafverbiest.be/Configuratie.html)
+- [Dimmer](https://b-logicx.rafverbiest.be/Dimmer.html) · [SoftM](https://b-logicx.rafverbiest.be/SoftM.html) · [Bus-repeater](https://b-logicx.rafverbiest.be/Bus-repeater.html)
+- [Diagnostiek](https://b-logicx.rafverbiest.be/Diagnostiek.html) (`blxmonitor`) · [YAML](https://b-logicx.rafverbiest.be/YAML.html) · [B-Logicx upgrades](https://b-logicx.rafverbiest.be/Alternatieven.html)
 
 ## Ontwikkeling
 

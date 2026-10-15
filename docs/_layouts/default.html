@@ -6,10 +6,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
 {% seo %}
-    <link rel="alternate" hreflang="nl" href="{{ "/" | absolute_url }}" />
-    <link rel="alternate" hreflang="en" href="{{ "/en.html" | absolute_url }}" />
-    <link rel="alternate" hreflang="x-default" href="{{ "/" | absolute_url }}" />
+    {% if page.lang == "en" %}
+      {% assign nl_href = page.alternate | default: "/" | absolute_url %}
+      {% assign en_href = page.url | absolute_url %}
+    {% else %}
+      {% assign nl_href = page.url | absolute_url %}
+      {% assign en_href = page.alternate | default: "/en.html" | absolute_url %}
+    {% endif %}
+    <link rel="alternate" hreflang="nl" href="{{ nl_href }}" />
+    <link rel="alternate" hreflang="en" href="{{ en_href }}" />
+    <link rel="alternate" hreflang="x-default" href="{{ nl_href }}" />
     <link rel="stylesheet" href="{{ "/assets/css/style.css?v=" | append: site.github.build_revision | relative_url }}">
+    <style>
+      header nav ul { list-style: none; padding: 0; margin: 0 0 16px; position: static; }
+      header nav li { margin: 0 0 4px; }
+      header nav p { margin: 0 0 8px; }
+      .ha-cards { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 20px; }
+      .ha-cards img { width: calc(50% - 6px); height: auto; }
+      img.dimmer-card { display: block; width: 100%; max-width: 520px; height: auto; margin: 0 0 20px; }
+      section img { max-width: 100%; height: auto; }
+      @media screen and (max-width: 960px) {
+        header { padding-right: 0; }
+      }
+      @media screen and (max-width: 480px) {
+        .ha-cards img { width: 100%; }
+      }
+    </style>
     <!--[if lt IE 9]>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv.min.js"></script>
     <![endif]-->
@@ -18,11 +40,13 @@
   <body>
     <div class="wrapper">
       <header>
-        {% assign sidebar_title = page.title | default: site.title | default: site.github.repository_name %}
-        {% assign sidebar_description = page.description | default: site.description | default: site.github.project_tagline %}
-        {% if page.lang and page.lang != site.lang %}
-          {% assign sidebar_home = page.url | absolute_url %}
+        {% if page.lang == "en" %}
+          {% assign sidebar_title = site.en_title %}
+          {% assign sidebar_description = site.en_description %}
+          {% assign sidebar_home = "/en.html" | absolute_url %}
         {% else %}
+          {% assign sidebar_title = site.title %}
+          {% assign sidebar_description = site.description %}
           {% assign sidebar_home = "/" | absolute_url %}
         {% endif %}
         <h1><a href="{{ sidebar_home }}">{{ sidebar_title }}</a></h1>
@@ -32,6 +56,34 @@
         {% endif %}
 
         <p>{{ sidebar_description }}</p>
+
+        <nav>
+          {% if page.lang == "en" %}
+          <p><a href="{{ "/" | relative_url }}">Nederlands</a></p>
+          <ul>
+            <li><a href="{{ "/Installation.html" | relative_url }}">Installation</a></li>
+            <li><a href="{{ "/Configuration.html" | relative_url }}">Configuration</a></li>
+            <li><a href="{{ "/Dimmer-en.html" | relative_url }}">Dimmer</a></li>
+            <li><a href="{{ "/SoftM-en.html" | relative_url }}">SoftM</a></li>
+            <li><a href="{{ "/Bus-repeater-en.html" | relative_url }}">Bus repeater</a></li>
+            <li><a href="{{ "/Diagnostics.html" | relative_url }}">Diagnostics</a></li>
+            <li><a href="{{ "/YAML-en.html" | relative_url }}">YAML</a></li>
+            <li><a href="{{ "/Alternatives.html" | relative_url }}">B-Logicx upgrades</a></li>
+          </ul>
+          {% else %}
+          <p><a href="{{ "/en.html" | relative_url }}">English</a></p>
+          <ul>
+            <li><a href="{{ "/Installatie.html" | relative_url }}">Installatie</a></li>
+            <li><a href="{{ "/Configuratie.html" | relative_url }}">Configuratie</a></li>
+            <li><a href="{{ "/Dimmer.html" | relative_url }}">Dimmer</a></li>
+            <li><a href="{{ "/SoftM.html" | relative_url }}">SoftM</a></li>
+            <li><a href="{{ "/Bus-repeater.html" | relative_url }}">Bus-repeater</a></li>
+            <li><a href="{{ "/Diagnostiek.html" | relative_url }}">Diagnostiek</a></li>
+            <li><a href="{{ "/YAML.html" | relative_url }}">YAML</a></li>
+            <li><a href="{{ "/Alternatieven.html" | relative_url }}">B-Logicx upgrades</a></li>
+          </ul>
+          {% endif %}
+        </nav>
 
         {% if site.github.is_project_page %}
         <p class="view"><a href="{{ site.github.repository_url }}">View the Project on GitHub <small>{{ site.github.repository_nwo }}</small></a></p>

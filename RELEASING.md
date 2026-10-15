@@ -6,7 +6,7 @@ Use this checklist so HACS custom-repository users get clean version upgrades.
 
 1. [ ] Integration changes are on the default branch and reviewed locally.
 2. [ ] Bump version in `custom_components/b_logicx/manifest.json` (e.g. `0.8.3`).
-3. [ ] Update `DESIGN.md` / wiki notes if behaviour changed.
+3. [ ] Update `DESIGN.md` and the pages under `docs/` if behaviour changed.
 4. [ ] Run tests:
 
    ```bash

@@ -1,7 +1,7 @@
 # Translations & terminology (v0.9.3+)
 
 Repository docs: Dutch is the primary [`README.md`](README.md); English is [`README.en.md`](README.en.md).  
-Public site: [b-logicx.rafverbiest.be](https://b-logicx.rafverbiest.be) (`docs/`). Wiki: Dutch pages primary, English twins (`Installation`, `Home-en`, …).
+Public site: [b-logicx.rafverbiest.be](https://b-logicx.rafverbiest.be) (`docs/`). Dutch pages are primary. English twins keep the Dutch filename with `-en` when the name is not already English (`Dimmer-en`, `SoftM-en`, …).
 
 User-facing strings live in:
 

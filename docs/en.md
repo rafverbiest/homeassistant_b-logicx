@@ -3,7 +3,8 @@ layout: default
 lang: en
 title: B-Logicx for Home Assistant
 description: Home Assistant integration for the B-Logicx bus gateway (NWM / NWX)
-last_modified_at: 2026-10-14
+last_modified_at: 2026-10-15
+alternate: /
 ---
 
 # B-Logicx for Home Assistant
@@ -12,11 +13,14 @@ last_modified_at: 2026-10-14
 
 Custom integration that connects [Home Assistant](https://www.home-assistant.io/) directly to a **[B-Logicx](https://b-logicx.be/) [NWM](https://b-logicx.be/DataSheet/DS_NWM.pdf) / NWX** bus gateway — the [BHS](https://b-logicx.be/DataSheet/DS_BHS.pdf) Home Server is optional and not a requirement.
 
+## About this project
+
+[B-Logicx](https://b-logicx.be/) is a Belgian home-automation vendor (Heist-op-den-Berg). Their bus uses EIB/KNX cabling and 24 V DC (black = 0, red = +24 V, yellow = bus signal). The protocol is simple: each datagram is **two bytes** (command + group, address).
+
 ## Links
 
 - [**B-Logicx**](https://b-logicx.be/) — the manufacturer's website
 - [**GitHub repository**](https://github.com/rafverbiest/homeassistant_b-logicx)
-- [**Wiki (documentation)**](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Home-en)
 - [**Releases**](https://github.com/rafverbiest/homeassistant_b-logicx/releases)
 - [**Install via HACS**](https://github.com/rafverbiest/homeassistant_b-logicx/blob/main/README.en.md#install-with-hacs-custom-repository)
 
@@ -30,18 +34,23 @@ Custom integration that connects [Home Assistant](https://www.home-assistant.io/
 - **[RTC](https://b-logicx.be/DataSheet/DS_RTC.pdf)** sync (incl. DST), **[LDM](https://b-logicx.be/DataSheet/DS_LDM.pdf)** light sensor, **[TSM](https://b-logicx.be/DataSheet/DS_TSM.pdf)** thermostat, **[WSM](https://b-logicx.be/DataSheet/DS_WSM.pdf)** wind speed (km/h), **[BM8](https://b-logicx.be/DataSheet/DS_BM8.pdf)** doorbell  
 - YAML import/export of addresses  
 
+<div class="ha-cards">
+<img src="/images/card-dimmer-en.png" alt="More-info for Table lamp: brightness 70 percent, with the vertical bar and power button">
+<img src="/images/card-cover-en.png" alt="More-info for Roller shutter: open, with up, stop, and down buttons stacked">
+<img src="/images/card-sfeer-en.png" alt="More-info for Sfeer: menu set to Evening">
+<img src="/images/card-aud-en.png" alt="More-info for AUD: Spotify is playing, with a pause button and volume bar">
+</div>
+
 ## Documentation
 
-More detail lives in the [wiki](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Home-en):
-
-[Installation](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Installation) ·
-[Configuration](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Configuration) ·
-[Dimmer](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Dimmer-en) ·
-[SoftM](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/SoftM-en) ·
-[Bus repeater](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Bus-repeater-en) ·
-[Diagnostics](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Diagnostics) ·
-[YAML](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/YAML-en) ·
-[B-Logicx upgrades](https://github.com/rafverbiest/homeassistant_b-logicx/wiki/Alternatives)
+[Installation](/Installation.html) ·
+[Configuration](/Configuration.html) ·
+[Dimmer](/Dimmer-en.html) ·
+[SoftM](/SoftM-en.html) ·
+[Bus repeater](/Bus-repeater-en.html) ·
+[Diagnostics](/Diagnostics.html) ·
+[YAML](/YAML-en.html) ·
+[B-Logicx upgrades](/Alternatives.html)
 
 ## Important
 
