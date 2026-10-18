@@ -3,7 +3,19 @@
     "step": {
       "user": {
         "title": "B-Logicx gateway",
-        "description": "Connect to your NWM (or compatible) gateway on the local network.",
+        "description": "A gateway answered on the local network. Pick it, or enter an address."
+      },
+      "manual": {
+        "title": "B-Logicx gateway",
+        "description": "No gateway answered on the local network. Enter the address yourself.",
+        "data": {
+          "host": "IP address or hostname",
+          "port": "TCP port (default 10001)"
+        }
+      },
+      "host": {
+        "title": "B-Logicx gateway",
+        "description": "Enter the address of the gateway yourself.",
         "data": {
           "host": "IP address or hostname",
           "port": "TCP port (default 10001)"
@@ -22,6 +34,7 @@
         "description": "Choose an action below. YAML import overwrites all existing entries.",
         "menu_options": {
           "add_address": "Add bus address",
+          "detect_address": "Detect an address",
           "add_sfeer_room": "Add Sfeer room",
           "add_sfeer_mood": "Add Sfeer",
           "edit_select": "Edit entry",
@@ -30,6 +43,18 @@
           "export_yaml": "Export YAML",
           "download_yaml_template": "Download YAML template",
           "import_yaml": "Import from YAML"
+        },
+        "menu_option_descriptions": {
+          "add_address": "Enter a group and address yourself, then choose the module type.",
+          "detect_address": "Flip a switch. Home Assistant listens and fills in the address it hears.",
+          "add_sfeer_room": "One bus group for a room. Add each Sfeer afterwards.",
+          "add_sfeer_mood": "Add one Sfeer to a room that already exists.",
+          "edit_select": "Change a saved address.",
+          "remove_select": "Delete a saved address.",
+          "integration_settings": "SoftM tracking for this gateway, and the bus repeater.",
+          "export_yaml": "Show or download the addresses saved now.",
+          "download_yaml_template": "An example file to edit and import.",
+          "import_yaml": "Replace all saved addresses with a YAML file."
         }
       },
       "add_address": {
@@ -38,6 +63,26 @@
         "data": {
           "address_type": "Type"
         }
+      },
+      "detect_address": {
+        "title": "Detect an address",
+        "description": "Be ready to change the module so it sends Set or Reset. An RLM, a SoftM, or the up relay of a cover all count. Press the button only when you are ready. Home Assistant then listens for up to 30 seconds and shows the first address that is not already configured.",
+        "submit": "Detect"
+      },
+      "detect_wait": {
+        "title": "Detect an address"
+      },
+      "detect_kind": {
+        "title": "What is this address?",
+        "description": "{group}.{address} turned {state}. Choose whether this is an RLM, a SoftM, or a cover.",
+        "data": {
+          "address_type": "Type"
+        }
+      },
+      "detect_timeout": {
+        "title": "Nothing heard",
+        "description": "No new Set or Reset arrived. Be ready to change the module, then try again.",
+        "submit": "Try again"
       },
       "add_rlm": {
         "title": "Add switch (RLM)",
@@ -191,6 +236,20 @@
           "check_status": "Ask the bus which relay is on when Home Assistant starts"
         }
       },
+      "add_shutter_detect": {
+        "title": "Add cover (roller / shutter)",
+        "description": "A cover uses two bus addresses: one for open, one for close. Travel times only estimate when Home Assistant shows open or closed — they do not drive the motors. Only the up relay was seen. Enter the down relay by hand. Adding a cover this way still has rough edges.",
+        "data": {
+          "name": "Name",
+          "open_group": "Open — group",
+          "open_address": "Open — address",
+          "close_group": "Close — group",
+          "close_address": "Close — address",
+          "open_time": "Open travel time (seconds)",
+          "close_time": "Close travel time (seconds)",
+          "check_status": "Ask the bus which relay is on when Home Assistant starts"
+        }
+      },
       "add_sfeer_room": {
         "title": "Add Sfeer room",
         "description": "One bus group per room (first room is usually group 5, then 6, …).\n\nCurrent Sfeer in this room: {moods}\n\nAdd each Sfeer afterwards with the menu item “Add Sfeer”.",
@@ -278,8 +337,12 @@
         }
       }
     },
+    "progress": {
+      "detect_wait": "Listening for Set or Reset, for up to 30 seconds."
+    },
     "error": {
       "invalid_yaml": "Could not read or parse the YAML file.",
+      "detect_not_running": "The gateway is not connected. Start the integration and try again.",
       "template_missing": "The template file could not be found.",
       "invalid_format": "The YAML structure or one or more entries is invalid.",
       "required": "This field is required.",

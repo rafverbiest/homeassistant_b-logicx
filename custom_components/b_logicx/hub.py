@@ -26,6 +26,7 @@ from collections.abc import Callable
 from homeassistant.core import HomeAssistant
 
 from .b_logicx import BLXConnection, BLXEvent
+from .b_logicx.detect import detect_match
 from .b_logicx.measure import (
     LDM_REQUEST_DATA_ADDRESS,
     LDM_REQUEST_DATA_GROUP,
@@ -123,6 +124,9 @@ class BLogicxHub:
         self._softm_timer_tasks: dict[tuple[int, int], asyncio.Task] = {}
         # Keys whose next Set/Reset is our SoftM reply echo (do not cancel timer)
         self._softm_own_emit: set[tuple[int, int]] = set()
+        # One options-flow waiter. The listener completes it; no second socket.
+        self._detect_future: asyncio.Future | None = None
+        self._detect_known: set[tuple[int, int]] = set()
         self._repeater: BusRepeater | None = None
 
     def configure_softm_tracking(
@@ -253,6 +257,8 @@ class BLogicxHub:
             async for event in self._conn.events():
                 key = (event.group, event.address)
                 now = time.monotonic()
+                # SoftM clears this mark while handling the frame. Snapshot it first.
+                own_echo = key in self._softm_own_emit
 
                 # Finish a waiting Status before SoftM looks at the same frame.
                 if event.command in ("Set", "Reset") and key in self._pending_status:
@@ -280,6 +286,9 @@ class BLogicxHub:
                             callback(event)
                         except Exception:  # noqa: BLE001
                             _LOGGER.exception("Error in B-Logicx event listener")
+
+                # Same frame, still delivered above. Detect only watches.
+                self._offer_detect(event, own_echo)
         except asyncio.CancelledError:
             raise
         except Exception as err:  # noqa: BLE001
@@ -650,6 +659,44 @@ class BLogicxHub:
             except Exception:  # noqa: BLE001
                 _LOGGER.exception("WSM callback error")
 
+    def begin_detect(self, known: set[tuple[int, int]]) -> asyncio.Future:
+        """Arm one waiter. The listener completes it on the first new Set or Reset.
+
+        The result is (group, address, turned_on). turned_on is true for Set.
+        """
+        self.end_detect()
+        future: asyncio.Future = asyncio.get_running_loop().create_future()
+        self._detect_future = future
+        self._detect_known = set(known)
+        return future
+
+    def end_detect(self, future: asyncio.Future | None = None) -> None:
+        """Drop the waiter. A newer detect is left alone when future is passed."""
+        current = self._detect_future
+        if future is not None and current is not future:
+            return
+        self._detect_future = None
+        self._detect_known = set()
+        if current is not None and not current.done():
+            current.cancel()
+
+    def _offer_detect(self, event: BLXEvent, own_echo: bool) -> None:
+        """Complete the detect waiter without taking the frame from anyone else."""
+        future = self._detect_future
+        if future is None or future.done():
+            return
+        if not detect_match(
+            event.command,
+            event.group,
+            event.address,
+            self._detect_known,
+            own_echo=own_echo,
+        ):
+            return
+        self._detect_future = None
+        self._detect_known = set()
+        future.set_result((event.group, event.address, event.command == "Set"))
+
     async def async_stop(self) -> None:
         """Stop listening.
 
@@ -658,6 +705,7 @@ class BLogicxHub:
         setup the new hub will obtain the *same* open connection via the
         singleton and only (re)subscribe its listener.
         """
+        self.end_detect()
         if self._listener_task:
             if not self._listener_task.done():
                 self._listener_task.cancel()

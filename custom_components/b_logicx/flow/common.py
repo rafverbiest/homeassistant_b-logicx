@@ -33,6 +33,8 @@ _SAFE_PLACEHOLDERS: dict[str, str] = {
     "step_title": "",
     "step_body": "",
     "mute_note": "",
+    "address": "",
+    "state": "",
 }
 
 

@@ -24,6 +24,18 @@ class ShutterSteps:
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Add or edit one shutter: the open pair, the close pair, and the travel times."""
+        return await self._add_shutter(user_input, from_detect=False)
+
+    async def async_step_add_shutter_detect(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Same screen as add, with the note that only the up relay was seen."""
+        return await self._add_shutter(user_input, from_detect=True)
+
+    async def _add_shutter(
+        self, user_input: dict[str, Any] | None, *, from_detect: bool
+    ) -> FlowResult:
+        """Add or edit one shutter: the open pair, the close pair, and the travel times."""
         if user_input is not None:
             new_cover = {
                 "name": user_input["name"].strip(),
@@ -44,7 +56,7 @@ class ShutterSteps:
 
         defaults = self._take_edit_defaults()
         return self.async_show_form(
-            step_id="add_shutter",
+            step_id="add_shutter_detect" if from_detect else "add_shutter",
             data_schema=vol.Schema(
                 {
                     vol.Required("name", default=defaults.get("name", "")): str,

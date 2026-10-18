@@ -141,14 +141,14 @@ def test_ldm_counts_zero_and_full_scale():
     assert full is not None and full.raw == 1024
 
 
-def test_wsm_quiet_breeze_is_asked_again_and_calm_is_not():
+def test_wsm_nonzero_speed_is_asked_again_and_calm_is_not():
     assert wsm_should_confirm_quiet(None, WSM_QUIET_ASK_AFTER_S) is False
     assert wsm_should_confirm_quiet(0, WSM_QUIET_ASK_AFTER_S) is False
     assert wsm_should_confirm_quiet(1, WSM_QUIET_ASK_AFTER_S - 1) is False
     assert wsm_should_confirm_quiet(1, WSM_QUIET_ASK_AFTER_S) is True
-    assert wsm_should_confirm_quiet(2, WSM_QUIET_ASK_AFTER_S) is True
-    assert wsm_should_confirm_quiet(3, WSM_QUIET_ASK_AFTER_S) is False
-    assert wsm_should_confirm_quiet(25, 24 * 60 * 60) is False
+    assert wsm_should_confirm_quiet(3, WSM_QUIET_ASK_AFTER_S) is True
+    assert wsm_should_confirm_quiet(25, WSM_QUIET_ASK_AFTER_S) is True
+    assert wsm_should_confirm_quiet(25, WSM_QUIET_ASK_AFTER_S - 1) is False
 
 
 def test_wsm_kmh_drops_halves():

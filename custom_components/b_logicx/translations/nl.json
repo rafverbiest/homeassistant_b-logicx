@@ -3,7 +3,19 @@
     "step": {
       "user": {
         "title": "B-Logicx gateway",
-        "description": "Maak verbinding met je NWM (of compatibele) gateway op het lokale netwerk.",
+        "description": "Een gateway heeft geantwoord op het lokale netwerk. Kies die, of vul een adres in."
+      },
+      "manual": {
+        "title": "B-Logicx gateway",
+        "description": "Geen gateway heeft geantwoord op het lokale netwerk. Vul zelf het adres in.",
+        "data": {
+          "host": "IP-adres of hostnaam",
+          "port": "TCP-poort (standaard 10001)"
+        }
+      },
+      "host": {
+        "title": "B-Logicx gateway",
+        "description": "Vul zelf het adres van de gateway in.",
         "data": {
           "host": "IP-adres of hostnaam",
           "port": "TCP-poort (standaard 10001)"
@@ -22,6 +34,7 @@
         "description": "Kies hieronder een actie. YAML-import overschrijft alle bestaande items.",
         "menu_options": {
           "add_address": "Busadres toevoegen",
+          "detect_address": "Adres detecteren",
           "add_sfeer_room": "Sfeer-ruimte toevoegen",
           "add_sfeer_mood": "Sfeer toevoegen",
           "edit_select": "Item bewerken",
@@ -30,6 +43,18 @@
           "export_yaml": "YAML exporteren",
           "download_yaml_template": "YAML-sjabloon downloaden",
           "import_yaml": "Importeren uit YAML"
+        },
+        "menu_option_descriptions": {
+          "add_address": "Vul zelf een groep en een adres in, en kies daarna het type.",
+          "detect_address": "Zet een schakelaar om. Home Assistant luistert en vult het adres in dat het hoort.",
+          "add_sfeer_room": "Eén busgroep voor een ruimte. Elke Sfeer voeg je daarna toe.",
+          "add_sfeer_mood": "Voeg één Sfeer toe aan een ruimte die al bestaat.",
+          "edit_select": "Wijzig een opgeslagen adres.",
+          "remove_select": "Verwijder een opgeslagen adres.",
+          "integration_settings": "SoftM-tracking voor deze gateway, en de bus repeater.",
+          "export_yaml": "Toon of download de adressen die nu zijn opgeslagen.",
+          "download_yaml_template": "Een voorbeeldbestand om aan te passen en te importeren.",
+          "import_yaml": "Vervang alle opgeslagen adressen door een YAML-bestand."
         }
       },
       "add_address": {
@@ -38,6 +63,26 @@
         "data": {
           "address_type": "Type"
         }
+      },
+      "detect_address": {
+        "title": "Adres detecteren",
+        "description": "Zet de module klaar zodat die Set of Reset stuurt. Een RLM, een SoftM of het op-relais van een rolluik telt mee. Druk pas op de knop als je klaar bent. Home Assistant luistert dan hoogstens 30 seconden en toont het eerste adres dat nog niet is ingesteld.",
+        "submit": "Detecteren"
+      },
+      "detect_wait": {
+        "title": "Adres detecteren"
+      },
+      "detect_kind": {
+        "title": "Wat is dit adres?",
+        "description": "{group}.{address} ging {state}. Kies of dit een RLM, een SoftM of een rolluik is.",
+        "data": {
+          "address_type": "Type"
+        }
+      },
+      "detect_timeout": {
+        "title": "Niets gehoord",
+        "description": "Er kwam geen nieuwe Set of Reset binnen. Zet de module klaar en probeer opnieuw.",
+        "submit": "Opnieuw"
       },
       "add_rlm": {
         "title": "Schakelaar (RLM) toevoegen",
@@ -191,6 +236,20 @@
           "check_status": "Vraag de bus welke relais aan staat wanneer Home Assistant start"
         }
       },
+      "add_shutter_detect": {
+        "title": "Rolluik toevoegen",
+        "description": "Een rolluik gebruikt twee busadressen: één voor openen, één voor sluiten. De looptijden schatten alleen wanneer Home Assistant open of dicht toont — ze sturen de motoren niet aan. Alleen het op-relais is gezien. Vul het neer-relais zelf in. Een rolluik zo toevoegen heeft nog ruwe kantjes.",
+        "data": {
+          "name": "Naam",
+          "open_group": "Openen — groep",
+          "open_address": "Openen — adres",
+          "close_group": "Sluiten — groep",
+          "close_address": "Sluiten — adres",
+          "open_time": "Looptijd openen (seconden)",
+          "close_time": "Looptijd sluiten (seconden)",
+          "check_status": "Vraag de bus welke relais aan staat wanneer Home Assistant start"
+        }
+      },
       "add_sfeer_room": {
         "title": "Sfeer-ruimte toevoegen",
         "description": "Eén busgroep per ruimte (eerste ruimte is meestal groep 5, daarna 6, …).\n\nHuidige Sfeer in deze ruimte: {moods}\n\nVoeg elke Sfeer daarna toe via het menu-item “Sfeer toevoegen”.",
@@ -278,8 +337,12 @@
         }
       }
     },
+    "progress": {
+      "detect_wait": "Luisteren naar Set of Reset, hoogstens 30 seconden."
+    },
     "error": {
       "invalid_yaml": "Kan het YAML-bestand niet lezen of verwerken.",
+      "detect_not_running": "De gateway is niet verbonden. Start de integratie en probeer opnieuw.",
       "template_missing": "Het sjabloonbestand is niet gevonden.",
       "invalid_format": "De YAML-structuur of een of meer items is ongeldig.",
       "required": "Dit veld is verplicht.",

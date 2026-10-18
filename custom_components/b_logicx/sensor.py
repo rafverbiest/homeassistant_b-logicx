@@ -323,10 +323,14 @@ class BLogicxWsmWindSensor(SensorEntity):
             reading = await self._hub.async_request_wsm(self._group, self._address)
             if reading is not None:
                 _on_reading(reading)
-        self._quiet_task = self.hass.async_create_task(self._confirm_quiet())
+        # Startup waits on async_create_task. This loop never ends.
+        self._quiet_task = self.hass.async_create_background_task(
+            self._confirm_quiet(),
+            name=f"b_logicx_wsm_quiet_{self._group}_{self._address}",
+        )
 
     async def _confirm_quiet(self) -> None:
-        """Ask again when a breeze has sat still. A calm zero is left alone."""
+        """Ask again when a non-zero speed has sat still. A calm zero is left alone."""
         while not self._quiet_stop.is_set():
             try:
                 await asyncio.wait_for(

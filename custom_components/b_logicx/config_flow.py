@@ -1,10 +1,14 @@
 """The screens for adding the integration and for editing its addresses.
 
-The first flow only asks for the gateway host and port. One host is one entry.
+The first flow searches the local network, then offers each gateway that
+answers. One click adds that address on port 10001. Typing an address
+remains for a gateway the search does not list. One host is one entry.
 Configure then opens the options flow:
 
 - Integration settings holds the SoftM master switch and the bus repeater.
 - Add picks a type, then opens that type's own screen.
+- Detect listens on the hub already connected, then opens the RLM, SoftM,
+  or cover screen with the address filled in.
 - Edit and remove pick an existing address. Edit reuses the add screen.
 - Import YAML overwrites the address list, but does not change the settings above.
 - Export and the template show the text and a download link.
@@ -15,7 +19,7 @@ switch or the repeater.
 
 Shared form helpers live in flow/common.py. Each address type lives in
 flow/: rlm, dimmer, softm, aud, readonly, ldm, tsm, wsm, bm8, rtc, shutter,
-and sfeer.
+and sfeer. Detect an address lives in flow/detect.py.
 This file keeps setup, the menu, settings, edit, remove, and YAML.
 """
 
@@ -40,6 +44,11 @@ from homeassistant.helpers import selector
 
 import ipaddress
 
+from .b_logicx.discover import (
+    discover_gateways,
+    gateway_step_id,
+    ip_from_gateway_step,
+)
 from .bus_repeater import suggested_repeater_cidr
 from .address_config import (
     dump_addresses_yaml,
@@ -48,6 +57,7 @@ from .address_config import (
 from .const import *
 from .flow.aud import AudSteps
 from .flow.dimmer import DimmerSteps
+from .flow.detect import DetectSteps
 from .flow.common import (
     _download_link,
     _entry_key,
@@ -89,10 +99,53 @@ class BLogicxConfigFlow(ConfigFlow, domain=DOMAIN):
 
     VERSION = 5
 
+    # Addresses from the last search. A click is accepted only for one of these.
+    _discovered_ips: tuple[str, ...] = ()
+
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Ask for the NWM IP address (gateway)."""
+        """Search the subnet, then list each gateway or the typed-address form."""
+        found = await discover_gateways()
+        self._discovered_ips = tuple(found)
+        if not found:
+            return await self.async_step_manual()
+        dutch = str(self.hass.config.language).lower().startswith("nl")
+        options = {gateway_step_id(ip): f"NWM {ip}" for ip in found}
+        options["host"] = "Adres invoeren" if dutch else "Enter an address"
+        return self.async_show_menu(step_id="user", menu_options=options)
+
+    def __getattr__(self, name: str):
+        """One step per discovered address, so the menu row can be a single click."""
+        if not name.startswith("async_step_gw_"):
+            raise AttributeError(name)
+        ip = ip_from_gateway_step(name.removeprefix("async_step_"))
+        if ip is None or ip not in self._discovered_ips:
+            raise AttributeError(name)
+
+        async def _add(
+            user_input: dict[str, Any] | None = None, host: str = ip
+        ) -> FlowResult:
+            return await self._async_create_gateway(host, DEFAULT_PORT)
+
+        return _add
+
+    async def async_step_manual(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Typed address after a search that heard nothing."""
+        return await self._async_handle_host_form("manual", user_input)
+
+    async def async_step_host(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Typed address, chosen from the menu while a gateway is also listed."""
+        return await self._async_handle_host_form("host", user_input)
+
+    async def _async_handle_host_form(
+        self, step_id: str, user_input: dict[str, Any] | None
+    ) -> FlowResult:
+        """Validate a typed host and port, then create the entry."""
         errors: dict[str, str] = {}
 
         if user_input is not None:
@@ -118,19 +171,10 @@ class BLogicxConfigFlow(ConfigFlow, domain=DOMAIN):
             except Exception:
                 errors[CONF_HOST] = "invalid_host"
             else:
-                await self.async_set_unique_id(validated_host)
-                self._abort_if_unique_id_configured()
-                return self.async_create_entry(
-                    title=f"B-Logicx {validated_host}",
-                    data={
-                        CONF_HOST: validated_host,
-                        CONF_PORT: port,
-                        CONF_ADDRESSES: [],
-                    },
-                )
+                return await self._async_create_gateway(validated_host, port)
 
         return self.async_show_form(
-            step_id="user",
+            step_id=step_id,
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_HOST): str,
@@ -138,6 +182,19 @@ class BLogicxConfigFlow(ConfigFlow, domain=DOMAIN):
                 }
             ),
             errors=errors,
+        )
+
+    async def _async_create_gateway(self, host: str, port: int) -> FlowResult:
+        """Create one entry for this gateway. The same host cannot be added twice."""
+        await self.async_set_unique_id(host)
+        self._abort_if_unique_id_configured()
+        return self.async_create_entry(
+            title=f"B-Logicx {host}",
+            data={
+                CONF_HOST: host,
+                CONF_PORT: port,
+                CONF_ADDRESSES: [],
+            },
         )
 
     @staticmethod
@@ -149,6 +206,7 @@ class BLogicxConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class BLogicxOptionsFlow(
+    DetectSteps,
     SfeerSteps,
     ShutterSteps,
     RtcSteps,
@@ -194,6 +252,7 @@ class BLogicxOptionsFlow(
         current = self.config_entry.data.get(CONF_ADDRESSES, [])
         keys: list[str] = [
             "add_address",
+            "detect_address",
             "add_sfeer_room",
         ]
         if any(a.get("type") == ADDRESS_TYPE_SFEER for a in current):
