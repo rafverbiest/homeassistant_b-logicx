@@ -3,7 +3,7 @@ layout: default
 lang: en
 title: "Configuration"
 description: "Address types, the option screens, and YAML import."
-last_modified_at: 2026-10-15
+last_modified_at: 2026-10-20
 alternate: /Configuratie.html
 permalink: /Configuration.html
 ---
@@ -13,6 +13,12 @@ permalink: /Configuration.html
 [Nederlands](/Configuratie.html) · **English** · [← Home](/en.html)
 
 Manage addresses in the **integration options** (UI) or via [YAML](/YAML-en.html) import/export. The main options menu shows an **entry count** only — not a full dump of every member.
+
+![Configuration menu, with a second line on each option.](/images/configure-menu.png)
+
+Detect an address listens for up to 30 seconds for the first Set or Reset that is not already saved.
+
+![Detect an address, listening for Set or Reset.](/images/detect-address.png)
 
 ## Address types
 
@@ -32,6 +38,10 @@ Manage addresses in the **integration options** (UI) or via [YAML](/YAML-en.html
 | `aud` | `media_player` | Virtual audio module, usually group 4. `controller: bhs` or `ha`. See below |
 
 An address you remove also disappears from the device list under the gateway when the integration reloads.
+
+![Two covers on a dashboard.](/images/dashboard-cover.png)
+
+![A cover and a Sfeer choice on a dashboard.](/images/dashboard-sfeer.png)
 
 ## AUD
 

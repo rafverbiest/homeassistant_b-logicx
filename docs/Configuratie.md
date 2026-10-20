@@ -3,7 +3,7 @@ layout: default
 lang: nl
 title: "Configuratie"
 description: "Adrestypes, de optieschermen, en YAML-import."
-last_modified_at: 2026-10-15
+last_modified_at: 2026-10-20
 alternate: /Configuration.html
 permalink: /Configuratie.html
 ---
@@ -13,6 +13,12 @@ permalink: /Configuratie.html
 **Nederlands** · [English](/Configuration.html) · [← Home](/)
 
 Adressen beheer je in de **integratie-opties** (UI) of via [YAML](/YAML.html)-import/export. Het hoofdmenu toont alleen een **aantal** entries — geen volledige dump van alle leden.
+
+![Configuratiemenu, met een tweede regel per optie.](/images/configure-menu.png)
+
+Adres detecteren luistert hoogstens 30 seconden naar de eerste Set of Reset die nog niet is opgeslagen.
+
+![Adres detecteren, luisterend naar Set of Reset.](/images/detect-address.png)
 
 ## Adrestypes
 
@@ -32,6 +38,10 @@ Adressen beheer je in de **integratie-opties** (UI) of via [YAML](/YAML.html)-im
 | `aud` | `media_player` | Virtuele audiomodule, meestal groep 4. `controller: bhs` of `ha`. Zie hieronder |
 
 Een adres dat je verwijdert, verdwijnt bij het herladen ook uit de apparatenlijst onder de gateway.
+
+![Twee rolluiken op een dashboard.](/images/dashboard-cover.png)
+
+![Een rolluik en een Sfeer-keuze op een dashboard.](/images/dashboard-sfeer.png)
 
 ## AUD
 

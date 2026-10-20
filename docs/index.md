@@ -2,7 +2,7 @@
 layout: default
 lang: nl
 title: B-Logicx voor Home Assistant
-last_modified_at: 2026-10-15
+last_modified_at: 2026-10-20
 alternate: /en.html
 ---
 
@@ -32,6 +32,8 @@ Custom integration die [Home Assistant](https://www.home-assistant.io/) rechtstr
 - **TCP bus repeater** — deel de ene [NWM](https://b-logicx.be/DataSheet/DS_NWM.pdf)-verbinding met [BLConfig](https://b-logicx.be/Manual/BLConfig/HTML/Introductie.html) / blxmonitor  
 - **[RTC](https://b-logicx.be/DataSheet/DS_RTC.pdf)**-synchronisatie (incl. DST), **[LDM](https://b-logicx.be/DataSheet/DS_LDM.pdf)**-lichtsensor, **[TSM](https://b-logicx.be/DataSheet/DS_TSM.pdf)**-thermostaat, **[WSM](https://b-logicx.be/DataSheet/DS_WSM.pdf)**-windsnelheid (km/h), **[BM8](https://b-logicx.be/DataSheet/DS_BM8.pdf)**-deurbel  
 - YAML import/export van adressen  
+
+![Integratiepagina met de apparaten onder de gateway.](/images/integration.png)
 
 ## Documentatie
 

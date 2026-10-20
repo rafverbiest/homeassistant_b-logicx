@@ -3,7 +3,7 @@ layout: default
 lang: en
 title: B-Logicx for Home Assistant
 description: Home Assistant integration for the B-Logicx bus gateway (NWM / NWX)
-last_modified_at: 2026-10-15
+last_modified_at: 2026-10-20
 alternate: /
 ---
 
@@ -33,6 +33,8 @@ Custom integration that connects [Home Assistant](https://www.home-assistant.io/
 - **TCP bus repeater** — share the single [NWM](https://b-logicx.be/DataSheet/DS_NWM.pdf) link with [BLConfig](https://b-logicx.be/Manual/BLConfig/HTML/Introductie.html) / blxmonitor  
 - **[RTC](https://b-logicx.be/DataSheet/DS_RTC.pdf)** sync (incl. DST), **[LDM](https://b-logicx.be/DataSheet/DS_LDM.pdf)** light sensor, **[TSM](https://b-logicx.be/DataSheet/DS_TSM.pdf)** thermostat, **[WSM](https://b-logicx.be/DataSheet/DS_WSM.pdf)** wind speed (km/h), **[BM8](https://b-logicx.be/DataSheet/DS_BM8.pdf)** doorbell  
 - YAML import/export of addresses  
+
+![Integration page with the devices under the gateway.](/images/integration.png)
 
 ## Documentation
 

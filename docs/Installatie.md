@@ -3,7 +3,7 @@ layout: default
 lang: nl
 title: "Installatie"
 description: "Installeren via HACS of met de hand, en daarna de gateway toevoegen."
-last_modified_at: 2026-10-15
+last_modified_at: 2026-10-20
 alternate: /Installation.html
 permalink: /Installatie.html
 ---
@@ -27,6 +27,10 @@ permalink: /Installatie.html
 5. **Herstart** Home Assistant.
 6. **Instellingen → Apparaten en diensten → Integratie toevoegen → B-Logicx**.
 7. Vul het **IP-adres** van de NWM / NWX in (standaardpoort `10001`).
+
+Antwoordt een gateway, kies die. Anders vul je het adres zelf in.
+
+![Gevonden gateway, of zelf een adres invoeren.](/images/discover-gateway.png)
 
 Zie ook de [README](https://github.com/rafverbiest/homeassistant_b-logicx#installeren-met-hacs-custom-repository).
 
