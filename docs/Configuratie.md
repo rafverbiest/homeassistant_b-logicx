@@ -3,7 +3,7 @@ layout: default
 lang: nl
 title: "Configuratie"
 description: "Adrestypes, de optieschermen, en YAML-import."
-last_modified_at: 2026-10-20
+last_modified_at: 2026-10-22
 alternate: /Configuration.html
 permalink: /Configuratie.html
 ---
@@ -16,7 +16,9 @@ Adressen beheer je in de **integratie-opties** (UI) of via [YAML](/YAML.html)-im
 
 ![Configuratiemenu, met een tweede regel per optie.](/images/configure-menu.png)
 
-Adres detecteren luistert hoogstens 30 seconden naar de eerste Set of Reset die nog niet is opgeslagen.
+Adres detecteren luistert hoogstens 30 seconden. Een RLM of SoftM zet je aan of uit. Een rolluik stuur je eerst omhoog en daarna omlaag. Voor het rolluik telt Set: dat is de richting die je stuurde. Reset is het andere relais.
+
+Importeren uit BHS leest eenmalig de ledenlijst op de BHS (poort 10014) en voegt de aangevinkte modules toe.
 
 ![Adres detecteren, luisterend naar Set of Reset.](/images/detect-address.png)
 

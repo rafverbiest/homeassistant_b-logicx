@@ -19,6 +19,10 @@ CONF_SOFTM_TRACKING_ENABLED = "softm_tracking_enabled"
 CONF_BUS_REPEATER_ENABLED = "bus_repeater_enabled"
 CONF_BUS_REPEATER_PORT = "bus_repeater_port"
 CONF_BUS_REPEATER_ALLOW = "bus_repeater_allow"
+# One-shot BHS import. YAML export never writes these.
+CONF_BHS_DEVICE_ID = "bhs_device_id"
+CONF_BHS_PRIVATE_KEY = "bhs_private_key"
+CONF_BHS_PUBLIC_KEY = "bhs_public_key"
 
 # Gateway port and the repeater's listen port share the library constant.
 try:

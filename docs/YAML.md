@@ -3,7 +3,7 @@ layout: default
 lang: nl
 title: "YAML import / export"
 description: "Adressen importeren en exporteren als YAML."
-last_modified_at: 2026-10-15
+last_modified_at: 2026-10-23
 alternate: /YAML-en.html
 permalink: /YAML.html
 ---
@@ -24,7 +24,7 @@ Er is ook `examples/demo_site.yaml` in de repo.
 
 ## Import
 
-In de integratie-opties: YAML importeren (bestand uploaden). Ongeldige combinaties worden geweigerd.
+In de integratie-opties: YAML importeren (bestand uploaden). Ongeldige combinaties worden geweigerd. Een `settings`-blok past SoftM-tracking en de bus repeater aan. Zonder dat blok blijven die instellingen zoals ze zijn. Een export met een opgeslagen BHS-sleutel zet die ook in `settings`.
 
 ## Export
 

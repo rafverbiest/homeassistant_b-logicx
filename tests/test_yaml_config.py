@@ -7,7 +7,11 @@ from pathlib import Path
 
 import pytest
 
-from address_config import dump_addresses_yaml, parse_addresses_yaml
+from address_config import (
+    dump_addresses_yaml,
+    parse_addresses_yaml,
+    parse_integration_settings,
+)
 from const import next_sfeer_group
 
 
@@ -463,3 +467,87 @@ addresses:
     assert "stop_action" not in dumped_bhs
     assert "mute_action" not in dumped_bhs
     assert "turn_on_with_play" not in dumped_bhs
+
+
+def test_export_writes_integration_settings_and_import_reads_them():
+    dumped = dump_addresses_yaml(
+        [
+            {
+                "type": "rlm",
+                "name": "Lamp",
+                "group": 2,
+                "address": 1,
+                "on_command": "Set",
+                "off_command": "Reset",
+            }
+        ],
+        options={"softm_tracking_enabled": True, "bus_repeater_enabled": True},
+        allow_default="192.168.50.0/24",
+    )
+    assert "not applied" not in dumped
+    assert "settings:" in dumped
+    settings, err = parse_integration_settings(dumped)
+    assert err is None
+    assert settings == {
+        "softm_tracking_enabled": True,
+        "bus_repeater_enabled": True,
+        "bus_repeater_port": 10001,
+        "bus_repeater_allow": "192.168.50.0/24",
+    }
+
+
+def test_yaml_without_settings_leaves_them_unset():
+    content = """
+addresses:
+  - type: rlm
+    name: Lamp
+    group: 2
+    address: 1
+"""
+    settings, err = parse_integration_settings(content)
+    assert err is None
+    assert settings is None
+    entries, addr_err = parse_addresses_yaml(content)
+    assert addr_err is None
+    assert entries[0]["name"] == "Lamp"
+
+
+def test_partial_settings_and_invalid_subnet():
+    partial = """
+settings:
+  bus_repeater_enabled: false
+addresses:
+  - type: rlm
+    name: Lamp
+    group: 2
+    address: 1
+"""
+    settings, err = parse_integration_settings(partial)
+    assert err is None
+    assert settings == {"bus_repeater_enabled": False}
+
+    bad = """
+settings:
+  bus_repeater_allow: not-a-network
+addresses:
+  - type: rlm
+    name: Lamp
+    group: 2
+    address: 1
+"""
+    settings, err = parse_integration_settings(bad)
+    assert settings is None
+    assert err == "invalid_subnet"
+
+    bad_port = """
+settings:
+  bus_repeater_port: 0
+addresses:
+  - type: rlm
+    name: Lamp
+    group: 2
+    address: 1
+"""
+    settings, err = parse_integration_settings(bad_port)
+    assert settings is None
+    assert err == "invalid_format"

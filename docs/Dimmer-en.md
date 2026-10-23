@@ -3,7 +3,7 @@ layout: default
 lang: en
 title: "Dimmer"
 description: "A dimmer as a light, with a slider and a short on/off tap."
-last_modified_at: 2026-10-15
+last_modified_at: 2026-10-20
 alternate: /Dimmer.html
 permalink: /Dimmer-en.html
 ---
@@ -12,7 +12,9 @@ permalink: /Dimmer-en.html
 
 [Nederlands](/Dimmer.html) · **English** · [← Home](/en.html)
 
-A dimmer is a bus member on a physical group and a physical address. That group is the room, the same group as that room's Sfeer entries. Home Assistant shows one light: a master switch and a slider from 0 to 100. On and off send a short `Dimmer` tap to that address, followed by `Dimmer` to 220. The dimmer answers with `Set` or `Reset`.
+A dimmer is normally addressed in group 5, 6, 7, 8 or 9. That group defines the room. Sfeer entries are gathered per group, and therefore per room.
+
+Home Assistant shows an individual dimmer as one light: a master switch and a slider from 0 to 100. On and off send a `Dimmer` command to that address, followed by `Dimmer` again to the fixed address 220. The dimmer itself answers with `Set` or `Reset`. The protocol lets you leave time between the two commands, time in which the dimmer starts dimming up and down. The idea is that you release at the wanted level, but that is not very usable through Home Assistant, so the two commands follow each other immediately.
 
 There are 3 ways to control dimmers:
 

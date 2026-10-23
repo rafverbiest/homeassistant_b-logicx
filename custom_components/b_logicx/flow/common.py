@@ -35,6 +35,12 @@ _SAFE_PLACEHOLDERS: dict[str, str] = {
     "mute_note": "",
     "address": "",
     "state": "",
+    "already": "",
+    "leftover": "",
+    "added": "",
+    "already_count": "",
+    "leftover_count": "",
+    "path": "",
 }
 
 

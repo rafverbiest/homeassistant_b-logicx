@@ -3,7 +3,7 @@ layout: default
 lang: nl
 title: "Dimmer"
 description: "Een dimmer als lamp, met schuifregelaar en korte aan/uit-puls."
-last_modified_at: 2026-10-15
+last_modified_at: 2026-10-20
 alternate: /Dimmer-en.html
 permalink: /Dimmer.html
 ---
@@ -12,7 +12,9 @@ permalink: /Dimmer.html
 
 **Nederlands** · [English](/Dimmer-en.html) · [← Home](/)
 
-Een dimmer is een busmember op een fysieke groep en een fysiek adres. Die groep is de kamer, dezelfde groep als de sferen van die kamer. Home Assistant toont één lamp: een hoofdschakelaar en een schuifregelaar van 0 tot 100. Aan en uit gaat met een korte `Dimmer`-puls naar dat adres, gevolgd door `Dimmer` naar 220. De dimmer antwoordt zelf met `Set` of `Reset`.
+Een dimmer is normaal geaddresseerd in groep 5,6,7,8 of 9. Die groep definieert de kamer. Sferen zijn verzameld per groep en dus per kamer.
+
+Een individuele dimmer toont Home Assistant als één lamp: een hoofdschakelaar en een schuifregelaar van 0 tot 100. Aan en uit gaat met een `Dimmer`-commando naar dat adres, gevolgd door nogmaals `Dimmer` naar vast adres 220. De dimmer antwoordt zelf met `Set` of `Reset`. Volgens het protocol kan je manueel tijd laten tussen beide commando's, tijd waarin de dimmer beginnen op-en af te dimmen. De bedoeling is dat je op het gewenste niveau loslaat, maar dat is niet heel bruikbaar via Home Assistant, vandaar dat beide commando's direct elkaar opvolgen.
 
 Er zijn 3 manieren om dimmers te besturen:
 1. Met Sferen

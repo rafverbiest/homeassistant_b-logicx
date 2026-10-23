@@ -26,7 +26,7 @@ from collections.abc import Callable
 from homeassistant.core import HomeAssistant
 
 from .b_logicx import BLXConnection, BLXEvent
-from .b_logicx.detect import detect_match
+from .b_logicx.detect import detect_match, remember_detect_partner
 from .b_logicx.measure import (
     LDM_REQUEST_DATA_ADDRESS,
     LDM_REQUEST_DATA_GROUP,
@@ -127,6 +127,11 @@ class BLogicxHub:
         # One options-flow waiter. The listener completes it; no second socket.
         self._detect_future: asyncio.Future | None = None
         self._detect_known: set[tuple[int, int]] = set()
+        self._detect_set_only = False
+        # While set, a Set/Reset that arrives after this waiter completes is kept
+        # for the next begin_detect. A cover's Reset and Set share one press.
+        self._detect_hold_stash = False
+        self._detect_stash: tuple[int, int, bool] | None = None
         self._repeater: BusRepeater | None = None
 
     def configure_softm_tracking(
@@ -659,15 +664,30 @@ class BLogicxHub:
             except Exception:  # noqa: BLE001
                 _LOGGER.exception("WSM callback error")
 
-    def begin_detect(self, known: set[tuple[int, int]]) -> asyncio.Future:
-        """Arm one waiter. The listener completes it on the first new Set or Reset.
+    def begin_detect(
+        self,
+        known: set[tuple[int, int]],
+        *,
+        set_only: bool = False,
+        hold_stash: bool = False,
+    ) -> asyncio.Future:
+        """Arm one waiter. The listener completes it on the first matching frame.
 
         The result is (group, address, turned_on). turned_on is true for Set.
+        set_only ignores Reset. hold_stash keeps a frame that arrives after this
+        waiter completes, so the flow can re-arm without losing the partner frame
+        already sitting in the socket buffer.
         """
-        self.end_detect()
+        pending = self._detect_future
+        self._detect_future = None
+        if pending is not None and not pending.done():
+            pending.cancel()
         future: asyncio.Future = asyncio.get_running_loop().create_future()
         self._detect_future = future
         self._detect_known = set(known)
+        self._detect_set_only = set_only
+        self._detect_hold_stash = hold_stash
+        self._give_stashed_frame()
         return future
 
     def end_detect(self, future: asyncio.Future | None = None) -> None:
@@ -675,15 +695,48 @@ class BLogicxHub:
         current = self._detect_future
         if future is not None and current is not future:
             return
-        self._detect_future = None
-        self._detect_known = set()
         if current is not None and not current.done():
             current.cancel()
+        self._detect_future = None
+        self._detect_known = set()
+        self._detect_set_only = False
+        self._detect_hold_stash = False
+        self._detect_stash = None
+
+    def _give_stashed_frame(self) -> None:
+        """Complete the new waiter immediately when a partner frame is already held."""
+        stash = self._detect_stash
+        future = self._detect_future
+        if stash is None or future is None or future.done():
+            return
+        group, address, is_set = stash
+        command = "Set" if is_set else "Reset"
+        if not detect_match(
+            command,
+            group,
+            address,
+            self._detect_known,
+            set_only=self._detect_set_only,
+        ):
+            self._detect_stash = None
+            return
+        self._detect_stash = None
+        self._detect_future = None
+        future.set_result((group, address, is_set))
 
     def _offer_detect(self, event: BLXEvent, own_echo: bool) -> None:
         """Complete the detect waiter without taking the frame from anyone else."""
         future = self._detect_future
         if future is None or future.done():
+            if self._detect_hold_stash:
+                self._detect_stash = remember_detect_partner(
+                    self._detect_stash,
+                    event.command,
+                    event.group,
+                    event.address,
+                    self._detect_known,
+                    own_echo=own_echo,
+                )
             return
         if not detect_match(
             event.command,
@@ -691,10 +744,10 @@ class BLogicxHub:
             event.address,
             self._detect_known,
             own_echo=own_echo,
+            set_only=self._detect_set_only,
         ):
             return
         self._detect_future = None
-        self._detect_known = set()
         future.set_result((event.group, event.address, event.command == "Set"))
 
     async def async_stop(self) -> None:

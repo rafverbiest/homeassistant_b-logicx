@@ -11,6 +11,8 @@ Configure then opens the options flow:
   or cover screen with the address filled in.
 - Edit and remove pick an existing address. Edit reuses the add screen.
 - Import YAML overwrites the address list, but does not change the settings above.
+- Import from BHS reads the member list once from the BHS PC, then adds the
+  addresses you check.
 - Export and the template show the text and a download link.
 
 Saving an address writes the entry data and reloads. Leaving the menu writes
@@ -19,7 +21,8 @@ switch or the repeater.
 
 Shared form helpers live in flow/common.py. Each address type lives in
 flow/: rlm, dimmer, softm, aud, readonly, ldm, tsm, wsm, bm8, rtc, shutter,
-and sfeer. Detect an address lives in flow/detect.py.
+and sfeer. Detect an address lives in flow/detect.py. Import from BHS
+lives in flow/bhs.py.
 This file keeps setup, the menu, settings, edit, remove, and YAML.
 """
 
@@ -53,9 +56,11 @@ from .bus_repeater import suggested_repeater_cidr
 from .address_config import (
     dump_addresses_yaml,
     parse_addresses_yaml,
+    parse_integration_settings,
 )
 from .const import *
 from .flow.aud import AudSteps
+from .flow.bhs import BhsSteps
 from .flow.dimmer import DimmerSteps
 from .flow.detect import DetectSteps
 from .flow.common import (
@@ -207,6 +212,7 @@ class BLogicxConfigFlow(ConfigFlow, domain=DOMAIN):
 
 class BLogicxOptionsFlow(
     DetectSteps,
+    BhsSteps,
     SfeerSteps,
     ShutterSteps,
     RtcSteps,
@@ -233,12 +239,24 @@ class BLogicxOptionsFlow(
             title="", data=dict(self.config_entry.options)
         )
 
-    async def _save_and_reload(self, addresses: list[dict]) -> None:
-        """Persist addresses. Reload is handled by the entry update listener."""
+    async def _save_and_reload(
+        self,
+        addresses: list[dict],
+        options: dict[str, Any] | None = None,
+    ) -> None:
+        """Persist addresses, and settings when an import carried them.
+
+        Reload is handled by the entry update listener.
+        """
         new_data = {**self.config_entry.data, CONF_ADDRESSES: addresses}
-        self.hass.config_entries.async_update_entry(
-            self.config_entry, data=new_data
-        )
+        if options is None:
+            self.hass.config_entries.async_update_entry(
+                self.config_entry, data=new_data
+            )
+        else:
+            self.hass.config_entries.async_update_entry(
+                self.config_entry, data=new_data, options=options
+            )
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -265,6 +283,7 @@ class BLogicxOptionsFlow(
                 "export_yaml",
                 "download_yaml_template",
                 "import_yaml",
+                "import_bhs",
             ]
         )
 
@@ -537,14 +556,20 @@ class BLogicxOptionsFlow(
                         _read_uploaded_text, self.hass, file_id
                     )
                     new_addresses, parse_error = parse_addresses_yaml(content)
-                    if parse_error:
-                        errors["base"] = parse_error
+                    settings, settings_error = (None, None)
+                    if not parse_error:
+                        settings, settings_error = parse_integration_settings(content)
+                    if parse_error or settings_error:
+                        errors["base"] = parse_error or settings_error
                     else:
                         _LOGGER.info(
                             "YAML import OK — saving %d entries",
                             len(new_addresses),
                         )
-                        await self._save_and_reload(new_addresses)
+                        merged = None
+                        if settings:
+                            merged = {**self.config_entry.options, **settings}
+                        await self._save_and_reload(new_addresses, merged)
                         return self._finish_options()
                 except Exception as err:
                     _LOGGER.exception("YAML import failed: %s", err)
@@ -573,8 +598,11 @@ class BLogicxOptionsFlow(
         from .yaml_download import async_yaml_download_url
 
         addresses = list(self.config_entry.data.get(CONF_ADDRESSES, []))
+        host = str(self.config_entry.data.get(CONF_HOST, ""))
         export_text = dump_addresses_yaml(
-            addresses, options=dict(self.config_entry.options)
+            addresses,
+            options=dict(self.config_entry.options),
+            allow_default=suggested_repeater_cidr(host),
         )
         download_url = async_yaml_download_url(
             self.hass,

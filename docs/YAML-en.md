@@ -3,7 +3,7 @@ layout: default
 lang: en
 title: "YAML import / export"
 description: "Import and export addresses as YAML."
-last_modified_at: 2026-10-15
+last_modified_at: 2026-10-23
 alternate: /YAML.html
 permalink: /YAML-en.html
 ---
@@ -24,7 +24,7 @@ The repo also has `examples/demo_site.yaml`.
 
 ## Import
 
-In the integration options: import YAML (upload a file). Invalid combinations are rejected.
+In the integration options: import YAML (upload a file). Invalid combinations are rejected. A `settings` block applies SoftM tracking and the bus repeater. Without that block those settings stay as they are. An export that has a saved BHS device key writes it into `settings` too.
 
 ## Export
 

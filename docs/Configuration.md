@@ -3,7 +3,7 @@ layout: default
 lang: en
 title: "Configuration"
 description: "Address types, the option screens, and YAML import."
-last_modified_at: 2026-10-20
+last_modified_at: 2026-10-22
 alternate: /Configuratie.html
 permalink: /Configuration.html
 ---
@@ -16,7 +16,9 @@ Manage addresses in the **integration options** (UI) or via [YAML](/YAML-en.html
 
 ![Configuration menu, with a second line on each option.](/images/configure-menu.png)
 
-Detect an address listens for up to 30 seconds for the first Set or Reset that is not already saved.
+Detect an address listens for up to 30 seconds. Turn an RLM or a SoftM on or off. Send a cover up, then down. For a cover, Set is the direction you sent. Reset is the other relay.
+
+Import from BHS reads the member list once from the BHS (port 10014) and adds the modules you check.
 
 ![Detect an address, listening for Set or Reset.](/images/detect-address.png)
 

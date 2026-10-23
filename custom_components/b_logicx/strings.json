@@ -42,7 +42,8 @@
           "integration_settings": "Integration settings",
           "export_yaml": "Export YAML",
           "download_yaml_template": "Download YAML template",
-          "import_yaml": "Import from YAML"
+          "import_yaml": "Import from YAML",
+          "import_bhs": "Import from BHS (experimental)"
         },
         "menu_option_descriptions": {
           "add_address": "Enter a group and address yourself, then choose the module type.",
@@ -54,7 +55,8 @@
           "integration_settings": "SoftM tracking for this gateway, and the bus repeater.",
           "export_yaml": "Show or download the addresses saved now.",
           "download_yaml_template": "An example file to edit and import.",
-          "import_yaml": "Replace all saved addresses with a YAML file."
+          "import_yaml": "Replace all saved addresses with a YAML file.",
+          "import_bhs": "Read the member list once. Pick which ones to add."
         }
       },
       "add_address": {
@@ -66,7 +68,7 @@
       },
       "detect_address": {
         "title": "Detect an address",
-        "description": "Be ready to change the module so it sends Set or Reset. An RLM, a SoftM, or the up relay of a cover all count. Press the button only when you are ready. Home Assistant then listens for up to 30 seconds and shows the first address that is not already configured.",
+        "description": "Be ready to switch a module. Detection starts when you click below.\n\nDuring detection it is enough to turn an RLM or a SoftM on or off. Send a cover up.",
         "submit": "Detect"
       },
       "detect_wait": {
@@ -74,7 +76,7 @@
       },
       "detect_kind": {
         "title": "What is this address?",
-        "description": "{group}.{address} turned {state}. Choose whether this is an RLM, a SoftM, or a cover.",
+        "description": "{group}.{address} turned {state}. Choose whether this is an RLM, a SoftM, or a cover. For a cover, only Set counts as up. The next step listens for down.",
         "data": {
           "address_type": "Type"
         }
@@ -83,6 +85,24 @@
         "title": "Nothing heard",
         "description": "No new Set or Reset arrived. Be ready to change the module, then try again.",
         "submit": "Try again"
+      },
+      "detect_up_again": {
+        "title": "Send the cover up",
+        "description": "A Reset arrived. That is the other relay, not the direction you sent. Send the cover up again. When you click below, Home Assistant listens for Set.",
+        "submit": "Detect"
+      },
+      "detect_close": {
+        "title": "Send the cover down",
+        "description": "Be ready to send the cover down. Detection starts again when you click below.",
+        "submit": "Detect"
+      },
+      "detect_close_timeout": {
+        "title": "No down address",
+        "description": "The down address did not arrive.",
+        "menu_options": {
+          "detect_close": "Listen again",
+          "detect_close_manual": "Enter it yourself"
+        }
       },
       "add_rlm": {
         "title": "Add switch (RLM)",
@@ -302,6 +322,34 @@
           "import_yaml": "YAML file"
         }
       },
+      "import_bhs": {
+        "title": "Import from BHS",
+        "description": "The IP Address of the BHS. Single-shot read of the member list, then the BHS is left alone. Port 10014 is the usual REST port.",
+        "data": {
+          "host": "BHS address",
+          "port": "Port (default 10014)",
+          "reuse_key": "Reuse existing key"
+        }
+      },
+      "import_bhs_pending": {
+        "title": "Waiting for approval",
+        "description": "BLConfig has to approve the device named <Home Assistant>. Then continue."
+      },
+      "import_bhs_pick": {
+        "title": "Choose members",
+        "description": "Checked members are added. Existing addresses stay.\n\n{already}\n\n{leftover}",
+        "data": {
+          "members": "Members"
+        }
+      },
+      "import_bhs_done": {
+        "title": "Import from BHS",
+        "description": "Added {added}. Already present: {already_count}. Not imported: {leftover_count}.\n\n{leftover}"
+      },
+      "import_bhs_secured": {
+        "title": "Secured BHS",
+        "description": "This BHS encrypts the API (ISSECURE). The import stopped before adding any modules.\n\nPlease send this file to raf.verbiest@gmail.com. It would help development.\n\n{path}\n\nCareful — this file contains your private key. Create a new key and delete the old one from the BHS before you send the email."
+      },
       "download_yaml_template": {
         "title": "Download YAML template",
         "description": "Copy the template below, or use the download link (opens a file download). Edit the file, then use Import from YAML.\n\n{download_link}",
@@ -338,9 +386,16 @@
       }
     },
     "progress": {
-      "detect_wait": "Listening for Set or Reset, for up to 30 seconds."
+      "detect_wait": "Listening for Set or Reset, for up to 30 seconds.",
+      "detect_up_wait": "Listening for Set, for up to 30 seconds.",
+      "detect_close_wait": "Listening for Set for down, for up to 30 seconds."
     },
     "error": {
+      "cannot_connect": "Could not connect to the BHS. Check the address, the port, and that Home Assistant can reach that PC.",
+      "pending_approval": "This device is waiting for approval in BLConfig.",
+      "bhs_secured": "This BHS encrypts the API (ISSECURE). This import does not speak that mode yet.",
+      "bhs_blocked": "BLConfig blocked this device. Submit again to register a new one.",
+      "bhs_error": "The BHS refused the request.",
       "invalid_yaml": "Could not read or parse the YAML file.",
       "detect_not_running": "The gateway is not connected. Start the integration and try again.",
       "template_missing": "The template file could not be found.",

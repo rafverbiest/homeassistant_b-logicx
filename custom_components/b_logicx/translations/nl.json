@@ -42,7 +42,8 @@
           "integration_settings": "Integratie-instellingen",
           "export_yaml": "YAML exporteren",
           "download_yaml_template": "YAML-sjabloon downloaden",
-          "import_yaml": "Importeren uit YAML"
+          "import_yaml": "Importeren uit YAML",
+          "import_bhs": "Importeren uit BHS (Experimenteel)"
         },
         "menu_option_descriptions": {
           "add_address": "Vul zelf een groep en een adres in, en kies daarna het type.",
@@ -54,7 +55,8 @@
           "integration_settings": "SoftM-tracking voor deze gateway, en de bus repeater.",
           "export_yaml": "Toon of download de adressen die nu zijn opgeslagen.",
           "download_yaml_template": "Een voorbeeldbestand om aan te passen en te importeren.",
-          "import_yaml": "Vervang alle opgeslagen adressen door een YAML-bestand."
+          "import_yaml": "Vervang alle opgeslagen adressen door een YAML-bestand.",
+          "import_bhs": "Lees eenmalig de ledenlijst. Kies welke je toevoegt."
         }
       },
       "add_address": {
@@ -66,7 +68,7 @@
       },
       "detect_address": {
         "title": "Adres detecteren",
-        "description": "Zet de module klaar zodat die Set of Reset stuurt. Een RLM, een SoftM of het op-relais van een rolluik telt mee. Druk pas op de knop als je klaar bent. Home Assistant luistert dan hoogstens 30 seconden en toont het eerste adres dat nog niet is ingesteld.",
+        "description": "Zet je klaar om een module om te schakelen. Zodra je hieronder klikt, start de detectie.\n\nTijdens de detectie volstaat het voor een RLM of SoftM om in of uit te schakelen. Een rolluik stuur je omhoog.",
         "submit": "Detecteren"
       },
       "detect_wait": {
@@ -74,7 +76,7 @@
       },
       "detect_kind": {
         "title": "Wat is dit adres?",
-        "description": "{group}.{address} ging {state}. Kies of dit een RLM, een SoftM of een rolluik is.",
+        "description": "{group}.{address} ging {state}. Kies of dit een RLM, een SoftM of een rolluik is. Bij een rolluik telt alleen Set als omhoog. De volgende stap luistert naar omlaag.",
         "data": {
           "address_type": "Type"
         }
@@ -83,6 +85,24 @@
         "title": "Niets gehoord",
         "description": "Er kwam geen nieuwe Set of Reset binnen. Zet de module klaar en probeer opnieuw.",
         "submit": "Opnieuw"
+      },
+      "detect_up_again": {
+        "title": "Stuur het rolluik omhoog",
+        "description": "Er kwam een Reset binnen. Dat is het andere relais, niet de richting die je stuurde. Stuur het rolluik opnieuw omhoog. Zodra je hieronder klikt, luistert Home Assistant naar Set.",
+        "submit": "Detecteren"
+      },
+      "detect_close": {
+        "title": "Stuur het rolluik omlaag",
+        "description": "Zet je klaar om het rolluik omlaag te sturen. Zodra je hieronder klikt, start de detectie opnieuw.",
+        "submit": "Detecteren"
+      },
+      "detect_close_timeout": {
+        "title": "Geen omlaag-adres",
+        "description": "Het omlaag-adres kwam niet binnen.",
+        "menu_options": {
+          "detect_close": "Opnieuw luisteren",
+          "detect_close_manual": "Zelf invullen"
+        }
       },
       "add_rlm": {
         "title": "Schakelaar (RLM) toevoegen",
@@ -302,6 +322,34 @@
           "import_yaml": "YAML-bestand"
         }
       },
+      "import_bhs": {
+        "title": "Importeren uit BHS",
+        "description": "Het IP adres van de BHS. Eén enkele keer de ledenlijst uitlezen, daarna wordt geen verbinding meer gemaakt. Poort 10014 is de gebruikelijke REST-poort.",
+        "data": {
+          "host": "BHS-adres",
+          "port": "Poort (standaard 10014)",
+          "reuse_key": "Bestaande sleutel hergebruiken"
+        }
+      },
+      "import_bhs_pending": {
+        "title": "Wachten op goedkeuring",
+        "description": "BLConfig moet het toestel <Home Assistant> goedkeuren. Klik daarna op verder."
+      },
+      "import_bhs_pick": {
+        "title": "Leden kiezen",
+        "description": "Aangevinkte leden worden toegevoegd. Bestaande adressen blijven staan.\n\n{already}\n\n{leftover}",
+        "data": {
+          "members": "Leden"
+        }
+      },
+      "import_bhs_done": {
+        "title": "Importeren uit BHS",
+        "description": "Toegevoegd: {added}. Al aanwezig: {already_count}. Niet geïmporteerd: {leftover_count}.\n\n{leftover}"
+      },
+      "import_bhs_secured": {
+        "title": "Beveiligde BHS",
+        "description": "Deze BHS versleutelt de API (ISSECURE). De import is gestopt voordat er modules zijn toegevoegd.\n\nStuur dit bestand naar raf.verbiest@gmail.com. Dat helpt bij de ontwikkeling.\n\n{path}\n\nOpgelet — dit bestand bevat je privésleutel. Maak een nieuwe sleutel aan en wis de oude uit BHS voor je de e-mail stuurt."
+      },
       "download_yaml_template": {
         "title": "YAML-sjabloon downloaden",
         "description": "Kopieer het sjabloon hieronder, of gebruik de downloadlink (opent een bestandsdownload). Pas het bestand aan en gebruik daarna Importeren uit YAML.\n\n{download_link}",
@@ -338,9 +386,16 @@
       }
     },
     "progress": {
-      "detect_wait": "Luisteren naar Set of Reset, hoogstens 30 seconden."
+      "detect_wait": "Luisteren naar Set of Reset, hoogstens 30 seconden.",
+      "detect_up_wait": "Luisteren naar Set, hoogstens 30 seconden.",
+      "detect_close_wait": "Luisteren naar Set voor omlaag, hoogstens 30 seconden."
     },
     "error": {
+      "cannot_connect": "Kan de BHS niet bereiken. Controleer het adres, de poort, én of Home Assistant die PC kan bereiken.",
+      "pending_approval": "Dit toestel wacht op goedkeuring in BLConfig.",
+      "bhs_secured": "Deze BHS versleutelt de API (ISSECURE). Deze import spreekt die modus nog niet.",
+      "bhs_blocked": "BLConfig heeft dit toestel geblokkeerd. Verzend opnieuw om een nieuw toestel te registreren.",
+      "bhs_error": "De BHS heeft de aanvraag geweigerd.",
       "invalid_yaml": "Kan het YAML-bestand niet lezen of verwerken.",
       "detect_not_running": "De gateway is niet verbonden. Start de integratie en probeer opnieuw.",
       "template_missing": "Het sjabloonbestand is niet gevonden.",

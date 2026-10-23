@@ -4,6 +4,14 @@
 #
 # Example conventions: lights/outlets group 2, covers group 3,
 # audio group 4, software members group 10.
+#
+# Omit settings to leave SoftM tracking and the bus repeater as they are.
+
+settings:
+  softm_tracking_enabled: false
+  bus_repeater_enabled: false
+  bus_repeater_port: 10001
+  bus_repeater_allow: 192.168.50.0/24
 
 addresses:
   - type: rlm

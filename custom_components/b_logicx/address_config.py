@@ -1,13 +1,14 @@
 """Turn a YAML file into address dicts, and write those dicts back out.
 
 Home Assistant imports are avoided, so the config flow and the offline tests share
-one schema. Import replaces the address list only. The SoftM master switch
-and the bus repeater stay in Integration settings, and export mentions them
-as comments rather than as data the import would apply.
+one schema. Import always replaces the address list. A settings block, when the
+file has one, also updates the SoftM master switch and the bus repeater.
+A file with no settings block leaves those values as they are.
 """
 
 from __future__ import annotations
 
+import ipaddress
 import logging
 from typing import Any
 
@@ -182,50 +183,134 @@ def _export_entry(entry: dict) -> dict:
     return _ordered_yaml_entry(ready)
 
 
+def settings_for_export(
+    options: dict[str, Any] | None,
+    *,
+    allow_default: str = "",
+) -> dict[str, Any]:
+    """The four Integration settings, with the same defaults as the form."""
+    options = options or {}
+    allow = str(options.get(CONF_BUS_REPEATER_ALLOW) or allow_default or "").strip()
+    port = options.get(CONF_BUS_REPEATER_PORT, DEFAULT_BUS_REPEATER_PORT)
+    if isinstance(port, bool) or not isinstance(port, int):
+        port = DEFAULT_BUS_REPEATER_PORT
+    out = {
+        CONF_SOFTM_TRACKING_ENABLED: options.get(CONF_SOFTM_TRACKING_ENABLED) is True,
+        CONF_BUS_REPEATER_ENABLED: options.get(CONF_BUS_REPEATER_ENABLED) is True,
+        CONF_BUS_REPEATER_PORT: port,
+        CONF_BUS_REPEATER_ALLOW: allow,
+    }
+    device_id = str(options.get(CONF_BHS_DEVICE_ID) or "").strip()
+    private_key = str(options.get(CONF_BHS_PRIVATE_KEY) or "").strip()
+    public_key = str(options.get(CONF_BHS_PUBLIC_KEY) or "").strip()
+    if device_id and private_key and public_key:
+        out[CONF_BHS_DEVICE_ID] = device_id
+        out[CONF_BHS_PRIVATE_KEY] = private_key
+        out[CONF_BHS_PUBLIC_KEY] = public_key
+    return out
+
+
 def dump_addresses_yaml(
     addresses: list[dict],
     *,
     options: dict[str, Any] | None = None,
+    allow_default: str = "",
 ) -> str:
     """Serialize addresses to YAML that ``parse_addresses_yaml`` can import.
 
-    Integration options (SoftM master switch, bus repeater) are added as
-    comments only — YAML import still replaces the addresses list alone.
+    When options is given, a settings block is written first and import applies it.
     """
     cleaned = [_export_entry(a) for a in addresses]
     # Stable-ish order: same as edit/remove picker
     cleaned = sorted(cleaned, key=entry_sort_key)
+    payload: dict[str, Any] = {}
+    if options is not None:
+        payload["settings"] = settings_for_export(options, allow_default=allow_default)
+    payload["addresses"] = cleaned
     body = yaml.safe_dump(
-        {"addresses": cleaned},
+        payload,
         sort_keys=False,
         allow_unicode=True,
         default_flow_style=False,
     )
     header = (
         "# B-Logicx export — use Import from YAML to load (replaces all addresses)\n"
+        "# A settings block is applied too. Omit it to leave SoftM tracking, "
+        "the bus repeater, and a saved BHS device key as they are.\n"
         "# Types: rlm | dimmer | softm | aud | shutter | sfeer | readonly | rtc | ldm | tsm | wsm | bm8\n"
     )
-    if options:
-        header += (
-            "#\n"
-            "# Integration settings (not applied by YAML import — use "
-            "Integration settings in the UI):\n"
-        )
-        for key in (
-            "softm_tracking_enabled",
-            "bus_repeater_enabled",
-            "bus_repeater_port",
-        ):
-            if key not in options:
-                continue
-            val = options[key]
-            if isinstance(val, bool):
-                val_s = "true" if val else "false"
-            else:
-                val_s = str(val)
-            header += f"#   {key}: {val_s}\n"
-        header += "#\n"
     return header + body
+
+
+def parse_integration_settings(
+    content: str,
+) -> tuple[dict[str, Any] | None, str | None]:
+    """Read an optional settings block.
+
+    None means the file has no settings key, so import must leave the current
+    SoftM switch and bus repeater alone. A dict is the keys the file set.
+    """
+    try:
+        data = yaml.safe_load(content)
+    except yaml.YAMLError as err:
+        _LOGGER.error("YAML parse error: %s", err)
+        return None, "invalid_yaml"
+
+    if not isinstance(data, dict) or "settings" not in data:
+        return None, None
+
+    raw = data["settings"]
+    if raw is None:
+        return {}, None
+    if not isinstance(raw, dict):
+        _LOGGER.error("YAML settings must be a mapping")
+        return None, "invalid_format"
+
+    out: dict[str, Any] = {}
+    for key in (CONF_SOFTM_TRACKING_ENABLED, CONF_BUS_REPEATER_ENABLED):
+        if key not in raw:
+            continue
+        if not isinstance(raw[key], bool):
+            _LOGGER.error("YAML settings.%s must be true or false", key)
+            return None, "invalid_format"
+        out[key] = raw[key]
+
+    if CONF_BUS_REPEATER_PORT in raw:
+        port = raw[CONF_BUS_REPEATER_PORT]
+        if isinstance(port, bool) or not isinstance(port, int) or not 1 <= port <= 65535:
+            _LOGGER.error("YAML settings.bus_repeater_port must be 1..65535")
+            return None, "invalid_format"
+        out[CONF_BUS_REPEATER_PORT] = port
+
+    if CONF_BUS_REPEATER_ALLOW in raw:
+        allow = raw[CONF_BUS_REPEATER_ALLOW]
+        if allow is None:
+            allow = ""
+        if not isinstance(allow, str):
+            _LOGGER.error("YAML settings.bus_repeater_allow must be a CIDR string")
+            return None, "invalid_format"
+        text = allow.strip()
+        if text:
+            try:
+                text = str(ipaddress.ip_network(text, strict=False))
+            except ValueError:
+                _LOGGER.error("YAML settings.bus_repeater_allow is not a CIDR: %s", allow)
+                return None, "invalid_subnet"
+        out[CONF_BUS_REPEATER_ALLOW] = text
+
+    bhs_keys = (CONF_BHS_DEVICE_ID, CONF_BHS_PRIVATE_KEY, CONF_BHS_PUBLIC_KEY)
+    if any(key in raw for key in bhs_keys):
+        if not all(key in raw for key in bhs_keys):
+            _LOGGER.error("YAML settings BHS device key must include id and both PEMs")
+            return None, "invalid_format"
+        for key in bhs_keys:
+            value = raw[key]
+            if not isinstance(value, str) or not value.strip():
+                _LOGGER.error("YAML settings.%s must be a non-empty string", key)
+                return None, "invalid_format"
+            out[key] = value.strip()
+
+    return out, None
 
 
 def parse_addresses_yaml(content: str) -> tuple[list[dict], str | None]:

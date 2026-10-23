@@ -1,0 +1,229 @@
+{
+  "count": 164,
+  "members": [
+    {
+      "memberID": "m-0-0",
+      "address": 0,
+      "group": 0,
+      "name": "",
+      "version": "",
+      "memberType": 0
+    },
+    {
+      "memberID": "m-1-1",
+      "address": 1,
+      "group": 1,
+      "name": "hall contact 1",
+      "version": "INM_24",
+      "memberType": 3
+    },
+    {
+      "memberID": "m-1-2",
+      "address": 2,
+      "group": 1,
+      "name": "hall contact 2",
+      "version": "INM_24",
+      "memberType": 3
+    },
+    {
+      "memberID": "m-1-100",
+      "address": 100,
+      "group": 1,
+      "name": "clock",
+      "version": "RTC_82",
+      "memberType": 12
+    },
+    {
+      "memberID": "m-1-101",
+      "address": 101,
+      "group": 1,
+      "name": "motion parking",
+      "version": "EXU_192",
+      "memberType": 17
+    },
+    {
+      "memberID": "m-1-102",
+      "address": 102,
+      "group": 1,
+      "name": "motion terrace",
+      "version": "EXU_192",
+      "memberType": 17
+    },
+    {
+      "memberID": "m-2-1",
+      "address": 1,
+      "group": 2,
+      "name": "VER_0_garage_ceiling",
+      "version": "RLM_4",
+      "memberType": 1
+    },
+    {
+      "memberID": "m-2-2",
+      "address": 2,
+      "group": 2,
+      "name": "VER_1_dressing_wall",
+      "version": "RLM_4",
+      "memberType": 1
+    },
+    {
+      "memberID": "m-3-1",
+      "address": 1,
+      "group": 3,
+      "name": "SCRN_0_bay_OP",
+      "version": "RLM_4",
+      "memberType": 20
+    },
+    {
+      "memberID": "m-3-2",
+      "address": 2,
+      "group": 3,
+      "name": "SCRN_0_bay_NEER",
+      "version": "RLM_4",
+      "memberType": 20
+    },
+    {
+      "memberID": "m-3-3",
+      "address": 3,
+      "group": 3,
+      "name": "ROL_1_bedroom_OP",
+      "version": "RLM_4",
+      "memberType": 20
+    },
+    {
+      "memberID": "m-3-4",
+      "address": 4,
+      "group": 3,
+      "name": "ROL_1_bedroom_NEER",
+      "version": "RLM_4",
+      "memberType": 20
+    },
+    {
+      "memberID": "m-5-1",
+      "address": 1,
+      "group": 5,
+      "name": "DIM_0_living_spots",
+      "version": "DIM1K_15",
+      "memberType": 2
+    },
+    {
+      "memberID": "m-5-2",
+      "address": 2,
+      "group": 5,
+      "name": "DIM_0_living_wall",
+      "version": "DIM1K_15",
+      "memberType": 2
+    },
+    {
+      "memberID": "m-5-219",
+      "address": 219,
+      "group": 5,
+      "name": "GroepsReset Dim",
+      "version": "SDim",
+      "memberType": 19
+    },
+    {
+      "memberID": "m-5-220",
+      "address": 220,
+      "group": 5,
+      "name": "Stop Dim",
+      "version": "SDim",
+      "memberType": 19
+    },
+    {
+      "memberID": "m-5-221",
+      "address": 221,
+      "group": 5,
+      "name": "Watching TV",
+      "version": "SDim",
+      "memberType": 19
+    },
+    {
+      "memberID": "m-5-222",
+      "address": 222,
+      "group": 5,
+      "name": "Morning",
+      "version": "SDim",
+      "memberType": 19
+    },
+    {
+      "memberID": "m-5-223",
+      "address": 223,
+      "group": 5,
+      "name": "Reading",
+      "version": "SDim",
+      "memberType": 19
+    },
+    {
+      "memberID": "m-5-224",
+      "address": 224,
+      "group": 5,
+      "name": "Playing",
+      "version": "SDim",
+      "memberType": 19
+    },
+    {
+      "memberID": "m-5-225",
+      "address": 225,
+      "group": 5,
+      "name": "Working",
+      "version": "SDim",
+      "memberType": 19
+    },
+    {
+      "memberID": "m-5-226",
+      "address": 226,
+      "group": 5,
+      "name": "Sfeer6 Dim",
+      "version": "SDim",
+      "memberType": 19
+    },
+    {
+      "memberID": "m-5-227",
+      "address": 227,
+      "group": 5,
+      "name": "Sfeer7 Dim",
+      "version": "SDim",
+      "memberType": 19
+    },
+    {
+      "memberID": "m-5-228",
+      "address": 228,
+      "group": 5,
+      "name": "Sfeer8 Dim",
+      "version": "SDim",
+      "memberType": 19
+    },
+    {
+      "memberID": "m-5-229",
+      "address": 229,
+      "group": 5,
+      "name": "Record Sfeer Dim",
+      "version": "SDim",
+      "memberType": 19
+    },
+    {
+      "memberID": "m-5-254",
+      "address": 254,
+      "group": 5,
+      "name": "Groepssturing Dim",
+      "version": "SDim",
+      "memberType": 0
+    },
+    {
+      "memberID": "m-10-1",
+      "address": 1,
+      "group": 10,
+      "name": "All off",
+      "version": "SoftM",
+      "memberType": 4
+    },
+    {
+      "memberID": "m-10-3",
+      "address": 3,
+      "group": 10,
+      "name": "Night",
+      "version": "SoftM",
+      "memberType": 4
+    }
+  ]
+}
