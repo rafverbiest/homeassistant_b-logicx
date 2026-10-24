@@ -334,7 +334,7 @@
       },
       "import_bhs_pending": {
         "title": "Wachten op goedkeuring",
-        "description": "BLConfig moet het toestel <Home Assistant> goedkeuren. Klik daarna op verder."
+        "description": "BLConfig moet het toestel \"Home Assistant\" goedkeuren. Klik daarna op verder."
       },
       "import_bhs_pick": {
         "title": "Leden kiezen",

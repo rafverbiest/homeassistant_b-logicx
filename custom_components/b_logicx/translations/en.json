@@ -334,7 +334,7 @@
       },
       "import_bhs_pending": {
         "title": "Waiting for approval",
-        "description": "BLConfig has to approve the device named <Home Assistant>. Then continue."
+        "description": "BLConfig has to approve the device named \"Home Assistant\". Then continue."
       },
       "import_bhs_pick": {
         "title": "Choose members",
