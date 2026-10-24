@@ -68,7 +68,7 @@ The options screen asks for BHS or Home Assistant before the source names. With 
 
 ## Status probe (`check_status`)
 
-For switches, read-only sensors, dimmers, covers, and Sfeer you can send a bus **Status** at startup. With `check_status` off, they show their last state and do not query the bus.
+For switches, read-only sensors, dimmers, covers, Sfeer, LDM, TSM, and WSM you can send a bus **Status** at startup. With `check_status` off, they show their last state and do not query the bus. An RTC has nothing to answer Status with.
 
 ## SoftM and bus repeater
 

@@ -242,6 +242,24 @@ def test_on_off_from_ha_state():
     assert sfeer_option_from_ha_state("Gone", options) is None
     assert sfeer_option_from_ha_state("unknown", options) is None
 
+    from const import (
+        measurement_from_ha_state,
+        text_from_ha_state,
+        whole_number_from_ha_state,
+    )
+
+    assert measurement_from_ha_state("21.5") == 21.5
+    assert measurement_from_ha_state("0") == 0.0
+    assert measurement_from_ha_state("unknown") is None
+    assert measurement_from_ha_state("unavailable") is None
+    assert whole_number_from_ha_state("12") == 12
+    assert whole_number_from_ha_state("12.0") == 12
+    assert whole_number_from_ha_state("12.5") is None
+    assert whole_number_from_ha_state("unknown") is None
+    assert text_from_ha_state("Day") == "Day"
+    assert text_from_ha_state("unknown") is None
+    assert text_from_ha_state("") is None
+
 
 def test_repeater_client_allowed():
     from bus_repeater import client_allowed, suggested_repeater_cidr

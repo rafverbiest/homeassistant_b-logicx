@@ -274,6 +274,34 @@ def cover_is_closed_from_ha_state(state: str | None) -> bool | None:
     return None
 
 
+def measurement_from_ha_state(state: str | None) -> float | None:
+    """Map a restored sensor state to a number, or None if unknown."""
+    if state in (None, "", "unknown", "unavailable", "none"):
+        return None
+    try:
+        value = float(state)
+    except (TypeError, ValueError):
+        return None
+    if value != value or value in (float("inf"), float("-inf")):
+        return None
+    return value
+
+
+def whole_number_from_ha_state(state: str | None) -> int | None:
+    """Map a restored sensor state to an integer, or None if it is not whole."""
+    value = measurement_from_ha_state(state)
+    if value is None or value != int(value):
+        return None
+    return int(value)
+
+
+def text_from_ha_state(state: str | None) -> str | None:
+    """Map a restored sensor state to text, or None if unknown."""
+    if state in (None, "", "unknown", "unavailable", "none"):
+        return None
+    return state
+
+
 def sfeer_option_from_ha_state(
     state: str | None, options: list[str] | tuple[str, ...]
 ) -> str | None:

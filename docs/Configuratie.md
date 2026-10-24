@@ -69,7 +69,7 @@ In het configuratiescherm kies je eerst BHS of Home Assistant, en daarna de bron
 
 ## Status opvragen (`check_status`)
 
-Voor schakelaars, alleen-lezen, dimmers, rolluiken en Sfeer kun je bij opstarten een bus-**Status** laten sturen. Staat `check_status` uit, dan tonen ze hun laatste stand en bevragen ze de bus niet.
+Voor schakelaars, alleen-lezen, dimmers, rolluiken, Sfeer, LDM, TSM en WSM kun je bij opstarten een bus-**Status** laten sturen. Staat `check_status` uit, dan tonen ze hun laatste stand en bevragen ze de bus niet. Een RTC heeft niets om op Status te antwoorden.
 
 ## SoftM en bus repeater
 

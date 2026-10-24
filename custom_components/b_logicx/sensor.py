@@ -23,6 +23,7 @@ from homeassistant.const import PERCENTAGE, UnitOfSpeed, UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from .b_logicx.measure import (
     LdmReading,
@@ -39,6 +40,9 @@ from .const import (
     CONF_HOST,
     DOMAIN,
     TSM_PRESET_LABELS,
+    measurement_from_ha_state,
+    text_from_ha_state,
+    whole_number_from_ha_state,
     get_ldm_device_identifiers,
     get_ldm_unique_id,
     get_rtc_device_identifiers,
@@ -120,11 +124,13 @@ async def async_setup_entry(
                 entities.append(
                     BLogicxTsmActivePresetSensor(
                         hub=hub, host=host, group=g, address=a, name=name,
+                        check_status=check,
                     )
                 )
                 entities.append(
                     BLogicxTsmActiveSetpointSensor(
                         hub=hub, host=host, group=g, address=a, name=name,
+                        check_status=check,
                     )
                 )
                 for idx, label in enumerate(TSM_PRESET_LABELS, start=1):
@@ -137,6 +143,7 @@ async def async_setup_entry(
                             name=name,
                             preset_index=idx,
                             preset_label=label,
+                            check_status=check,
                         )
                     )
         except (KeyError, TypeError, ValueError) as err:
@@ -198,7 +205,7 @@ class BLogicxRtcLastSyncSensor(SensorEntity):
 # ----- LDM -----------------------------------------------------------------
 
 
-class BLogicxLdmLightSensor(SensorEntity):
+class BLogicxLdmLightSensor(SensorEntity, RestoreEntity):
     """LDM light level as percent (from Value+System pair)."""
 
     _attr_should_poll = False
@@ -251,6 +258,8 @@ class BLogicxLdmLightSensor(SensorEntity):
             reading = await self._hub.async_request_ldm(self._group, self._address)
             if reading is not None:
                 _on_reading(reading)
+            return
+        await _restore_number(self, measurement_from_ha_state, raw_attr="raw")
 
     async def async_will_remove_from_hass(self) -> None:
         if self._unsub:
@@ -261,7 +270,7 @@ class BLogicxLdmLightSensor(SensorEntity):
 # ----- WSM -----------------------------------------------------------------
 
 
-class BLogicxWsmWindSensor(SensorEntity):
+class BLogicxWsmWindSensor(SensorEntity, RestoreEntity):
     """WSM wind speed in km/h (from Value 14 + System)."""
 
     _attr_should_poll = False
@@ -323,6 +332,14 @@ class BLogicxWsmWindSensor(SensorEntity):
             reading = await self._hub.async_request_wsm(self._group, self._address)
             if reading is not None:
                 _on_reading(reading)
+        else:
+            restored = await _restore_number(
+                self, whole_number_from_ha_state, raw_attr="raw"
+            )
+            if restored:
+                # Age the quiet check from this start, so a restored breeze
+                # can still be asked again. Zero stays alone.
+                self._updated_at = time.monotonic()
         # Startup waits on async_create_task. This loop never ends.
         self._quiet_task = self.hass.async_create_background_task(
             self._confirm_quiet(),
@@ -367,7 +384,7 @@ class BLogicxWsmWindSensor(SensorEntity):
 # ----- TSM helpers ---------------------------------------------------------
 
 
-class _TsmEntityBase(SensorEntity):
+class _TsmEntityBase(SensorEntity, RestoreEntity):
     _attr_should_poll = False
     _attr_has_entity_name = True
 
@@ -379,10 +396,12 @@ class _TsmEntityBase(SensorEntity):
         address: int,
         name: str,
         uid_suffix: str,
+        check_status: bool = False,
     ) -> None:
         self._hub = hub
         self._group = group
         self._address = address
+        self._check_status = check_status
         self._unsub = None
         self._attr_unique_id = f"{get_tsm_unique_id(host, group, address)}_{uid_suffix}"
         self._attr_device_info = DeviceInfo(
@@ -418,8 +437,9 @@ class BLogicxTsmTemperatureSensor(_TsmEntityBase):
     _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, hub, host, group, address, name, check_status: bool = False):
-        super().__init__(hub, host, group, address, name, "temperature")
-        self._check_status = check_status
+        super().__init__(
+            hub, host, group, address, name, "temperature", check_status=check_status
+        )
         self._attr_native_value = None
         self._value_address: int | None = None
 
@@ -442,19 +462,39 @@ class BLogicxTsmTemperatureSensor(_TsmEntityBase):
             if reading is not None:
                 self._apply_reading(reading)
                 self.async_write_ha_state()
+            return
+        last = await _restore_number(self, measurement_from_ha_state)
+        if last is None:
+            return
+        raw = last.attributes.get("value_address")
+        if isinstance(raw, int) and not isinstance(raw, bool):
+            self._value_address = raw
+            self.async_write_ha_state()
 
 
 class BLogicxTsmActivePresetSensor(_TsmEntityBase):
     _attr_translation_key = "active_preset"
     _attr_icon = "mdi:calendar-clock"
 
-    def __init__(self, hub, host, group, address, name):
-        super().__init__(hub, host, group, address, name, "preset")
+    def __init__(self, hub, host, group, address, name, check_status: bool = False):
+        super().__init__(
+            hub, host, group, address, name, "preset", check_status=check_status
+        )
         self._attr_native_value = None
 
     def _apply_reading(self, reading: TsmReading) -> None:
         if reading.preset_name is not None:
             self._attr_native_value = reading.preset_name
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        if self._check_status:
+            return
+        text = text_from_ha_state(await _last_state_text(self))
+        if text is None:
+            return
+        self._attr_native_value = text
+        self.async_write_ha_state()
 
 
 class BLogicxTsmActiveSetpointSensor(_TsmEntityBase):
@@ -462,13 +502,27 @@ class BLogicxTsmActiveSetpointSensor(_TsmEntityBase):
     _attr_device_class = SensorDeviceClass.TEMPERATURE
     _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
 
-    def __init__(self, hub, host, group, address, name):
-        super().__init__(hub, host, group, address, name, "active_setpoint")
+    def __init__(self, hub, host, group, address, name, check_status: bool = False):
+        super().__init__(
+            hub,
+            host,
+            group,
+            address,
+            name,
+            "active_setpoint",
+            check_status=check_status,
+        )
         self._attr_native_value = None
 
     def _apply_reading(self, reading: TsmReading) -> None:
         if reading.preset_setpoint is not None:
             self._attr_native_value = reading.preset_setpoint
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        if self._check_status:
+            return
+        await _restore_number(self, measurement_from_ha_state)
 
 
 class BLogicxTsmCachedSetpointSensor(_TsmEntityBase):
@@ -487,9 +541,16 @@ class BLogicxTsmCachedSetpointSensor(_TsmEntityBase):
         name,
         preset_index: int,
         preset_label: str,
+        check_status: bool = False,
     ):
         super().__init__(
-            hub, host, group, address, name, f"setpoint_{preset_index}"
+            hub,
+            host,
+            group,
+            address,
+            name,
+            f"setpoint_{preset_index}",
+            check_status=check_status,
         )
         self._preset_index = preset_index
         self._attr_name = f"{preset_label} setpoint"
@@ -502,3 +563,38 @@ class BLogicxTsmCachedSetpointSensor(_TsmEntityBase):
         cached = self._hub._measure.preset_setpoint_cache.get(self._preset_index)
         if cached is not None:
             self._attr_native_value = cached
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        if self._check_status:
+            return
+        await _restore_number(self, measurement_from_ha_state)
+
+
+async def _last_state_text(entity: RestoreEntity) -> str | None:
+    """Previous state string, or None when this entity has nothing saved."""
+    last = await entity.async_get_last_state()
+    if last is None:
+        return None
+    return last.state
+
+
+async def _restore_number(entity: RestoreEntity, parse, raw_attr: str | None = None):
+    """Show the last number again. Returns the state when a number was kept.
+
+    check_status is the caller's concern. A missing or unknown state is left
+    unknown. An optional integer attribute, such as raw, is kept with it.
+    """
+    last = await entity.async_get_last_state()
+    if last is None:
+        return None
+    value = parse(last.state)
+    if value is None:
+        return None
+    entity._attr_native_value = value
+    if raw_attr is not None:
+        raw = last.attributes.get(raw_attr)
+        if isinstance(raw, int) and not isinstance(raw, bool):
+            entity._raw = raw
+    entity.async_write_ha_state()
+    return last
