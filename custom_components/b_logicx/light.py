@@ -13,10 +13,12 @@ from collections.abc import Callable
 
 from homeassistant.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant, State, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import ExtraStoredData, RestoreEntity
 
 from .b_logicx.dimmer import (
+    DIMMER_PERCENT_MAX,
     DimmerConfig,
     DimmerView,
     brightness_to_percent,
@@ -29,6 +31,7 @@ from .const import (
     DOMAIN,
     get_dimmer_device_identifiers,
     get_dimmer_unique_id,
+    on_off_from_ha_state,
 )
 from .hub import BLogicxHub
 
@@ -65,6 +68,7 @@ async def async_setup_entry(
                         ),
                     ),
                     name=addr.get("name") or f"Dimmer {group}.{address}",
+                    check_status=bool(addr.get("check_status", False)),
                 )
             )
         except (KeyError, TypeError, ValueError) as err:
@@ -74,8 +78,37 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class BLogicxDimmer(LightEntity):
-    """A dimmer. Level and on/off start unknown and are not restored."""
+class _DimmerLevelStored(ExtraStoredData):
+    """Last percent, kept while the lamp is off and brightness is empty."""
+
+    def __init__(self, percent: int | None) -> None:
+        self.percent = percent
+
+    def as_dict(self) -> dict[str, int | None]:
+        return {"percent": self.percent}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "_DimmerLevelStored | None":
+        if not isinstance(data, dict) or "percent" not in data:
+            return None
+        raw = data.get("percent")
+        if raw is None:
+            return cls(None)
+        try:
+            percent = int(raw)
+        except (TypeError, ValueError):
+            return None
+        if percent < 0 or percent > DIMMER_PERCENT_MAX:
+            return None
+        return cls(percent)
+
+
+class BLogicxDimmer(LightEntity, RestoreEntity):
+    """A dimmer. The last on/off and percent come back after a restart.
+
+    check_status asks the bus instead. That reply is on or off only, and
+    the saved percent is not used.
+    """
 
     _attr_should_poll = False
     _attr_supported_color_modes = {ColorMode.BRIGHTNESS}
@@ -86,23 +119,44 @@ class BLogicxDimmer(LightEntity):
         host: str,
         config: DimmerConfig,
         name: str,
+        check_status: bool = False,
     ) -> None:
         self._hub = hub
         self._host = host
         self._config = config
         self._group = config.group
         self._address = config.address
+        self._check_status = check_status
         self._attr_name = name
         self._attr_unique_id = get_dimmer_unique_id(host, config.group, config.address)
         self._attr_is_on = None
         self._attr_brightness = None
         self._attr_color_mode = None
+        # Last percent the card showed. An off lamp clears brightness, so
+        # this is what restore writes beside the state.
+        self._level: int | None = None
         self._unsub: Callable[[], None] | None = None
 
     async def async_added_to_hass(self) -> None:
-        """Listen for bus updates. Do not restore a level from the last run."""
+        """Listen for bus updates. Restore the last level, or ask Status."""
         self._unsub = self._hub.register_dimmer(self._config, self._handle_view)
+        if self._check_status:
+            await self._hub.async_request_status(self._group, self._address)
+            return
+        last = await self.async_get_last_state()
+        extra = await self.async_get_last_extra_data()
+        percent = _percent_from_restore(last, extra)
+        is_on = on_off_from_ha_state(last.state if last is not None else None)
+        if is_on is not None:
+            self._level = percent
+            self._hub.dimmer_seed(self._group, self._address, is_on, percent)
         self._show(self._hub.dimmer_view(self._group, self._address))
+        self.async_write_ha_state()
+
+    @property
+    def extra_restore_state_data(self) -> ExtraStoredData:
+        """Percent kept beside the state, including while the lamp is off."""
+        return _DimmerLevelStored(self._level)
 
     async def async_will_remove_from_hass(self) -> None:
         if self._unsub:
@@ -125,6 +179,11 @@ class BLogicxDimmer(LightEntity):
 
     def _show(self, view: DimmerView) -> None:
         self._attr_is_on = view.is_on
+        if view.percent is not None:
+            self._level = view.percent
+        elif view.is_on is True:
+            # Hold or Sfeer dropped the level. Do not keep a stale number.
+            self._level = None
         if view.is_on and view.percent is not None:
             self._attr_brightness = percent_to_brightness(view.percent)
             self._attr_color_mode = ColorMode.BRIGHTNESS
@@ -150,3 +209,22 @@ class BLogicxDimmer(LightEntity):
     async def async_turn_off(self, **kwargs) -> None:
         """Master off sends the same tap pair as on. The module answers."""
         await self._hub.async_toggle_dimmer(self._group, self._address)
+
+
+def _percent_from_restore(
+    last: State | None, extra: ExtraStoredData | None
+) -> int | None:
+    """Percent stored beside the state, or the brightness of an on lamp."""
+    if extra is not None:
+        stored = _DimmerLevelStored.from_dict(extra.as_dict())
+        if stored is not None:
+            return stored.percent
+    if last is None or last.state != "on":
+        return None
+    raw = last.attributes.get(ATTR_BRIGHTNESS)
+    if raw is None:
+        return None
+    try:
+        return brightness_to_percent(int(raw))
+    except (TypeError, ValueError):
+        return None

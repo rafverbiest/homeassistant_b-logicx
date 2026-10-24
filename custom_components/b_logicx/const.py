@@ -153,6 +153,8 @@ DEFAULT_CLOSE_TIME = 30.0  # seconds for full close travel
 # The module answers with Set or Reset. remembers_level is how the
 # module was programmed: it keeps its level across off and on. When that
 # is off, a plain Set shows 100%. A Sfeer answer does not.
+# check_status asks the bus for on/off at startup. When it is off, the
+# last on/off and percent are restored instead.
 # {
 #   "name": "Table lamp",
 #   "type": "dimmer",
@@ -160,6 +162,7 @@ DEFAULT_CLOSE_TIME = 30.0  # seconds for full close travel
 #   "address": 40,
 #   "remembers_level": False,
 #   "participates_in_moods": True,
+#   "check_status": False,
 # }
 #
 # SoftM. Tracking on means Home Assistant is the virtual status module
@@ -255,6 +258,34 @@ def on_off_from_ha_state(state: str | None) -> bool | None:
         return True
     if state == "off":
         return False
+    return None
+
+
+def cover_is_closed_from_ha_state(state: str | None) -> bool | None:
+    """Map a restored cover state to is_closed.
+
+    A travel that was still running is taken as finished: opening is open,
+    closing is closed. Unknown and unavailable stay unknown. True means closed.
+    """
+    if state in ("open", "opening"):
+        return False
+    if state in ("closed", "closing"):
+        return True
+    return None
+
+
+def sfeer_option_from_ha_state(
+    state: str | None, options: list[str] | tuple[str, ...]
+) -> str | None:
+    """Map a restored select state to a current option.
+
+    Older states used "Off". A mood name that is no longer configured is
+    left unset, so the caller keeps its default.
+    """
+    if state in (SFEER_OPTION_OFF, "Off"):
+        return SFEER_OPTION_OFF
+    if state is not None and state in options:
+        return state
     return None
 
 

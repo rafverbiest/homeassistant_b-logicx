@@ -3,7 +3,7 @@ layout: default
 lang: nl
 title: "Dimmer"
 description: "Een dimmer als lamp, met schuifregelaar en korte aan/uit-puls."
-last_modified_at: 2026-10-20
+last_modified_at: 2026-10-24
 alternate: /Dimmer-en.html
 permalink: /Dimmer.html
 ---
@@ -41,8 +41,9 @@ Een goed niveau zoeken door de knop ingedrukt te houden is geen prettige dagelij
 |-------|------|-----------|
 | Memo | `remembers_level` | uit |
 | Neemt deel aan sferen | `participates_in_moods` | aan |
+| Vraag de stand bij start | `check_status` | uit |
 
-Memo wil zeggen dat de module het dimniveau onthoudt bij uit.
+Memo wil zeggen dat de module het dimniveau onthoudt bij uit. Staat `check_status` uit, dan toont Home Assistant na een herstart de laatste aan/uit-stand en het laatste percentage. Aanzetten vraagt de bus alleen naar aan of uit, want het percentage kan door technische limitaties in B-Logicx niet opgevraagd worden.
 
 ```yaml
 - type: dimmer
@@ -51,4 +52,5 @@ Memo wil zeggen dat de module het dimniveau onthoudt bij uit.
   address: 40
   remembers_level: false
   participates_in_moods: true
+  check_status: false
 ```

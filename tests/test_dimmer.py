@@ -272,3 +272,39 @@ def test_second_set_after_sfeer_does_not_invent_a_level():
     _feed(bus, [("Dimmer", 5, 222), ("Set", 5, 40), ("Set", 5, 40)])
     assert bus.view(5, 40).is_on is True
     assert bus.view(5, 40).percent is None
+
+
+def test_seed_on_shows_the_percent():
+    bus = _bus(_cfg())
+    bus.seed(5, 40, True, 40)
+    assert bus.view(5, 40) == DimmerView(True, 40)
+
+
+def test_seed_off_with_memo_comes_back_on_set():
+    bus = _bus(_cfg(remembers_level=True))
+    bus.seed(5, 40, False, 35)
+    assert bus.view(5, 40) == DimmerView(False, None)
+    _feed(bus, [("Set", 5, 40)])
+    assert bus.view(5, 40) == DimmerView(True, 35)
+
+
+def test_seed_off_without_memo_sets_full_on_set():
+    bus = _bus(_cfg())
+    bus.seed(5, 40, False, 35)
+    _feed(bus, [("Set", 5, 40)])
+    assert bus.view(5, 40) == DimmerView(True, 100)
+
+
+def test_seed_on_without_a_percent_stays_unknown():
+    bus = _bus(_cfg(remembers_level=True))
+    bus.seed(5, 40, True, None)
+    assert bus.view(5, 40) == DimmerView(True, None)
+
+
+def test_seed_unknown_or_missing_slot_is_left_alone():
+    bus = _bus(_cfg())
+    bus.seed(5, 40, None, 40)
+    assert bus.view(5, 40) == DimmerView(None, None)
+    empty = DimmerBus()
+    empty.seed(5, 40, True, 40)
+    assert empty.view(5, 40) == DimmerView(None, None)

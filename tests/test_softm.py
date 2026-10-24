@@ -217,12 +217,30 @@ def test_set_reset_and_cancel_timer():
 
 
 def test_on_off_from_ha_state():
-    from const import on_off_from_ha_state
+    from const import (
+        cover_is_closed_from_ha_state,
+        on_off_from_ha_state,
+        sfeer_option_from_ha_state,
+    )
 
     assert on_off_from_ha_state("on") is True
     assert on_off_from_ha_state("off") is False
     assert on_off_from_ha_state("unknown") is None
     assert on_off_from_ha_state(None) is None
+
+    assert cover_is_closed_from_ha_state("open") is False
+    assert cover_is_closed_from_ha_state("opening") is False
+    assert cover_is_closed_from_ha_state("closed") is True
+    assert cover_is_closed_from_ha_state("closing") is True
+    assert cover_is_closed_from_ha_state("unknown") is None
+    assert cover_is_closed_from_ha_state(None) is None
+
+    options = ["off", "Reading", "Cinema"]
+    assert sfeer_option_from_ha_state("Reading", options) == "Reading"
+    assert sfeer_option_from_ha_state("off", options) == "off"
+    assert sfeer_option_from_ha_state("Off", options) == "off"
+    assert sfeer_option_from_ha_state("Gone", options) is None
+    assert sfeer_option_from_ha_state("unknown", options) is None
 
 
 def test_repeater_client_allowed():

@@ -28,6 +28,7 @@ addresses:
     address: 40
     remembers_level: false
     participates_in_moods: true
+    check_status: false
 
   - type: shutter
     name: Office Blind

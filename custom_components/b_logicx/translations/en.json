@@ -124,7 +124,8 @@
           "group": "Group",
           "address": "Address",
           "remembers_level": "Memo",
-          "participates_in_moods": "Participates in Sfeer"
+          "participates_in_moods": "Participates in Sfeer",
+          "check_status": "Ask the bus for current on/off when Home Assistant starts"
         }
       },
       "add_softm": {

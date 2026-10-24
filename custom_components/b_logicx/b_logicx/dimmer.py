@@ -138,6 +138,37 @@ class DimmerBus:
             return DimmerView(None, None)
         return DimmerView(slot.is_on, slot.percent)
 
+    def seed(
+        self,
+        group: int,
+        address: int,
+        is_on: bool | None,
+        percent: int | None,
+    ) -> None:
+        """Put a remembered on/off and percent back. The slot must already exist.
+
+        An unknown on/off is left alone. While the lamp is off the percent is
+        not shown. It is kept as memory only when the module remembers its
+        level, so the next Set can bring that level back.
+        """
+        slot = self._slots.get((int(group) & 0x0F, int(address) & 0xFF))
+        if slot is None or is_on is None:
+            return
+        if percent is not None:
+            percent = max(0, min(DIMMER_PERCENT_MAX, int(percent)))
+        slot.is_on = bool(is_on)
+        slot.mood_pending = False
+        if slot.is_on:
+            slot.percent = percent
+            if slot.config.remembers_level and percent is not None:
+                slot.memory = percent
+            return
+        slot.percent = None
+        if slot.config.remembers_level and percent is not None:
+            slot.memory = percent
+        elif not slot.config.remembers_level:
+            slot.memory = None
+
     def apply(self, event: BLXEvent, now: float) -> list[tuple[int, int]]:
         """Fold one frame in. Return dimmers whose on/off or percent changed."""
         before = {key: (slot.is_on, slot.percent) for key, slot in self._slots.items()}

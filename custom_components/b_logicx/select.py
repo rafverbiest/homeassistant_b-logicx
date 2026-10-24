@@ -25,6 +25,7 @@ from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
     ADDRESS_TYPE_SFEER,
@@ -35,6 +36,7 @@ from .const import (
     SFEER_OPTION_OFF,
     get_sfeer_device_identifiers,
     get_sfeer_unique_id,
+    sfeer_option_from_ha_state,
 )
 from .hub import BLogicxHub
 from .b_logicx.models import BLXEvent
@@ -84,8 +86,12 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class BLogicxSfeerSelect(SelectEntity):
-    """One Select per Sfeer room: Off + mood names."""
+class BLogicxSfeerSelect(SelectEntity, RestoreEntity):
+    """One Select per Sfeer room: Off + mood names.
+
+    The last mood comes back after a restart when that name is still in the
+    room. check_status asks the bus instead.
+    """
 
     _attr_should_poll = False
 
@@ -153,6 +159,17 @@ class BLogicxSfeerSelect(SelectEntity):
 
         if self._check_status:
             await self._query_status()
+            return
+
+        last = await self.async_get_last_state()
+        restored = sfeer_option_from_ha_state(
+            last.state if last is not None else None,
+            self._attr_options,
+        )
+        if restored is None:
+            return
+        self._attr_current_option = restored
+        self.async_write_ha_state()
 
     async def async_will_remove_from_hass(self) -> None:
         for unsub in self._unsubs:

@@ -143,12 +143,24 @@ addresses:
     entries, err = parse_addresses_yaml(content)
     assert err is None
     assert entries[0]["remembers_level"] is False
+    assert entries[0]["check_status"] is False
     assert "default_level" not in entries[0]
     assert entries[0]["participates_in_moods"] is True
     again, err = parse_addresses_yaml(dump_addresses_yaml(entries))
     assert err is None
     assert "default_level" not in again[0]
     assert again[0]["participates_in_moods"] is True
+    assert again[0]["check_status"] is False
+    asked, err = parse_addresses_yaml(
+        "addresses:\n"
+        "  - type: dimmer\n"
+        "    name: Table lamp\n"
+        "    group: 5\n"
+        "    address: 40\n"
+        "    check_status: true\n"
+    )
+    assert err is None
+    assert asked[0]["check_status"] is True
 
 
 def test_dimmer_import_drops_a_default_level_key():

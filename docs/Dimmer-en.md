@@ -3,7 +3,7 @@ layout: default
 lang: en
 title: "Dimmer"
 description: "A dimmer as a light, with a slider and a short on/off tap."
-last_modified_at: 2026-10-20
+last_modified_at: 2026-10-24
 alternate: /Dimmer.html
 permalink: /Dimmer-en.html
 ---
@@ -42,8 +42,9 @@ Finding a good level by holding the button is not a pleasant daily control. With
 |--------|------|---------|
 | Memo | `remembers_level` | off |
 | Participates in Sfeer | `participates_in_moods` | on |
+| Ask for state at startup | `check_status` | off |
 
-Memo means the module remembers the dim level when off.
+Memo means the module remembers the dim level when off. With `check_status` off, Home Assistant shows the last on/off and the last percent after a restart. Turning it on asks the bus for on or off only, because the percent cannot be read back due to technical limits in B-Logicx.
 
 ```yaml
 - type: dimmer
@@ -52,4 +53,5 @@ Memo means the module remembers the dim level when off.
   address: 40
   remembers_level: false
   participates_in_moods: true
+  check_status: false
 ```

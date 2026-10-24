@@ -592,6 +592,7 @@ def normalize_yaml_entry(item: Any) -> dict:
             "address": int(item["address"]),
             "remembers_level": bool(item.get("remembers_level", False)),
             "participates_in_moods": bool(item.get("participates_in_moods", True)),
+            "check_status": check,
         }
 
     if t == ADDRESS_TYPE_SFEER:

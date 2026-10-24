@@ -19,9 +19,10 @@ controls / building blocks):
   idle → (close start) → closing → [close_time] → closed
   opening/closing → stop (Reset active / HA stop) → unknown
 
-On reload/restart with check_status only: Status Set/Reset is used once to
-assume open/closed (one relay on) or unknown (both off). Status replies do
-not start travel timers.
+On reload/restart the last position is shown again. Opening is taken as
+open and closing as closed. With check_status, Status Set/Reset is used
+once instead: one relay on means open or closed, both off means unknown.
+That reply does not start a travel timer.
 """
 
 from __future__ import annotations
@@ -39,6 +40,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_call_later
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
     ADDRESS_TYPE_SHUTTER,
@@ -49,6 +51,7 @@ from .const import (
     DEFAULT_CLOSE_TIME,
     DEFAULT_OPEN_TIME,
     DOMAIN,
+    cover_is_closed_from_ha_state,
     get_cover_device_identifiers,
     get_cover_unique_id,
 )
@@ -118,12 +121,8 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class BLogicxCover(CoverEntity):
-    """Cover representing a B-Logicx open/close relay pair.
-
-    Travel timers apply to both HA services and live bus Set/Reset from
-    physical controls. Status at startup only snapshots open/closed/unknown.
-    """
+class BLogicxCover(CoverEntity, RestoreEntity):
+    """Cover representing a B-Logicx open/close relay pair."""
 
     _attr_should_poll = False
     _attr_assumed_state = True
@@ -223,9 +222,18 @@ class BLogicxCover(CoverEntity):
                     self._close_relay_on = close_on
             finally:
                 self._status_probe = False
-            # Reload snapshot only — not the live travel machine
             self._apply_status_snapshot()
             self.async_write_ha_state()
+            return
+
+        last = await self.async_get_last_state()
+        restored = cover_is_closed_from_ha_state(
+            last.state if last is not None else None
+        )
+        if restored is None:
+            return
+        self._attr_is_closed = restored
+        self.async_write_ha_state()
 
     async def async_will_remove_from_hass(self) -> None:
         self._cancel_travel_timer()

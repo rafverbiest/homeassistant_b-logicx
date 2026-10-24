@@ -124,7 +124,8 @@
           "group": "Groep",
           "address": "Adres",
           "remembers_level": "Memo",
-          "participates_in_moods": "Neemt deel aan sferen"
+          "participates_in_moods": "Neemt deel aan sferen",
+          "check_status": "Vraag de bus naar de huidige aan/uit-stand wanneer Home Assistant start"
         }
       },
       "add_softm": {

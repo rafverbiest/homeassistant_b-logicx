@@ -476,6 +476,16 @@ class BLogicxHub:
         """Latest on/off and percent for this dimmer."""
         return self._dimmer.view(group, address)
 
+    def dimmer_seed(
+        self,
+        group: int,
+        address: int,
+        is_on: bool | None,
+        percent: int | None,
+    ) -> None:
+        """Restore a dimmer's last on/off and percent. Does not query the bus."""
+        self._dimmer.seed(group, address, is_on, percent)
+
     def _publish_dimmer(self, key: tuple[int, int]) -> None:
         view = self._dimmer.view(key[0], key[1])
         for cb in list(self._dimmer_callbacks.get(key, ())):

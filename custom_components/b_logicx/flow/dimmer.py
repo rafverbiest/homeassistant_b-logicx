@@ -34,6 +34,7 @@ class DimmerSteps:
                 "participates_in_moods": bool(
                     user_input.get("participates_in_moods", True)
                 ),
+                "check_status": bool(user_input.get("check_status", False)),
             }
             return await self._commit_address(new_addr)
 
@@ -54,6 +55,10 @@ class DimmerSteps:
                     vol.Optional(
                         "participates_in_moods",
                         default=defaults.get("participates_in_moods", True),
+                    ): selector.BooleanSelector(),
+                    vol.Optional(
+                        "check_status",
+                        default=defaults.get("check_status", False),
                     ): selector.BooleanSelector(),
                 }
             ),

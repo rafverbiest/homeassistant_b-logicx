@@ -68,7 +68,7 @@ The options screen asks for BHS or Home Assistant before the source names. With 
 
 ## Status probe (`check_status`)
 
-For switches, read-only, covers, Sfeer, … you can send a bus **Status** at startup to ask for the state. With `check_status` off, switches and read-only sensors restore the last on/off and do not query the bus. Covers and Sfeer do not do that (yet).
+For switches, read-only sensors, dimmers, covers, and Sfeer you can send a bus **Status** at startup. With `check_status` off, they show their last state and do not query the bus.
 
 ## SoftM and bus repeater
 
