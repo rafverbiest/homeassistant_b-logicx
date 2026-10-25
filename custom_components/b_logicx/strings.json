@@ -206,32 +206,32 @@
       },
       "add_ldm": {
         "title": "Add LDM (light sensor)",
-        "description": "Outdoor/indoor light sensor on the bus. Levels also arrive on their own when the sensor updates.\n\nIf “read on startup” is on, Home Assistant requests a reading at start and adds a Refresh button.",
+        "description": "Outdoor/indoor light sensor on the bus. Levels also arrive on their own when the sensor updates. A Refresh button asks for a reading now.",
         "data": {
           "name": "Name",
           "group": "Group",
           "address": "Address",
-          "check_status": "Read light level when Home Assistant starts (also adds a Refresh button)"
+          "check_status": "Read light level when Home Assistant starts"
         }
       },
       "add_tsm": {
         "title": "Add TSM (temperature)",
-        "description": "Thermostat / temperature module. Readings include measured temperature, active preset and setpoint.\n\nIf “read on startup” is on, Home Assistant requests a reading at start and adds a Refresh button.",
+        "description": "Thermostat / temperature module. Readings include measured temperature, active preset and setpoint. A Refresh button asks for a reading now.",
         "data": {
           "name": "Name",
           "group": "Group",
           "address": "Address",
-          "check_status": "Read temperature when Home Assistant starts (also adds a Refresh button)"
+          "check_status": "Read temperature when Home Assistant starts"
         }
       },
       "add_wsm": {
         "title": "Add WSM (wind speed)",
-        "description": "Wind speed on the bus, in km/h. Readings also arrive on their own when the sensor updates.\n\nIf “read on startup” is on, Home Assistant requests a reading at start and adds a Refresh button.",
+        "description": "Wind speed on the bus, in km/h. Readings also arrive on their own when the sensor updates. A Refresh button asks for a reading now.",
         "data": {
           "name": "Name",
           "group": "Group",
           "address": "Address",
-          "check_status": "Read wind speed when Home Assistant starts (also adds a Refresh button)"
+          "check_status": "Read wind speed when Home Assistant starts"
         }
       },
       "add_bm8": {

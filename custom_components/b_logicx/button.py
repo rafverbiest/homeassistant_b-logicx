@@ -1,7 +1,7 @@
 """Buttons that ask a module to do something now.
 
-Every RTC gets a sync button. An LDM, a TSM, or a WSM gets a refresh button
-only when check_status is on, the same flag that asks for a reading at startup.
+Every RTC gets a sync button. Every LDM, TSM, and WSM gets a refresh button.
+check_status only asks for a reading when Home Assistant starts.
 A BM8 gets eight chime buttons and a stop button. A press sends that pair
 and does not stay on.
 """
@@ -70,7 +70,7 @@ async def async_setup_entry(
                         ),
                     )
                 )
-            elif t == ADDRESS_TYPE_LDM and addr.get("check_status", False):
+            elif t == ADDRESS_TYPE_LDM:
                 entities.append(
                     BLogicxLdmRefreshButton(
                         hub=hub,
@@ -82,7 +82,7 @@ async def async_setup_entry(
                         ),
                     )
                 )
-            elif t == ADDRESS_TYPE_WSM and addr.get("check_status", False):
+            elif t == ADDRESS_TYPE_WSM:
                 entities.append(
                     BLogicxWsmRefreshButton(
                         hub=hub,
@@ -94,7 +94,7 @@ async def async_setup_entry(
                         ),
                     )
                 )
-            elif t == ADDRESS_TYPE_TSM and addr.get("check_status", False):
+            elif t == ADDRESS_TYPE_TSM:
                 entities.append(
                     BLogicxTsmRefreshButton(
                         hub=hub,

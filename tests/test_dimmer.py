@@ -274,6 +274,27 @@ def test_second_set_after_sfeer_does_not_invent_a_level():
     assert bus.view(5, 40).percent is None
 
 
+def test_status_set_is_put_back_to_the_saved_percent():
+    """Status answers Set, which shows 100% without Memo. The saved level stays."""
+    bus = _bus(_cfg())
+    _feed(bus, [("Set", 5, 40)])
+    assert bus.view(5, 40) == DimmerView(True, 100)
+    bus.seed(5, 40, True, 40)
+    assert bus.view(5, 40) == DimmerView(True, 40)
+
+    memo = _bus(_cfg(remembers_level=True))
+    _feed(memo, [("Set", 5, 40)])
+    assert memo.view(5, 40) == DimmerView(True, None)
+    memo.seed(5, 40, True, 35)
+    assert memo.view(5, 40) == DimmerView(True, 35)
+
+    _feed(memo, [("Reset", 5, 40)])
+    memo.seed(5, 40, False, 35)
+    assert memo.view(5, 40) == DimmerView(False, None)
+    _feed(memo, [("Set", 5, 40)])
+    assert memo.view(5, 40) == DimmerView(True, 35)
+
+
 def test_seed_on_shows_the_percent():
     bus = _bus(_cfg())
     bus.seed(5, 40, True, 40)

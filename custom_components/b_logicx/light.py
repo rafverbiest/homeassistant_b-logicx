@@ -106,8 +106,8 @@ class _DimmerLevelStored(ExtraStoredData):
 class BLogicxDimmer(LightEntity, RestoreEntity):
     """A dimmer. The last on/off and percent come back after a restart.
 
-    check_status asks the bus instead. That reply is on or off only, and
-    the saved percent is not used.
+    check_status asks the bus for on or off. The saved percent stays,
+    because Status cannot report a level.
     """
 
     _attr_should_poll = False
@@ -140,16 +140,31 @@ class BLogicxDimmer(LightEntity, RestoreEntity):
     async def async_added_to_hass(self) -> None:
         """Listen for bus updates. Restore the last level, or ask Status."""
         self._unsub = self._hub.register_dimmer(self._config, self._handle_view)
-        if self._check_status:
-            await self._hub.async_request_status(self._group, self._address)
-            return
         last = await self.async_get_last_state()
         extra = await self.async_get_last_extra_data()
         percent = _percent_from_restore(last, extra)
-        is_on = on_off_from_ha_state(last.state if last is not None else None)
-        if is_on is not None:
+        saved_on = on_off_from_ha_state(last.state if last is not None else None)
+        if self._check_status:
+            # Read the percent first. The Status reply may replace it with
+            # 100% or clear it before this method continues.
             self._level = percent
-            self._hub.dimmer_seed(self._group, self._address, is_on, percent)
+            reported = await self._hub.async_request_status(
+                self._group, self._address
+            )
+            if reported is None:
+                reported = saved_on
+            elif percent is None:
+                return
+            if reported is None:
+                return
+            self._level = percent
+            self._hub.dimmer_seed(self._group, self._address, reported, percent)
+            self._show(self._hub.dimmer_view(self._group, self._address))
+            self.async_write_ha_state()
+            return
+        if saved_on is not None:
+            self._level = percent
+            self._hub.dimmer_seed(self._group, self._address, saved_on, percent)
         self._show(self._hub.dimmer_view(self._group, self._address))
         self.async_write_ha_state()
 

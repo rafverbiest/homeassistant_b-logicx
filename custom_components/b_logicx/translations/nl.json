@@ -206,32 +206,32 @@
       },
       "add_ldm": {
         "title": "LDM toevoegen (lichtsensor)",
-        "description": "Lichtsensor op de bus. Niveaus komen ook vanzelf binnen wanneer de sensor bijwerkt.\n\nAls “lezen bij opstarten” aan staat, vraagt Home Assistant bij start een meting en voegt een Vernieuwen-knop toe.",
+        "description": "Lichtsensor op de bus. Niveaus komen ook vanzelf binnen wanneer de sensor bijwerkt. Een Vernieuwen-knop vraagt nu een meting.",
         "data": {
           "name": "Naam",
           "group": "Groep",
           "address": "Adres",
-          "check_status": "Lees lichtniveau wanneer Home Assistant start (voegt ook een Vernieuwen-knop toe)"
+          "check_status": "Lees lichtniveau wanneer Home Assistant start"
         }
       },
       "add_tsm": {
         "title": "TSM toevoegen (temperatuur)",
-        "description": "Thermostaat- / temperatuurmodule. Metingen bevatten gemeten temperatuur, actieve preset en setpoint.\n\nAls “lezen bij opstarten” aan staat, vraagt Home Assistant bij start een meting en voegt een Vernieuwen-knop toe.",
+        "description": "Thermostaat- / temperatuurmodule. Metingen bevatten gemeten temperatuur, actieve preset en setpoint. Een Vernieuwen-knop vraagt nu een meting.",
         "data": {
           "name": "Naam",
           "group": "Groep",
           "address": "Adres",
-          "check_status": "Lees temperatuur wanneer Home Assistant start (voegt ook een Vernieuwen-knop toe)"
+          "check_status": "Lees temperatuur wanneer Home Assistant start"
         }
       },
       "add_wsm": {
         "title": "WSM toevoegen (windsnelheid)",
-        "description": "Windsnelheid op de bus, in km/h. Metingen komen ook vanzelf binnen wanneer de sensor bijwerkt.\n\nAls “lezen bij opstarten” aan staat, vraagt Home Assistant bij start een meting en voegt een Vernieuwen-knop toe.",
+        "description": "Windsnelheid op de bus, in km/h. Metingen komen ook vanzelf binnen wanneer de sensor bijwerkt. Een Vernieuwen-knop vraagt nu een meting.",
         "data": {
           "name": "Naam",
           "group": "Groep",
           "address": "Adres",
-          "check_status": "Lees windsnelheid wanneer Home Assistant start (voegt ook een Vernieuwen-knop toe)"
+          "check_status": "Lees windsnelheid wanneer Home Assistant start"
         }
       },
       "add_bm8": {
