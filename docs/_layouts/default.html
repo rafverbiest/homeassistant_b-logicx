@@ -5,7 +5,15 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-{% seo %}
+    {% if page.title == site.title or page.title == site.en_title %}
+      {% assign doc_title = page.title %}
+    {% elsif page.title %}
+      {% assign doc_title = page.title | append: " | B-Logicx" %}
+    {% else %}
+      {% assign doc_title = site.title %}
+    {% endif %}
+    <title>{{ doc_title | escape }}</title>
+{% seo title=false %}
     {% if page.lang == "en" %}
       {% assign nl_href = page.alternate | default: "/" | absolute_url %}
       {% assign en_href = page.url | absolute_url %}
@@ -18,6 +26,7 @@
     <link rel="alternate" hreflang="x-default" href="{{ nl_href }}" />
     <link rel="stylesheet" href="{{ "/assets/css/style.css?v=" | append: site.github.build_revision | relative_url }}">
     <style>
+      header p.site-title { margin: 0 0 20px; font-size: 28px; line-height: 1.1; font-weight: 700; }
       header nav ul { list-style: none; padding: 0; margin: 0 0 16px; position: static; }
       header nav li { margin: 0 0 4px; }
       header nav p { margin: 0 0 8px; }
@@ -43,7 +52,7 @@
           {% assign sidebar_description = site.description %}
           {% assign sidebar_home = "/" | absolute_url %}
         {% endif %}
-        <h1><a href="{{ sidebar_home }}">{{ sidebar_title }}</a></h1>
+        <p class="site-title"><a href="{{ sidebar_home }}">{{ sidebar_title }}</a></p>
 
         {% if site.logo %}
           <img src="{{site.logo | relative_url}}" alt="Logo" />
