@@ -25,7 +25,6 @@ from b_logicx.bhs_client import (
     encrypt_bhs_body,
     format_secure_dump,
     generate_device_credentials,
-    leftover_line,
     normalize_host,
     read_member_list,
 )
@@ -354,20 +353,84 @@ def test_already_configured_cover_and_rlm_are_listed_not_checked():
     assert any(item.key == "rlm:3.1" for item in result.candidates)
 
 
-def test_unknown_types_go_to_leftover():
+def test_undefined_member_types_are_dropped():
     members = [
         {
             "memberID": "k",
             "group": 1,
             "address": 1,
-            "name": "Klavier",
+            "name": "Panel",
             "version": "KLA_42",
             "memberType": 6,
-        }
+        },
+        {
+            "memberID": "d",
+            "group": 1,
+            "address": 2,
+            "name": "Display",
+            "version": "md_1",
+            "memberType": 230,
+        },
+        {
+            "memberID": "p",
+            "group": 1,
+            "address": 3,
+            "name": "Probe",
+            "version": "th_1",
+            "memberType": 4097,
+        },
     ]
     result = classify_members(members)
     assert result.candidates == []
-    assert leftover_line(1, 1, "Klavier", "KLA_42", 6) in result.leftover
+    assert result.leftover == []
+
+
+def test_type_26_is_an_aud_controlled_by_the_bhs():
+    members = [
+        {
+            "memberID": "z",
+            "group": 2,
+            "address": 10,
+            "name": "Zone",
+            "version": "NuVoP",
+            "memberType": 26,
+        }
+    ]
+    result = classify_members(members)
+    assert result.leftover == []
+    assert len(result.candidates) == 1
+    item = result.candidates[0]
+    assert item.kind == "aud"
+    assert item.entry["controller"] == "bhs"
+    assert item.label == "2.10 Zone — AUD"
+    assert "(type" not in item.label
+    assert normalize_yaml_entry(item.entry)["controller"] == "bhs"
+
+
+def test_type_28_is_a_bm8():
+    members = [
+        {
+            "memberID": "c",
+            "group": 1,
+            "address": 40,
+            "name": "Chime",
+            "version": "BM8_1",
+            "memberType": 28,
+        }
+    ]
+    result = classify_members(members)
+    assert result.leftover == []
+    assert len(result.candidates) == 1
+    item = result.candidates[0]
+    assert item.kind == "bm8"
+    assert item.entry["type"] == "bm8"
+    assert item.entry["group"] == 1
+    assert item.entry["address"] == 40
+    assert item.label == "1.40 Chime — BM8"
+    assert "(type" not in item.label
+    saved = normalize_yaml_entry(item.entry)
+    assert saved["type"] == "bm8"
+    assert saved["name"] == "Chime"
 
 
 def test_rows_without_memberid_skipped_when_others_have_one():

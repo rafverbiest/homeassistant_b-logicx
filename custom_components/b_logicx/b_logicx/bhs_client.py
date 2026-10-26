@@ -35,7 +35,8 @@ from uuid import uuid4
 
 BHS_DEFAULT_PORT = 10014
 BHS_DEVICE_NAME = "Home Assistant"
-BHS_PLATFORM = "homeassistant"
+# The register call accepts a free-text platform, but "android" is seemingly the only value the BHS accepts.
+BHS_PLATFORM = "android"
 BHS_TIMEOUT_S = 15
 
 _SDIM_SKIP_NAMES = frozenset(
@@ -52,6 +53,8 @@ _KIND_LABEL = {
     "ldm": ("LDM", "LDM"),
     "wsm": ("WSM", "WSM"),
     "rtc": ("RTC", "RTC"),
+    "aud": ("AUD", "AUD"),
+    "bm8": ("BM8", "BM8"),
 }
 
 
@@ -488,26 +491,29 @@ def classify_members(
             kind = "ldm"
         elif row.member_type == 13 and head == "wsm":
             kind = "wsm"
+        elif row.member_type == 26:
+            kind = "aud"
+        elif row.member_type == 28:
+            kind = "bm8"
         elif head == "rtc":
             kind = "rtc"
         if kind is None:
-            result.leftover.append(
-                leftover_line(
-                    row.group, row.address, row.name, row.version, row.member_type
-                )
-            )
+            # A member type this integration does not configure is dropped.
             continue
         loc = f"{row.group}.{row.address}"
+        entry = {
+            "type": kind,
+            "name": row.name or loc,
+            "group": row.group,
+            "address": row.address,
+        }
+        if kind == "aud":
+            entry["controller"] = "bhs"
         candidate = ImportCandidate(
             key=f"{kind}:{row.group}.{row.address}",
             kind=kind,
             label=_label(kind, loc, row.name, lang),
-            entry={
-                "type": kind,
-                "name": row.name or loc,
-                "group": row.group,
-                "address": row.address,
-            },
+            entry=entry,
             pairs=((row.group, row.address),),
         )
         if known.intersection(candidate.pairs):
