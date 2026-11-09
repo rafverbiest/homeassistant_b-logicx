@@ -8,20 +8,19 @@ Custom integration for the **[B-Logicx](https://b-logicx.be/) (NWM / NWX)** bus 
 **Site:** [b-logicx.rafverbiest.be](https://b-logicx.rafverbiest.be/en.html) ·
 **Releases:** [changelog](https://github.com/rafverbiest/homeassistant_b-logicx/releases)
 
-## Install with HACS (custom repository)
+## Install with HACS
 
 1. Install [HACS](https://hacs.xyz/) if you do not already have it.
-2. In Home Assistant open **HACS** → top-right **⋮** → **Custom repositories**.
-3. Repository URL:
+2. Search for **B-Logicx** in HACS and choose **Download**.
+   If it is not listed yet, add the repository first via **HACS** → top-right **⋮** → **Custom repositories**:
 
    ```text
    https://github.com/rafverbiest/homeassistant_b-logicx
    ```
 
-   Category: **Integration**
-4. Click **Add**, then find **B-Logicx** in HACS and **Download**.
-5. **Restart** Home Assistant.
-6. **Settings → Devices & services → Add integration → B-Logicx** and enter your gateway IP (default port `10001`).
+   Category: **Integration**. Click **Add**, search for **B-Logicx**, and choose **Download**.
+3. **Restart** Home Assistant.
+4. **Settings → Devices & services → Add integration → B-Logicx** and enter your gateway IP (default port `10001`).
 
 Configure addresses in the integration options (UI) or via YAML import. Template: `custom_components/b_logicx/flow/template.yaml`.
 

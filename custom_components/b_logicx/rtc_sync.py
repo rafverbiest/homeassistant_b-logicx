@@ -11,9 +11,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
-from zoneinfo import ZoneInfo
+
+from homeassistant.util import dt as dt_util
 
 from .b_logicx.rtc import build_rtc_sync_frames, next_phased_sync
 from .const import (
@@ -32,18 +32,6 @@ if TYPE_CHECKING:
     from .hub import BLogicxHub
 
 _LOGGER = logging.getLogger(__name__)
-
-
-def _tz(hass: HomeAssistant) -> ZoneInfo | timezone:
-    name = getattr(hass.config, "time_zone", None) or "UTC"
-    try:
-        return ZoneInfo(name)
-    except Exception:  # noqa: BLE001
-        return timezone.utc
-
-
-def _local_now(hass: HomeAssistant) -> datetime:
-    return datetime.now(_tz(hass))
 
 
 class RtcSyncManager:
@@ -124,7 +112,7 @@ class RtcSyncManager:
         group = int(cfg["group"])
         address = int(cfg["address"])
         name = cfg.get("name", f"RTC {group}.{address}")
-        when = _local_now(self.hass)
+        when = dt_util.now()
         # Use naive local components for packing (hour/minute as wall clock)
         wall = when.replace(tzinfo=None) if when.tzinfo else when
         frames = build_rtc_sync_frames(wall, group, address)
@@ -162,7 +150,7 @@ class RtcSyncManager:
         )
         minute = int(cfg.get("sync_minute", DEFAULT_RTC_SYNC_MINUTE))
         while not self._stopped:
-            now = _local_now(self.hass)
+            now = dt_util.now()
             # next_phased_sync expects naive or aware consistently — use local naive
             wall = now.replace(tzinfo=None) if now.tzinfo else now
             nxt = next_phased_sync(wall, interval_hours=interval, sync_minute=minute)
@@ -189,7 +177,7 @@ class RtcSyncManager:
         delay_min = int(
             cfg.get("dst_delay_minutes", DEFAULT_RTC_DST_DELAY_MINUTES)
         )
-        last_offset = _local_now(self.hass).utcoffset()
+        last_offset = dt_util.now().utcoffset()
         while not self._stopped:
             try:
                 await asyncio.sleep(30)
@@ -197,7 +185,7 @@ class RtcSyncManager:
                 raise
             if self._stopped:
                 return
-            now = _local_now(self.hass)
+            now = dt_util.now()
             offset = now.utcoffset()
             if offset != last_offset:
                 _LOGGER.info(

@@ -9,9 +9,9 @@ target="_blank", into the download_link placeholder. The translation strings
 only contain that placeholder. An <a> tag written in strings.json is rejected
 as an invalid tag.
 
-requires_auth is false, and this view does not check the signature on the
-URL. The id is a random value. The store forgets every staged file once more
-than 32 are waiting. It does not expire them by the 15 minute signature time.
+The link is signed for 15 minutes. Home Assistant checks that signature,
+including the expiry, because this view requires auth. The id is a random
+value. The store forgets every staged file once more than 32 are waiting.
 """
 
 from __future__ import annotations
@@ -41,7 +41,6 @@ class BLogicxYamlDownloadView(HomeAssistantView):
 
     url = "/api/b_logicx/yaml_download/{download_id}"
     name = "api:b_logicx:yaml_download"
-    requires_auth = False
 
     async def get(self, request: web.Request, download_id: str) -> web.Response:
         hass: HomeAssistant = request.app["hass"]
@@ -80,7 +79,7 @@ def async_yaml_download_url(
 ) -> str:
     """Store the YAML and return a path the options flow can put in the anchor.
 
-    The path is signed for 15 minutes. This view does not check that signature.
+    The path is signed for 15 minutes. Home Assistant checks that signature.
     """
     async_setup_yaml_downloads(hass)
     download_id = uuid.uuid4().hex

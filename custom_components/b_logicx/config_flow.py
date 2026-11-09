@@ -646,7 +646,7 @@ class BLogicxOptionsFlow(
         from .yaml_download import async_yaml_download_url
 
         try:
-            template = _yaml_template()
+            template = await self.hass.async_add_executor_job(_yaml_template)
         except FileNotFoundError:
             _LOGGER.error("B-Logicx template.yaml was not found")
             return self.async_show_form(
