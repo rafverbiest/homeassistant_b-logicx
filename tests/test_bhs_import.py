@@ -119,6 +119,92 @@ def test_type20_consecutive_rlm_becomes_one_cover():
     assert "rolluik" in classify_members(members, lang="nl").candidates[0].label
 
 
+def test_type20_with_a_gap_is_still_one_cover():
+    members = [
+        {
+            "memberID": "a",
+            "group": 3,
+            "address": 5,
+            "name": "screen_OP",
+            "version": "RLM_4",
+            "memberType": 20,
+        },
+        {
+            "memberID": "b",
+            "group": 3,
+            "address": 8,
+            "name": "screen_NEER",
+            "version": "RLM_4",
+            "memberType": 20,
+        },
+    ]
+    result = classify_members(members)
+    assert len(result.candidates) == 1
+    item = result.candidates[0]
+    assert item.kind == "shutter"
+    assert item.entry["open_address"] == 5
+    assert item.entry["close_address"] == 8
+    assert result.leftover == []
+
+
+def test_type20_relays_in_different_groups_stay_apart():
+    members = [
+        {
+            "memberID": "a",
+            "group": 3,
+            "address": 5,
+            "name": "left_OP",
+            "version": "RLM_4",
+            "memberType": 20,
+        },
+        {
+            "memberID": "b",
+            "group": 4,
+            "address": 6,
+            "name": "right_NEER",
+            "version": "RLM_4",
+            "memberType": 20,
+        },
+    ]
+    result = classify_members(members)
+    assert result.candidates == []
+    assert len(result.leftover) == 2
+
+
+def test_type20_odd_relay_stays_unpaired():
+    members = [
+        {
+            "memberID": "a",
+            "group": 3,
+            "address": 5,
+            "name": "one_OP",
+            "version": "RLM_4",
+            "memberType": 20,
+        },
+        {
+            "memberID": "b",
+            "group": 3,
+            "address": 8,
+            "name": "one_NEER",
+            "version": "RLM_4",
+            "memberType": 20,
+        },
+        {
+            "memberID": "c",
+            "group": 3,
+            "address": 12,
+            "name": "spare",
+            "version": "RLM_4",
+            "memberType": 20,
+        },
+    ]
+    result = classify_members(members)
+    assert len(result.candidates) == 1
+    assert result.candidates[0].entry["open_address"] == 5
+    assert result.candidates[0].entry["close_address"] == 8
+    assert any("12" in line for line in result.leftover)
+
+
 def test_unpaired_type20_is_leftover_not_rlm():
     members = [
         {
@@ -238,12 +324,32 @@ def test_softm_dimmer_sensors_drop_inm_and_exu():
             "address": 13,
             "name": "klok",
             "version": "RTC_84",
+            "memberType": 12,
+        },
+        {
+            "memberID": "x",
+            "group": 1,
+            "address": 14,
+            "name": "not a clock",
+            "version": "RTC_84",
             "memberType": 99,
+        },
+        {
+            "memberID": "y",
+            "group": 1,
+            "address": 15,
+            "name": "wrong version",
+            "version": "OTHER_1",
+            "memberType": 12,
         },
     ]
     result = classify_members(members)
     kinds = sorted(item.kind for item in result.candidates)
     assert kinds == ["dimmer", "ldm", "rtc", "softm", "wsm"]
+    assert not any(
+        item.entry.get("name") in {"not a clock", "wrong version"}
+        for item in result.candidates
+    )
     assert not any(
         item.entry.get("name") in {"PIR", "motion parking"}
         for item in result.candidates
@@ -319,9 +425,46 @@ def test_sfeer_groups_sdim_and_skips_stop_reset_record():
     assert saved["type"] == "sfeer"
     assert len(saved["moods"]) == 2
     leftover_text = " ".join(result.leftover).casefold()
-    assert "stop dim" in leftover_text
-    assert "groepsreset" in leftover_text
+    assert "stop dim" not in leftover_text
+    assert "groepsreset" not in leftover_text
     assert "record" in leftover_text
+
+
+def test_type19_control_addresses_are_dropped():
+    members = []
+    for group, mood in ((7, "Reading"), (8, "Cinema")):
+        members.append(
+            {
+                "memberID": f"mood-{group}",
+                "group": group,
+                "address": 221,
+                "name": mood,
+                "version": "SDIM",
+                "memberType": 19,
+            }
+        )
+        for address, name in (
+            (219, "GroepsReset Dim"),
+            (220, "Stop Dim"),
+            (229, "Record Sfeer Dim"),
+            (254, "Groepssturing Dim"),
+        ):
+            members.append(
+                {
+                    "memberID": f"{group}-{address}",
+                    "group": group,
+                    "address": address,
+                    "name": name,
+                    "version": "SDIM",
+                    "memberType": 19,
+                }
+            )
+    result = classify_members(members)
+    assert result.leftover == []
+    assert len(result.candidates) == 2
+    for item in result.candidates:
+        assert item.kind == "sfeer"
+        assert [m["address"] for m in item.entry["moods"]] == [221]
 
 
 def test_already_configured_cover_and_rlm_are_listed_not_checked():

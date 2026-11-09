@@ -54,6 +54,7 @@ YAML_ORDER = (
     "on_command",
     "off_command",
     "check_status",
+    "sfeer_on_only",
     "enable_softm_status_tracking",
     "softm_timer",
     "persist_state",
@@ -630,6 +631,7 @@ def normalize_yaml_entry(item: Any) -> dict:
             "group": room_group,
             "moods": moods,
             "check_status": check,
+            "sfeer_on_only": bool(item.get("sfeer_on_only", False)),
         }
 
     raise ValueError(f"unknown type {t!r}")

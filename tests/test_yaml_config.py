@@ -220,6 +220,40 @@ addresses:
     assert entries[0]["moods"] == []
 
 
+def test_sfeer_on_only_roundtrip_and_default():
+    on, err = parse_addresses_yaml(
+        """
+addresses:
+  - type: sfeer
+    name: Lounge
+    group: 5
+    sfeer_on_only: true
+    moods:
+      - name: Reading
+        address: 221
+"""
+    )
+    assert err is None
+    assert on[0]["sfeer_on_only"] is True
+    again, err2 = parse_addresses_yaml(dump_addresses_yaml(on))
+    assert err2 is None
+    assert again[0]["sfeer_on_only"] is True
+
+    off, err3 = parse_addresses_yaml(
+        """
+addresses:
+  - type: sfeer
+    name: Lounge
+    group: 5
+    moods:
+      - name: Reading
+        address: 221
+"""
+    )
+    assert err3 is None
+    assert off[0]["sfeer_on_only"] is False
+
+
 def test_sfeer_room_group_fills_moods():
     content = """
 addresses:

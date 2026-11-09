@@ -42,6 +42,8 @@ BHS_TIMEOUT_S = 15
 _SDIM_SKIP_NAMES = frozenset(
     {"stop dim", "groepsreset dim", "groepssturing dim"}
 )
+# Group reset, stop dim, record, and group steering. Not Sfeer moods.
+_SDIM_IGNORE_ADDRESSES = frozenset({219, 220, 229, 254})
 
 _KIND_LABEL = {
     "rlm": ("RLM", "RLM"),
@@ -368,7 +370,9 @@ def classify_members(
         current = type20[i]
         if i + 1 < len(type20):
             nxt = type20[i + 1]
-            if nxt.group == current.group and nxt.address == current.address + 1:
+            # Two type-20 relays in one group are one cover. The addresses
+            # are usually consecutive. Nothing requires that.
+            if nxt.group == current.group:
                 open_row, close_row = _assign_open_close(current, nxt)
                 loc = (
                     f"{open_row.group}.{open_row.address}"
@@ -422,12 +426,10 @@ def classify_members(
         if row.member_type != 19 or _version_head(row.version) != "sdim":
             continue
         used.add((row.group, row.address))
+        if row.address in _SDIM_IGNORE_ADDRESSES:
+            continue
         name_cf = row.name.casefold()
-        if (
-            row.address == 220
-            or name_cf in _SDIM_SKIP_NAMES
-            or "record" in name_cf
-        ):
+        if name_cf in _SDIM_SKIP_NAMES or "record" in name_cf:
             result.leftover.append(
                 leftover_line(
                     row.group, row.address, row.name, row.version, row.member_type
@@ -495,7 +497,7 @@ def classify_members(
             kind = "aud"
         elif row.member_type == 28:
             kind = "bm8"
-        elif head == "rtc":
+        elif row.member_type == 12 and head == "rtc":
             kind = "rtc"
         if kind is None:
             # A member type this integration does not configure is dropped.

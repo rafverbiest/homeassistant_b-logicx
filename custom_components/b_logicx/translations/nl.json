@@ -273,11 +273,12 @@
       },
       "add_sfeer_room": {
         "title": "Sfeer-ruimte toevoegen",
-        "description": "Eén busgroep per ruimte (eerste ruimte is meestal groep 5, daarna 6, …).\n\nHuidige Sfeer in deze ruimte: {moods}\n\nVoeg elke Sfeer daarna toe via het menu-item “Sfeer toevoegen”.",
+        "description": "Eén busgroep per ruimte (eerste ruimte is meestal groep 5, daarna 6, …).\n\nHuidige Sfeer in deze ruimte: {moods}\n\nVoeg elke Sfeer daarna toe via het menu-item “Sfeer toevoegen”.\n\nStaat “Sfeer enkel aan” uit, dan stuurt Uit de actieve sfeer nog eens, zodat gekoppelde RLM’s ook uit gaan. Staat het aan, dan stuurt Uit groepsreset op adres 219, en die zet die RLM’s niet uit.",
         "data": {
           "room_name": "Ruimtenaam",
           "group": "Busgroep",
-          "check_status": "Vraag de bus welke Sfeer actief is wanneer Home Assistant start"
+          "check_status": "Vraag de bus welke Sfeer actief is wanneer Home Assistant start",
+          "sfeer_on_only": "Sfeer enkel aan"
         }
       },
       "add_sfeer_mood": {

@@ -44,6 +44,7 @@ addresses:
     name: Lounge
     group: 5
     check_status: true
+    sfeer_on_only: false
     moods:
       - name: Reading
         address: 221

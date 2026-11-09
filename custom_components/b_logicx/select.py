@@ -3,7 +3,7 @@
 One SelectEntity per room. Options are Off plus each configured mood name.
 Activating a mood sends Dimmer to that virtual address (221 and up); the bus answers with
 Set/Reset and enforces mutual exclusivity (Reset on the previous mood).
-Off sends Dimmer to the currently active mood address, which then functions akin to a Toggle.
+Off sends Dimmer to the active mood. With Sfeer enkel aan, Off sends Dimmer to address 219.
 
 The Rooms described here have nothing to do with Home Assistants Rooms.
 B-Logicx uses groups 5 trough 9 to address a room for Sfeer functionality,
@@ -36,6 +36,7 @@ from .const import (
     SFEER_OPTION_OFF,
     get_sfeer_device_identifiers,
     get_sfeer_unique_id,
+    sfeer_off_address,
     sfeer_option_from_ha_state,
 )
 from .hub import BLogicxHub
@@ -72,6 +73,7 @@ async def async_setup_entry(
                     room_name=addr.get("name", "Sfeer"),
                     moods=moods,
                     check_status=addr.get("check_status", False),
+                    on_only=bool(addr.get("sfeer_on_only", False)),
                     room_group=addr.get("group"),
                 )
             )
@@ -102,12 +104,14 @@ class BLogicxSfeerSelect(SelectEntity, RestoreEntity):
         room_name: str,
         moods: list[dict],
         check_status: bool = False,
+        on_only: bool = False,
         room_group: int | None = None,
     ) -> None:
         self._hub = hub
         self._host = host
         self._room_name = room_name
         self._check_status = check_status
+        self._on_only = on_only
         self._room_group = room_group
 
         # mood name -> (group, address)
@@ -233,7 +237,9 @@ class BLogicxSfeerSelect(SelectEntity, RestoreEntity):
                 self.async_write_ha_state()
                 return
             g, a = ga
-            await self._hub.async_send(COMMAND_DIMMER, g, a)
+            await self._hub.async_send(
+                COMMAND_DIMMER, g, sfeer_off_address(self._on_only, a)
+            )
             # Optimistic; bus Reset confirms
             self._attr_current_option = SFEER_OPTION_OFF
             self.async_write_ha_state()

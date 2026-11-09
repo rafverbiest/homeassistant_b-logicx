@@ -40,6 +40,7 @@ class SfeerSteps:
             room_name = user_input["room_name"].strip()
             room_group = int(user_input["group"])
             check = user_input.get("check_status", False)
+            on_only = bool(user_input.get("sfeer_on_only", False))
             edit_key = getattr(self, "_edit_key", None)
             if edit_key:
                 old = _find_entry(current, edit_key) or {}
@@ -64,6 +65,7 @@ class SfeerSteps:
                 "group": room_group,
                 "moods": moods,
                 "check_status": check,
+                "sfeer_on_only": on_only,
             }
             current = _upsert_by_key(current, new_room)
             await self._save_and_reload(current)
@@ -82,6 +84,7 @@ class SfeerSteps:
             def_group = sfeer_room_group(defaults)
             def_name = defaults.get("name", "")
             def_check = defaults.get("check_status", False)
+            def_on_only = bool(defaults.get("sfeer_on_only", False))
             moods = defaults.get("moods") or []
             mood_desc = (
                 ", ".join(f"{m.get('name')} → {m.get('address')}" for m in moods)
@@ -95,6 +98,7 @@ class SfeerSteps:
             def_group = next_sfeer_group(used)
             def_name = ""
             def_check = False
+            def_on_only = False
             mood_desc = (
                 "(nog geen — gebruik Sfeer toevoegen na het aanmaken van de ruimte)"
                 if _flow_lang(self.hass) == "nl"
@@ -110,6 +114,9 @@ class SfeerSteps:
                     vol.Required("group", default=def_group): int,
                     vol.Optional(
                         "check_status", default=def_check
+                    ): selector.BooleanSelector(),
+                    vol.Optional(
+                        "sfeer_on_only", default=def_on_only
                     ): selector.BooleanSelector(),
                 }
             ),
@@ -182,6 +189,7 @@ class SfeerSteps:
                 "group": room_group,
                 "moods": moods,
                 "check_status": room.get("check_status", False),
+                "sfeer_on_only": bool(room.get("sfeer_on_only", False)),
             }
             addresses = [a for a in current if _entry_key(a) != room_key]
             addresses = _upsert_by_key(addresses, new_room)

@@ -242,6 +242,11 @@ def test_on_off_from_ha_state():
     assert sfeer_option_from_ha_state("Gone", options) is None
     assert sfeer_option_from_ha_state("unknown", options) is None
 
+    from const import sfeer_off_address
+
+    assert sfeer_off_address(False, 221) == 221
+    assert sfeer_off_address(True, 221) == 219
+
     from const import (
         measurement_from_ha_state,
         text_from_ha_state,
