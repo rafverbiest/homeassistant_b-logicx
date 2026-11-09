@@ -273,7 +273,7 @@
       },
       "add_sfeer_room": {
         "title": "Add Sfeer room",
-        "description": "One bus group per room (first room is usually group 5, then 6, …).\n\nCurrent Sfeer in this room: {moods}\n\nAdd each Sfeer afterwards with the menu item “Add Sfeer”.\n\nWhen “Mood switches on only” is off, Off sends the active Sfeer again, so coupled RLMs turn off too. When it is on, Off sends group reset at address 219, which does not turn those RLMs off.",
+        "description": "One bus group per room (first room is usually group 5, then 6, …).\n\nCurrent Sfeer in this room: {moods}\n\nAdd each Sfeer afterwards with the menu item “Add Sfeer”.\n\n“Mood switches on only” is off by default. This setting can also be found in BLConfig. When it is on, the lights can only be switched off with the group reset. If it is on in BLConfig, it must be on here too.",
         "data": {
           "room_name": "Room name",
           "group": "Bus group",

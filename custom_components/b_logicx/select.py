@@ -3,7 +3,9 @@
 One SelectEntity per room. Options are Off plus each configured mood name.
 Activating a mood sends Dimmer to that virtual address (221 and up); the bus answers with
 Set/Reset and enforces mutual exclusivity (Reset on the previous mood).
-Off sends Dimmer to the active mood. With Sfeer enkel aan, Off sends Dimmer to address 219.
+Off sends Dimmer to the active mood. With Sfeer enkel aan, the same option as in
+BLConfig, Off sends the group reset at address 219: the lights can then only
+be switched off that way. Turn it on here when it is on in BLConfig.
 
 The Rooms described here have nothing to do with Home Assistants Rooms.
 B-Logicx uses groups 5 trough 9 to address a room for Sfeer functionality,

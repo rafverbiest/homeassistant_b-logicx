@@ -32,6 +32,8 @@ This integration calls a Sfeer by sending `Dimmer` to `<group> 221`–`228`. The
 
 Some dimmers also send `Set` or `Reset` to particular RLMs or SoftMs when a Sfeer runs, from a condition saved with that Sfeer. That normally goes through BLConfig, but automations can do it through HA as well.
 
+BLConfig has the same option, “Mood switches on only”. It is off by default. When it is on, Sfeer behaves differently: the lights can then only be switched off with the group reset. If it is on in BLConfig, turn it on in this integration too, on the Sfeer room, or the two will not behave the same way. In YAML that is `sfeer_on_only: true`.
+
 ## Why a slider
 
 Finding a good level by holding the button is not a pleasant daily control. With many LED lamps the useful range sits in a small slice of the actual operating range, and because of the delay on the bus you release the button too late. With the slider you can send a value in percent, either by hand or through automations.

@@ -273,7 +273,7 @@
       },
       "add_sfeer_room": {
         "title": "Sfeer-ruimte toevoegen",
-        "description": "Eén busgroep per ruimte (eerste ruimte is meestal groep 5, daarna 6, …).\n\nHuidige Sfeer in deze ruimte: {moods}\n\nVoeg elke Sfeer daarna toe via het menu-item “Sfeer toevoegen”.\n\nStaat “Sfeer enkel aan” uit, dan stuurt Uit de actieve sfeer nog eens, zodat gekoppelde RLM’s ook uit gaan. Staat het aan, dan stuurt Uit groepsreset op adres 219, en die zet die RLM’s niet uit.",
+        "description": "Eén busgroep per ruimte (eerste ruimte is meestal groep 5, daarna 6, …).\n\nHuidige Sfeer in deze ruimte: {moods}\n\nVoeg elke Sfeer daarna toe via het menu-item “Sfeer toevoegen”.\n\n“Sfeer enkel aan” staat standaard uit. Deze instelling kan ook in BLConfig gevonden worden. Staat ze aan, dan kunnen de lichten enkel nog uit met de groepsreset. Staat ze aan in BLConfig, dan moet ze hier ook aan staan.",
         "data": {
           "room_name": "Ruimtenaam",
           "group": "Busgroep",

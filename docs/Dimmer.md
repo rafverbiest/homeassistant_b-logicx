@@ -31,6 +31,8 @@ Deze integratie roept een sfeer op door `Dimmer` naar `<groep> 221`–`228` te s
 
 Sommige dimmers sturen bij een sfeer ook `Set` of `Reset` naar bepaalde RLM's of SoftM's, volgens een voorwaarde die bij die sfeer is opgeslagen. Dat gaat normaal via BLConfig, maar kan via Automatisaties ook via HA.
 
+In BLConfig bestaat ook de optie “Sfeer enkel aan”. Ze staat standaard uit. Staat ze aan, dan verandert het gedrag van de sferen: de lichten uitschakelen kan dan enkel nog met de groepsreset. Staat ze aan in BLConfig, dan moet ze ook in deze integratie aan staan, bij de Sfeer-ruimte, anders is het gedrag niet hetzelfde. In YAML is dat `sfeer_on_only: true`.
+
 ## Waarom een schuifregelaar
 
 Een goed niveau zoeken door de knop ingedrukt te houden is geen prettige dagelijkse bediening. Bij veel ledlampen zit het bruikbare bereik in een klein stuk van het eigenlijke werkingsbereik, en door de vertraging op de bus laat je de knop te laat los. Door gebruik te maken van de schuifregelaar kan je een waarde in procent sturen, hetzij manueel hetzij via Automatisaties.

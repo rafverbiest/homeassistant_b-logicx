@@ -66,7 +66,7 @@ TSM_PRESET_LABELS = ("Night", "Day", "Away", "Holiday")
 # One room = one bus group (typically 5, then 6, 7…); moods = 221, 222… in that group.
 DEFAULT_SFEER_GROUP = 5
 DEFAULT_SFEER_ADDRESS = 221  # first scene in a room; 222, 223, …
-SFEER_GROUP_RESET_ADDRESS = 219  # Dimmer here turns the room's dimmers off
+SFEER_GROUP_RESET_ADDRESS = 219  # group reset; the lights go off only this way when Sfeer enkel aan is on
 SFEER_OPTION_OFF = "off"  # select option to clear active mood (HA translation keys must be lowercase)
 # Groups 10+ are for software members / other roles — not Sfeer rooms
 SFEER_AVOID_GROUPS = frozenset(range(10, 16))
@@ -201,7 +201,7 @@ DEFAULT_CLOSE_TIME = 30.0  # seconds for full close travel
 #     {"name": "TV", "group": 5, "address": 222},
 #   ],
 #   "check_status": False,
-#   "sfeer_on_only": False,
+#   "sfeer_on_only": False,  # BLConfig “Sfeer enkel aan”; on here when it is on there
 # }
 #
 # Read-only address (binary_sensor — Status optional, no control commands):
@@ -320,7 +320,11 @@ def sfeer_option_from_ha_state(
 
 
 def sfeer_off_address(on_only: bool, active_address: int) -> int:
-    """219 when the room only switches moods on. Otherwise the active mood."""
+    """Group reset when Sfeer enkel aan is on. Otherwise the active mood.
+
+    BLConfig has the same option. When it is on, the lights can only be
+    switched off with the group reset, so the option has to be on here too.
+    """
     if on_only:
         return SFEER_GROUP_RESET_ADDRESS
     return active_address
