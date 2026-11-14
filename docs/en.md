@@ -16,13 +16,13 @@ Custom integration that connects [Home Assistant](https://www.home-assistant.io/
 
 [B-Logicx](https://b-logicx.be/) is a Belgian home-automation vendor (Heist-op-den-Berg). Their bus uses EIB/KNX cabling and 24 V DC (black = 0, red = +24 V, yellow = bus signal). The system is decentralised by nature and makes it easy to spread the building blocks (inputs and outputs) through a building. An important advantage of B-Logicx is that everything is powered over the bus, and that (within certain limits) a single 24 V supply is enough. The protocol is simple: each datagram is **two bytes** (command + group, address).
 
-The problem I ran into more and more over recent years is that newer, usually wireless, home-automation products make classic systems such as B-Logicx or Niko Home Control feel dated, because they are simple to install. Wireless products are by nature easier to add during later building work than wired systems, with the drawback that they usually run on batteries.
+The problem I have found more and more over recent years is that newer, usually wireless, home-automation products make classic systems such as B-Logicx or Niko Home Control feel dated, because installation is simple. Wireless products do have the drawback that they often run on batteries, but they are much easier to fit, often without much experience, which makes them especially attractive for later installations.
 
-This project lets an existing system become a hybrid. By letting B-Logicx talk to Home Assistant, people can use Zigbee, Z-Wave or Shelly where that makes the installation much simpler, without that becoming a second, parallel system beside their existing B-Logicx.
+This project means you do not have to choose: it lets an existing system become a **hybrid**. By letting B-Logicx talk to Home Assistant, it lets you install Zigbee, Z-Wave or Shelly where that makes the installation much simpler, without that becoming a second, parallel system beside the existing B-Logicx.
 
 The official B-Logicx way to connect to Home Assistant is too limited, and it also requires a B-Logicx Home Server.
 
-This integration needs only the network module every system already has, and it provides seamless communication between B-Logicx and Home Assistant.
+This integration works **only through a network module** that every system already has, and it provides seamless, real-time communication between B-Logicx and Home Assistant.
 
 ## Links
 

@@ -16,13 +16,13 @@ Custom integration die [Home Assistant](https://www.home-assistant.io/) rechtstr
 
 [B-Logicx](https://b-logicx.be/) is een Belgische producent van domotica (Heist-op-den-Berg). Hun bus gebruikt EIB/KNX-bekabeling en 24 V DC (zwart = 0, rood = +24 V, geel = bussignaal). Het systeem is van nature gedecentraliseerd en laat eenvoudig toe om de bouwstenen (input en output) te verdelen over een gebouw. Een belangrijk voordeel van B-Logicx is dat alles gevoed wordt langs de bus en dat je (binnen bepaalde grenzen) met een enkele 24 V voeding kan werken. Het protocol zelf is eenvoudig: elk datagram is **twee bytes** (commando + groep, adres).
 
-Het probleem dat ik de laatste jaren meer en meer tegenkwam, is dat er modernere (meestal draadloze) domotica-oplossingen op de markt komen die door hun eenvoud in installatie de klassieke domotica zoals B-Logicx of Niko Home Control ouderwets laten aanvoelen. Draadloze oplossingen zijn van nature gemakkelijker in nabouw aan te brengen dan bedrade systemen, weliswaar met het nadeel dat ze meestal batterijgevoed zijn.
+Het probleem dat ik de laatste jaren meer en meer ondervond, is dat er modernere (meestal draadloze) domotica-oplossingen op de markt komen die door hun eenvoudige installatie de klassieke domotica zoals B-Logicx of Niko Home Control ouderwets laten aanvoelen. Draadloze oplossingen hebben wel het nadeel dat ze vaak batterijgevoed zijn, maar ze zijn wel veel makkelijker en vaak zonder veel ervaring aan te brengen, wat ze vooral voor na-installaties aantrekkelijk maakt.
 
-Dit project laat toe om bestaande systemen 'hybride' te maken. Door B-Logicx te laten praten met Home Assistant, laat het gebruikers toe om bijvoorbeeld Zigbee, Z-Wave of Shelly te gebruiken op die plaatsen waar dat de installatie enorm vereenvoudigt, zonder dat dat een tweede, parallelle systeem moet vormen naast hun bestaande B-Logicx.
+Dit project zorgt ervoor dat je niet hoeft te kiezen: het laat toe om bestaande systemen **hybride** te maken. Door B-Logicx te laten praten met Home Assistant, laat het toe om bijvoorbeeld Zigbee, Z-Wave of Shelly te installeren op die plaatsen waar dat de installatie enorm vereenvoudigt, zonder dat dat een tweede, parallelle systeem moet vormen naast de bestaande B-Logicx.
 
 De officiële methode van B-Logicx om te verbinden met Home Assistant is te beperkt en vereist bovendien een B-Logicx Home Server.
 
-Deze integratie werkt enkel op basis van een netwerkmodule die elk systeem toch al bevat en biedt een naadloze communicatie tussen B-Logicx en Home Assistant.
+Deze integratie werkt **enkel op basis van een netwerkmodule** die elk systeem toch al bevat en biedt een naadloze en real-time communicatie tussen B-Logicx en Home Assistant.
 
 ## Links
 
