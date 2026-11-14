@@ -1,0 +1,14 @@
+# B-Logicx voor Home Assistant
+
+> Koppel Home Assistant rechtstreeks aan een B-Logicx NWM of NWX. Schakelaars, dimmers, rolluiken en Sfeer, zonder B-Logicx Home Server. Onafhankelijk project.
+
+- Nederlands: https://b-logicx.rafverbiest.be/
+- English: https://b-logicx.rafverbiest.be/en.html
+- Installatie: https://b-logicx.rafverbiest.be/Installatie.html
+- Configuratie: https://b-logicx.rafverbiest.be/Configuratie.html
+- Dimmer: https://b-logicx.rafverbiest.be/Dimmer.html
+- SoftM: https://b-logicx.rafverbiest.be/SoftM.html
+- Bus-repeater: https://b-logicx.rafverbiest.be/Bus-repeater.html
+- Diagnostiek: https://b-logicx.rafverbiest.be/Diagnostiek.html
+- YAML: https://b-logicx.rafverbiest.be/YAML.html
+- B-Logicx upgrades: https://b-logicx.rafverbiest.be/Alternatieven.html

@@ -2,7 +2,9 @@
 layout: default
 lang: nl
 title: B-Logicx voor Home Assistant
-last_modified_at: 2026-10-20
+head_title: B-Logicx voor Home Assistant, zonder Home Server
+description: Koppel Home Assistant rechtstreeks aan een B-Logicx NWM of NWX. Schakelaars, dimmers, rolluiken en Sfeer, zonder B-Logicx Home Server.
+last_modified_at: 2026-11-14
 alternate: /en.html
 ---
 
@@ -12,7 +14,15 @@ Custom integration die [Home Assistant](https://www.home-assistant.io/) rechtstr
 
 ## Over dit project
 
-[B-Logicx](https://b-logicx.be/) is een Belgische producent van domotica (Heist-op-den-Berg). Hun bus gebruikt EIB/KNX-bekabeling en 24 V DC (zwart = 0, rood = +24 V, geel = bussignaal). Het protocol is eenvoudig: elk datagram is **twee bytes** (commando + groep, adres).
+[B-Logicx](https://b-logicx.be/) is een Belgische producent van domotica (Heist-op-den-Berg). Hun bus gebruikt EIB/KNX-bekabeling en 24 V DC (zwart = 0, rood = +24 V, geel = bussignaal). Het systeem is van nature gedecentraliseerd en laat eenvoudig toe om de bouwstenen (input en output) te verdelen over een gebouw. Een belangrijk voordeel van B-Logicx is dat alles gevoed wordt langs de bus en dat je (binnen bepaalde grenzen) met een enkele 24 V voeding kan werken. Het protocol zelf is eenvoudig: elk datagram is **twee bytes** (commando + groep, adres).
+
+Het probleem dat ik de laatste jaren meer en meer tegenkwam, is dat er modernere (meestal draadloze) domotica-oplossingen op de markt komen die door hun eenvoud in installatie de klassieke domotica zoals B-Logicx of Niko Home Control ouderwets laten aanvoelen. Draadloze oplossingen zijn van nature gemakkelijker in nabouw aan te brengen dan bedrade systemen, weliswaar met het nadeel dat ze meestal batterijgevoed zijn.
+
+Dit project laat toe om bestaande systemen 'hybride' te maken. Door B-Logicx te laten praten met Home Assistant, laat het gebruikers toe om bijvoorbeeld Zigbee, Z-Wave of Shelly te gebruiken op die plaatsen waar dat de installatie enorm vereenvoudigt, zonder dat dat een tweede, parallelle systeem moet vormen naast hun bestaande B-Logicx.
+
+De officiële methode van B-Logicx om te verbinden met Home Assistant is te beperkt en vereist bovendien een B-Logicx Home Server.
+
+Deze integratie werkt enkel op basis van een netwerkmodule die elk systeem toch al bevat en biedt een naadloze communicatie tussen B-Logicx en Home Assistant.
 
 ## Links
 
@@ -31,7 +41,7 @@ Custom integration die [Home Assistant](https://www.home-assistant.io/) rechtstr
 - **[RTC](https://b-logicx.be/DataSheet/DS_RTC.pdf)**-synchronisatie (incl. DST), **[LDM](https://b-logicx.be/DataSheet/DS_LDM.pdf)**-lichtsensor, **[TSM](https://b-logicx.be/DataSheet/DS_TSM.pdf)**-thermostaat, **[WSM](https://b-logicx.be/DataSheet/DS_WSM.pdf)**-windsnelheid (km/h), **[BM8](https://b-logicx.be/DataSheet/DS_BM8.pdf)**-deurbel  
 - YAML import/export van adressen  
 
-![Integratiepagina met de apparaten onder de gateway.](/images/integration.png)
+<img src="/images/integration.png" alt="Integratiepagina met de apparaten onder de gateway." width="1128" height="811">
 
 ## Documentatie
 

@@ -5,7 +5,9 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    {% if page.title == site.title or page.title == site.en_title %}
+    {% if page.head_title %}
+      {% assign doc_title = page.head_title %}
+    {% elsif page.title == site.title or page.title == site.en_title %}
       {% assign doc_title = page.title %}
     {% elsif page.title %}
       {% assign doc_title = page.title | append: " | B-Logicx" %}
@@ -13,6 +15,15 @@
       {% assign doc_title = site.title %}
     {% endif %}
     <title>{{ doc_title | escape }}</title>
+    <link rel="icon" type="image/png" href="{{ "/favicon.png" | relative_url }}">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "name": "Raf Verbiest",
+      "url": {{ site.url | jsonify }}
+    }
+    </script>
 {% seo title=false %}
     {% if page.lang == "en" %}
       {% assign nl_href = page.alternate | default: "/" | absolute_url %}
