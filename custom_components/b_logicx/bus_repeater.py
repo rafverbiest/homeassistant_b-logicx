@@ -9,6 +9,14 @@ Bytes from the gateway are copied to every client before Program filtering.
 Bytes from a client are two-byte frames written to the gateway under the
 same request lock as Status and the sensors, so they do not land in the
 middle of those sequences.
+
+While that TCP port is open, this also answers the NWM search on UDP 30718.
+The setup reply names this listen port and no second port. The firmware
+query is answered with the MAC A5-51-57-10-00-00 and the first digits of
+the manifest version. Read as letters (5=S, 1=I, 7=T, 0=O) that MAC spells
+ASSISTIO.
+The allow-list is unchanged: a machine that can see the search can still
+be refused on TCP.
 """
 
 from __future__ import annotations
@@ -16,7 +24,13 @@ from __future__ import annotations
 import asyncio
 import ipaddress
 import logging
+import socket
 from typing import TYPE_CHECKING
+
+try:
+    from .b_logicx.discover import DISCOVER_PORT, reply_to_discover
+except ImportError:  # offline tests import this file as a top-level module
+    from b_logicx.discover import DISCOVER_PORT, reply_to_discover
 
 if TYPE_CHECKING:
     from .b_logicx.connection import BLXConnection
@@ -97,6 +111,8 @@ class BusRepeater:
         self._server: asyncio.Server | None = None
         self._clients: list[asyncio.StreamWriter] = []
         self._unsub_raw = None
+        self._announce_sock: socket.socket | None = None
+        self._announce_task: asyncio.Task | None = None
 
     @property
     def port(self) -> int:
@@ -119,8 +135,10 @@ class BusRepeater:
             self._port,
             self._gateway_host,
         )
+        await self._start_announce()
 
     async def stop(self) -> None:
+        await self._stop_announce()
         if self._unsub_raw is not None:
             self._unsub_raw()
             self._unsub_raw = None
@@ -136,6 +154,55 @@ class BusRepeater:
             await self._server.wait_closed()
             self._server = None
             _LOGGER.info("Bus repeater stopped")
+
+    async def _start_announce(self) -> None:
+        """Answer the NWM search on UDP 30718. A busy port leaves TCP running."""
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setblocking(False)
+        try:
+            sock.bind(("0.0.0.0", DISCOVER_PORT))
+        except OSError:
+            _LOGGER.warning(
+                "Bus repeater could not listen for an NWM search on UDP %s",
+                DISCOVER_PORT,
+            )
+            sock.close()
+            return
+        self._announce_sock = sock
+        self._announce_task = asyncio.create_task(self._announce_loop())
+        _LOGGER.info("Bus repeater answering an NWM search on UDP %s", DISCOVER_PORT)
+
+    async def _stop_announce(self) -> None:
+        task = self._announce_task
+        self._announce_task = None
+        sock = self._announce_sock
+        self._announce_sock = None
+        if sock is not None:
+            sock.close()
+        if task is not None:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+    async def _announce_loop(self) -> None:
+        sock = self._announce_sock
+        if sock is None:
+            return
+        loop = asyncio.get_running_loop()
+        try:
+            while True:
+                data, addr = await loop.sock_recvfrom(sock, 512)
+                reply = reply_to_discover(data, self._port)
+                if reply is None:
+                    continue
+                try:
+                    await loop.sock_sendto(sock, reply, addr)
+                except OSError:
+                    _LOGGER.debug("Discovery reply to %s failed", addr, exc_info=True)
+        except OSError:
+            return
 
     def _broadcast(self, data: bytes) -> None:
         """Write one received frame to every client without blocking the reader."""

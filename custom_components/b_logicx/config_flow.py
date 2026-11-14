@@ -112,11 +112,11 @@ class BLogicxConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         """Search the subnet, then list each gateway or the typed-address form."""
         found = await discover_gateways()
-        self._discovered_ips = tuple(found)
+        self._discovered_ips = tuple(item.ip for item in found)
         if not found:
             return await self.async_step_manual()
         dutch = str(self.hass.config.language).lower().startswith("nl")
-        options = {gateway_step_id(ip): f"NWM {ip}" for ip in found}
+        options = {gateway_step_id(item.ip): item.label for item in found}
         options["host"] = "Adres invoeren" if dutch else "Enter an address"
         return self.async_show_menu(step_id="user", menu_options=options)
 

@@ -76,6 +76,7 @@
         <nav>
           {% if page.lang == "en" %}
           <ul>
+            <li><a href="{{ sidebar_home }}">Home</a></li>
             <li><a href="{{ "/Installation.html" | relative_url }}">Installation</a></li>
             <li><a href="{{ "/Configuration.html" | relative_url }}">Configuration</a></li>
             <li><a href="{{ "/Dimmer-en.html" | relative_url }}">Dimmer</a></li>
@@ -87,6 +88,7 @@
           </ul>
           {% else %}
           <ul>
+            <li><a href="{{ sidebar_home }}">Home</a></li>
             <li><a href="{{ "/Installatie.html" | relative_url }}">Installatie</a></li>
             <li><a href="{{ "/Configuratie.html" | relative_url }}">Configuratie</a></li>
             <li><a href="{{ "/Dimmer.html" | relative_url }}">Dimmer</a></li>
