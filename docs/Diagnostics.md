@@ -10,8 +10,6 @@ permalink: /Diagnostics.html
 
 # Diagnostics (blxmonitor)
 
-[Nederlands](/Diagnostiek.html) · **English** · [← Home](/en.html)
-
 `blxmonitor.py` is a command-line bus monitor/sender. It lives in the library package (not next to HA platforms like `select.py`, which would shadow the stdlib `select` module):
 
 ```bash

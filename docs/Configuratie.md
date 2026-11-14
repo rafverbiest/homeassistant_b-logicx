@@ -10,8 +10,6 @@ permalink: /Configuratie.html
 
 # Configuratie
 
-**Nederlands** · [English](/Configuration.html) · [← Home](/)
-
 Adressen beheer je in de **integratie-opties** (UI) of via [YAML](/YAML.html)-import/export. Het hoofdmenu toont alleen een **aantal** entries — geen volledige dump van alle leden.
 
 ![Configuratiemenu, met een tweede regel per optie.](/images/configure-menu.png)

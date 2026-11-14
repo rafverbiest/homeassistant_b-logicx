@@ -10,9 +10,10 @@ permalink: /Bus-repeater-en.html
 
 # TCP bus repeater
 
-[Nederlands](/Bus-repeater.html) · **English** · [← Home](/en.html)
+B-Logicx bus gateways (NWM / NWX) accept only **one** TCP client. With the repeater, Home Assistant keeps that single link open and listens on HA (default port `10001`). The BHS (B-Logicx Home Server), for example, can stay connected to the bus at the same time by pointing its connection at the Home Assistant IP address.
+BLConfig can be used the same way without switching Home Assistant off.
 
-NWM / NWX accept **one** TCP client. With the repeater enabled, Home Assistant keeps that single link and listens on HA (default port `10001`) so **BLConfig** / **blxmonitor** on the same LAN subnet as the NWM can share the bus.
+The BHS has a similar feature, so if you have a BHS you can still choose which of the two (BHS or Home Assistant) sits in front.
 
 ## Enabling
 
@@ -30,7 +31,3 @@ In integration settings you enter a **CIDR** (for example `192.168.50.0/24`). On
 ## Without the repeater
 
 Without this feature you need a second NWM/NWX or a **NWM2** to run HA and BLConfig at the same time.
-
-## Warning
-
-The repeater is still lightly tested. Do **not** rely on it yet as the only path for critical **Program** actions by BLConfig.

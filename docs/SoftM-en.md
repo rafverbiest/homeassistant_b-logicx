@@ -10,8 +10,6 @@ permalink: /SoftM-en.html
 
 # SoftM (virtual status module)
 
-[Nederlands](/SoftM.html) · **English** · [← Home](/en.html)
-
 Home Assistant can act as a **virtual status module (VSM)** for Software Members (SoftM) — similar to a hardware STM.
 
 ## Bus behaviour

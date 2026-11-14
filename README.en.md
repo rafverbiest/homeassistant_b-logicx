@@ -2,15 +2,15 @@
 
 [Nederlands](README.md) | **English**
 
-Custom integration for the **[B-Logicx](https://b-logicx.be/) (NWM / NWX)** bus gateway: RLM's, dimmers, covers, sfeer (moods), read-only addresses, SoftM VSM, RTC, LDM/TSM/WSM, BM8, and a TCP bus repeater. Independent of the manufacturer.
+Custom integration for **[B-Logicx](https://b-logicx.be/)**: RLMs, dimmers, cover controls, Sfeer (moods), read-only addresses (generic Set/Reset), Software members, VSM (Virtual Status Module), RTC (Real-Time Clock), LDM (light sensor), TSM (temperature sensor), WSM (wind speed monitor), BM8 (doorbell module), and a TCP bus repeater. Connects directly to the NWM/NWX. No B-Logicx Home Server required. Independent of the manufacturer.
 
-**B-Logicx:** [b-logicx.be](https://b-logicx.be/) ·
-**Site:** [b-logicx.rafverbiest.be](https://b-logicx.rafverbiest.be/en.html) ·
+**Official B-Logicx website:** [b-logicx.be](https://b-logicx.be/) ·
+**This integration's website:** [b-logicx.rafverbiest.be](https://b-logicx.rafverbiest.be/en.html) ·
 **Releases:** [changelog](https://github.com/rafverbiest/homeassistant_b-logicx/releases)
 
 ## Install with HACS
 
-1. Install [HACS](https://hacs.xyz/) if you do not already have it.
+1. Install [HACS](https://hacs.xyz/) if you do not already have it (or choose 'marketplace' on Home Assistant 2026.11 or newer).
 2. Search for **B-Logicx** in HACS and choose **Download**.
    If it is not listed yet, add the repository first via **HACS** → top-right **⋮** → **Custom repositories**:
 

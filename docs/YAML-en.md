@@ -10,8 +10,6 @@ permalink: /YAML-en.html
 
 # YAML import / export
 
-[Nederlands](/YAML.html) · **English** · [← Home](/en.html)
-
 Addresses can be managed in the UI or as YAML.
 
 ## Template

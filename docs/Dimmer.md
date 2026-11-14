@@ -10,8 +10,6 @@ permalink: /Dimmer.html
 
 # Dimmer
 
-**Nederlands** · [English](/Dimmer-en.html) · [← Home](/)
-
 Een dimmer is normaal geaddresseerd in groep 5,6,7,8 of 9. Die groep definieert de kamer. Sferen zijn verzameld per groep en dus per kamer.
 
 Een individuele dimmer toont Home Assistant als één lamp: een hoofdschakelaar en een schuifregelaar van 0 tot 100. Aan en uit gaat met een `Dimmer`-commando naar dat adres, gevolgd door nogmaals `Dimmer` naar vast adres 220. De dimmer antwoordt zelf met `Set` of `Reset`. Volgens het protocol kan je manueel tijd laten tussen beide commando's, tijd waarin de dimmer beginnen op-en af te dimmen. De bedoeling is dat je op het gewenste niveau loslaat, maar dat is niet heel bruikbaar via Home Assistant, vandaar dat beide commando's direct elkaar opvolgen.

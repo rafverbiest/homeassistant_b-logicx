@@ -10,8 +10,6 @@ permalink: /Alternatieven.html
 
 # B-Logicx upgrades
 
-**Nederlands** · [English](/Alternatives.html) · [← Home](/)
-
 ## Sommige modules zijn niet meer nodig
 
 Met een **NWM / NWX** en deze Home Assistant-integratie zit HA al op de B-Logicx-bus. Daardoor is een apart B-Logicx-WiFi-traject voor schakelaars niet meer nodig.
@@ -23,6 +21,7 @@ Omdat deze integratie de bus rechtstreeks monitort en bestuurt, kun je voor *nie
 Je bouwt dan geen tweede, parallel bedieningsnetwerk naast de bus; HA is de gemeenschappelijke laag.
 
 - **Voorbeeld:** gebruik een Niko-schakelaar met een INM om een Shelly of Zigbee-stopcontact te schakelen (spotgoedkoop op Amazon of bij IKEA te verkrijgen)
+
 
 ## Automatisaties
 

@@ -8,8 +8,6 @@ alternate: /en.html
 
 # B-Logicx voor Home Assistant
 
-**Nederlands** · [English](en.html)
-
 Custom integration die [Home Assistant](https://www.home-assistant.io/) rechtstreeks koppelt aan een **[B-Logicx](https://b-logicx.be/) [NWM](https://b-logicx.be/DataSheet/DS_NWM.pdf) / NWX** bus-gateway — [BHS](https://b-logicx.be/DataSheet/DS_BHS.pdf) Home Server is optioneel en geen vereiste.
 
 ## Over dit project
@@ -25,7 +23,7 @@ Custom integration die [Home Assistant](https://www.home-assistant.io/) rechtstr
 
 ## Functies
 
-- Schakelaars ([RLM](https://b-logicx.be/DataSheet/DS_RLM.pdf) / SoftM), **dimmers** en **alleen-lezen** adressen  
+- Schakelaars (**[RLM](https://b-logicx.be/DataSheet/DS_RLM.pdf)** / **SoftM**), **dimmers** en **alleen-lezen** (generiek Set/Reset) adressen  
 - **[Rolluiken](https://b-logicx.be/DataSheet/DS_Rolluik.pdf)** (dubbele RLM) en **Sfeer**-selectie  
 - **AUD**-mediaspelers (bronnen, volume omhoog/omlaag, dempen). [BHS](https://b-logicx.be/DataSheet/DS_BHS.pdf) kan de fysieke speler bedienen; dat is getest met een [NuVoP](https://b-logicx.be/Manual/BLConfig/HTML/NuVoP.html). NUV, AUD, ASD en ART24 gebruiken dezelfde busvorm. De volledige controle kan ook langs Home Assistant; dat is getest met Spotify en hoort te werken met elke speler die Home Assistant kan koppelen. Een gekende bron, afspelen, stoppen of dempen wordt teruggeschreven zodat de [DSM](https://b-logicx.be/DataSheet/DS_DSM.pdf) schermen volgen.  
 - **SoftM** virtuele statusmodule (VSM) in Home Assistant  

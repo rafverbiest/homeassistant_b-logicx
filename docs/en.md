@@ -9,8 +9,6 @@ alternate: /
 
 # B-Logicx for Home Assistant
 
-[Nederlands](index.html) · **English**
-
 Custom integration that connects [Home Assistant](https://www.home-assistant.io/) directly to a **[B-Logicx](https://b-logicx.be/) [NWM](https://b-logicx.be/DataSheet/DS_NWM.pdf) / NWX** bus gateway — the [BHS](https://b-logicx.be/DataSheet/DS_BHS.pdf) Home Server is optional and not a requirement.
 
 ## About this project
@@ -26,7 +24,7 @@ Custom integration that connects [Home Assistant](https://www.home-assistant.io/
 
 ## Features
 
-- Switches ([RLM](https://b-logicx.be/DataSheet/DS_RLM.pdf) / SoftM), **dimmers**, and **read-only** addresses  
+- Switches (**[RLM](https://b-logicx.be/DataSheet/DS_RLM.pdf)** / **SoftM**), **dimmers**, and **read-only** addresses (generic Set/Reset)  
 - **[Covers](https://b-logicx.be/DataSheet/DS_Rolluik.pdf)** (dual RLM) and **Sfeer** selection  
 - **AUD** media players (sources, volume up/down, mute). [BHS](https://b-logicx.be/DataSheet/DS_BHS.pdf) can control the physical player; that was tested with a [NuVoP](https://b-logicx.be/Manual/BLConfig/HTML/NuVoP.html). NUV, AUD, ASD, and ART24 use the same bus shape. Full control can also go through Home Assistant; that was tested with Spotify and should work with any player Home Assistant can link. A known source, play, stop, or mute is written back so the [DSM](https://b-logicx.be/DataSheet/DS_DSM.pdf) displays follow.  
 - **SoftM** virtual status module (VSM) inside Home Assistant  

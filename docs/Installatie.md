@@ -10,12 +10,10 @@ permalink: /Installatie.html
 
 # Installatie
 
-**Nederlands** · [English](/Installation.html) · [← Home](/)
-
 ## Via HACS (aanbevolen)
 
-1. Installeer [HACS](https://hacs.xyz/) als je dat nog niet hebt.
-2. In Home Assistant: **HACS** → rechtsboven **⋮** → **Custom repositories**.
+1. Installeer [HACS](https://hacs.xyz/) als je dat nog niet hebt (niet meer nodig vanaf Home Assistant 2026.11!)
+2. In Home Assistant: **HACS** (**marketplace** in >2026.11) → rechtsboven **⋮** → **Custom repositories**.
 3. Repository-URL:
 
    ```text
@@ -46,5 +44,6 @@ Na toevoegen van de integratie:
 
 - Stel **adressen** in via de opties-UI (toevoegen / bewerken / verwijderen), of  
 - Importeer een YAML-bestand ([YAML](/YAML.html), sjabloon: `custom_components/b_logicx/flow/template.yaml`).
+- Nieuwe feature: autodetectie van de bus gateway en de busadressen. 
 
-Optioneel later: SoftM status-tracking en TCP bus repeater in de **integratie-instellingen** — zie [SoftM](/SoftM.html) en [Bus-repeater](/Bus-repeater.html).
+Optioneel later: zet de Virtuele Status Module en de TCP bus repeater aan in de **integratie-instellingen** — zie [SoftM](/SoftM.html) en [Bus-repeater](/Bus-repeater.html).

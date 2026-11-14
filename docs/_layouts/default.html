@@ -31,6 +31,8 @@
       header nav li { margin: 0 0 4px; }
       header nav p { margin: 0 0 8px; }
       section img { max-width: 100%; height: auto; }
+      p.lang-switch { margin: 0 0 12px; text-align: right; font-size: 14px; }
+      p.lang-switch span { font-weight: 700; }
       @media screen and (max-width: 960px) {
         header { padding-right: 0; }
       }
@@ -62,7 +64,6 @@
 
         <nav>
           {% if page.lang == "en" %}
-          <p><a href="{{ "/" | relative_url }}">Nederlands</a></p>
           <ul>
             <li><a href="{{ "/Installation.html" | relative_url }}">Installation</a></li>
             <li><a href="{{ "/Configuration.html" | relative_url }}">Configuration</a></li>
@@ -74,7 +75,6 @@
             <li><a href="{{ "/Alternatives.html" | relative_url }}">B-Logicx upgrades</a></li>
           </ul>
           {% else %}
-          <p><a href="{{ "/en.html" | relative_url }}">English</a></p>
           <ul>
             <li><a href="{{ "/Installatie.html" | relative_url }}">Installatie</a></li>
             <li><a href="{{ "/Configuratie.html" | relative_url }}">Configuratie</a></li>
@@ -105,6 +105,13 @@
         {% endif %}
       </header>
       <section>
+        <p class="lang-switch">
+          {% if page.lang == "en" %}
+          <a href="{{ nl_href }}">Nederlands</a> · <span aria-current="page">English</span>
+          {% else %}
+          <span aria-current="page">Nederlands</span> · <a href="{{ en_href }}">English</a>
+          {% endif %}
+        </p>
 
       {{ content }}
 

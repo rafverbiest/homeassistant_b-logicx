@@ -10,8 +10,6 @@ permalink: /Alternatives.html
 
 # B-Logicx upgrades
 
-[Nederlands](/Alternatieven.html) · **English** · [← Home](/en.html)
-
 ## Some modules are no longer needed
 
 With a **NWM / NWX** and this Home Assistant integration, HA is already on the B-Logicx bus. That means a separate B-Logicx WiFi path for switches is no longer needed.
