@@ -4,6 +4,8 @@ Z15.csv
 site.yaml
 *.local.yaml
 private/
+*.fdb
+*.FDB
 
 # Editor / OS backups
 *~

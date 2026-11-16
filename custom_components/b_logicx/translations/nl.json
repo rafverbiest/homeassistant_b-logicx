@@ -43,7 +43,8 @@
           "export_yaml": "YAML exporteren",
           "download_yaml_template": "YAML-sjabloon downloaden",
           "import_yaml": "Importeren uit YAML",
-          "import_bhs": "Importeren uit BHS (Experimenteel)"
+          "import_bhs": "Importeren uit BHS (Experimenteel)",
+          "import_fdb": "Importeren uit FDB (Experimenteel)"
         },
         "menu_option_descriptions": {
           "add_address": "Vul zelf een groep en een adres in, en kies daarna het type.",
@@ -56,7 +57,8 @@
           "export_yaml": "Toon of download de adressen die nu zijn opgeslagen.",
           "download_yaml_template": "Een voorbeeldbestand om aan te passen en te importeren.",
           "import_yaml": "Vervang alle opgeslagen adressen door een YAML-bestand.",
-          "import_bhs": "Lees eenmalig de ledenlijst. Kies welke je toevoegt."
+          "import_bhs": "Lees eenmalig de ledenlijst. Kies welke je toevoegt.",
+          "import_fdb": "Upload eenmalig het BHS-databasebestand. Het wordt gelezen en niet bewaard."
         }
       },
       "add_address": {
@@ -344,8 +346,15 @@
           "members": "Leden"
         }
       },
+      "import_fdb": {
+        "title": "Importeren uit FDB",
+        "description": "Upload het BHS-databasebestand (.fdb). Het bestand wordt één keer gelezen en niet bewaard. Kies daarna welke leden je toevoegt.",
+        "data": {
+          "import_fdb": "Databasebestand"
+        }
+      },
       "import_bhs_done": {
-        "title": "Importeren uit BHS",
+        "title": "Leden geïmporteerd",
         "description": "Toegevoegd: {added}. Al aanwezig: {already_count}. Niet geïmporteerd: {leftover_count}.\n\n{leftover}"
       },
       "import_bhs_secured": {
@@ -399,6 +408,7 @@
       "bhs_blocked": "BLConfig heeft dit toestel geblokkeerd. Verzend opnieuw om een nieuw toestel te registreren.",
       "bhs_error": "De BHS heeft de aanvraag geweigerd.",
       "invalid_yaml": "Kan het YAML-bestand niet lezen of verwerken.",
+      "invalid_fdb": "Dit bestand is geen leesbare BHS-database, of er zijn geen leden om te importeren.",
       "detect_not_running": "De gateway is niet verbonden. Start de integratie en probeer opnieuw.",
       "template_missing": "Het sjabloonbestand is niet gevonden.",
       "invalid_format": "De YAML-structuur of een of meer items is ongeldig.",

@@ -237,6 +237,8 @@ class _Row:
     version: str
     member_type: int | None
     member_id: str
+    # Shown as a trailing * on the checklist name. Not stored on the entity.
+    incomplete: bool = False
 
 
 @dataclass(frozen=True)
@@ -302,7 +304,11 @@ def _cover_name(open_row: _Row, close_row: _Row) -> str:
     return open_row.name or f"Cover {open_row.group}.{open_row.address}"
 
 
-def _label(kind: str, loc: str, name: str, lang: str) -> str:
+def _label(
+    kind: str, loc: str, name: str, lang: str, *, marked: bool = False
+) -> str:
+    if marked:
+        name = f"{name}*" if name else "*"
     word = _kind_word(kind, lang)
     if name:
         return f"{loc} {name} — {word}"
@@ -339,6 +345,7 @@ def _rows_from_members(members: list[Any]) -> tuple[list[_Row], list[str]]:
                 version=version,
                 member_type=member_type,
                 member_id=member_id,
+                incomplete=bool(member.get("incomplete")),
             )
         )
     return rows, leftover
@@ -385,7 +392,13 @@ def classify_members(
                         f":{close_row.group}.{close_row.address}"
                     ),
                     kind="shutter",
-                    label=_label("shutter", loc, name, lang),
+                    label=_label(
+                        "shutter",
+                        loc,
+                        name,
+                        lang,
+                        marked=open_row.incomplete or close_row.incomplete,
+                    ),
                     entry={
                         "type": "shutter",
                         "name": name,
@@ -439,13 +452,20 @@ def classify_members(
         sdim_moods.setdefault(row.group, []).append(row)
 
     for group, moods in sorted(sdim_moods.items()):
+        moods = sorted(moods, key=lambda mood: mood.address)
         pairs = tuple((group, mood.address) for mood in moods)
         name = f"Sfeer {group}"
         loc = str(group)
         candidate = ImportCandidate(
             key=f"sfeer:{group}",
             kind="sfeer",
-            label=_label("sfeer", loc, name, lang),
+            label=_label(
+                "sfeer",
+                loc,
+                name,
+                lang,
+                marked=any(mood.incomplete for mood in moods),
+            ),
             entry={
                 "type": "sfeer",
                 "name": name,
@@ -465,6 +485,7 @@ def classify_members(
         else:
             result.candidates.append(candidate)
 
+    rest: list[ImportCandidate] = []
     for row in rows:
         if (row.group, row.address) in used:
             continue
@@ -511,13 +532,17 @@ def classify_members(
         }
         if kind == "aud":
             entry["controller"] = "bhs"
-        candidate = ImportCandidate(
-            key=f"{kind}:{row.group}.{row.address}",
-            kind=kind,
-            label=_label(kind, loc, row.name, lang),
-            entry=entry,
-            pairs=((row.group, row.address),),
+        rest.append(
+            ImportCandidate(
+                key=f"{kind}:{row.group}.{row.address}",
+                kind=kind,
+                label=_label(kind, loc, row.name, lang, marked=row.incomplete),
+                entry=entry,
+                pairs=((row.group, row.address),),
+            )
         )
+    rest.sort(key=lambda item: (item.pairs[0][0], item.pairs[0][1]))
+    for candidate in rest:
         if known.intersection(candidate.pairs):
             result.already.append(candidate.label)
         else:

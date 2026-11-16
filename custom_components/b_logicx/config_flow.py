@@ -284,6 +284,7 @@ class BLogicxOptionsFlow(
                 "download_yaml_template",
                 "import_yaml",
                 "import_bhs",
+                "import_fdb",
             ]
         )
 

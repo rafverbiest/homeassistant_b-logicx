@@ -10,6 +10,7 @@ from typing import Any
 
 import voluptuous as vol
 
+from homeassistant.components.file_upload import process_uploaded_file
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -33,10 +34,22 @@ from ..b_logicx.bhs_client import (
     read_member_list,
 )
 from ..b_logicx.detect import configured_bus_keys
+from ..b_logicx.fdb_members import FdbError, read_members
 from ..const import *
 from .common import _flow_lang, _placeholders
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _members_from_upload(hass, file_id: str) -> list:
+    """Read an uploaded database and return its members.
+
+    The temporary file is deleted. The disk read and the parse both happen
+    here, so the options flow can run this off the event loop.
+    """
+    with process_uploaded_file(hass, file_id) as file_path:
+        raw = file_path.read_bytes()
+    return read_members(raw)
 
 
 class BhsSteps:
@@ -98,6 +111,47 @@ class BhsSteps:
         return self.async_show_form(
             step_id="import_bhs",
             data_schema=vol.Schema(fields),
+            errors=errors or None,
+            description_placeholders=_placeholders(),
+        )
+
+    async def async_step_import_fdb(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Upload a BHS database file and open the member checklist."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            file_id = user_input.get("import_fdb")
+            if not file_id:
+                errors["import_fdb"] = "required"
+            else:
+                try:
+                    members = await self.hass.async_add_executor_job(
+                        _members_from_upload, self.hass, file_id
+                    )
+                except FdbError:
+                    errors["base"] = "invalid_fdb"
+                except Exception:
+                    _LOGGER.exception("FDB import failed")
+                    errors["base"] = "invalid_fdb"
+                else:
+                    _LOGGER.info("FDB import read %d members", len(members))
+                    addresses = list(self.config_entry.data.get(CONF_ADDRESSES, []))
+                    self._bhs_classified = classify_members(
+                        members,
+                        configured_bus_keys(addresses),
+                        lang=_flow_lang(self.hass),
+                    )
+                    return await self.async_step_import_bhs_pick()
+        return self.async_show_form(
+            step_id="import_fdb",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("import_fdb"): selector.FileSelector(
+                        selector.FileSelectorConfig(accept=".fdb,.FDB")
+                    ),
+                }
+            ),
             errors=errors or None,
             description_placeholders=_placeholders(),
         )

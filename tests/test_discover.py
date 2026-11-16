@@ -98,19 +98,26 @@ def test_parentheses_follow_the_first_digits_of_the_manifest_version():
     assert _shown_version("0.10.1") == "0.1"
     assert _shown_version("12.3.0") == "1.3"
     mac = bytes.fromhex("020000000001")
-    reply = firmware_reply(mac)
+    version = manifest_version()
+    reply = firmware_reply(mac, version)
     assert reply is not None
     assert len(reply) == 30
     assert reply[:6] == _FIRMWARE_REPLY[:6]
-    assert reply[6:8] == version_octets(manifest_version())
+    assert reply[6:8] == version_octets(version)
     assert reply[8:24] == _FIRMWARE_REPLY[8:24]
     assert reply.endswith(mac)
-    assert firmware_version(reply) == _shown_version(manifest_version())
-    assistio = firmware_reply(bytes.fromhex("a55157100000"))
-    assert reply_to_discover(b"\x00\x00\x00\xf6", 10001) == assistio
+    assert firmware_version(reply) == _shown_version(version)
+    # A caller-supplied version is what the reply shows. The builder does
+    # not open manifest.json itself.
+    supplied = firmware_reply(mac, "1.4.2")
+    assert supplied is not None
+    assert supplied[6:8] == version_octets("1.4.2")
+    assert reply_to_discover(b"\x00\x00\x00\xf6", 10001, "1.4.2")[6:8] == supplied[6:8]
+    assistio = firmware_reply(bytes.fromhex("a55157100000"), version)
+    assert reply_to_discover(b"\x00\x00\x00\xf6", 10001, version) == assistio
     assert firmware_mac(assistio) == "A5-51-57-10-00-00"
-    assert reply_to_discover(DISCOVER_QUERY, 10001) == build_setup_record(10001)
-    assert reply_to_discover(b"", 10001) is None
+    assert reply_to_discover(DISCOVER_QUERY, 10001, version) == build_setup_record(10001)
+    assert reply_to_discover(b"", 10001, version) is None
 
 
 def test_this_host_is_among_its_own_addresses():

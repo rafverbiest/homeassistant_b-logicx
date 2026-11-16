@@ -48,6 +48,7 @@ from .bus_repeater import BusRepeater
 from .const import (
     BM8_DATA_GROUP,
     DEFAULT_BUS_REPEATER_PORT,
+    DOMAIN,
     bm8_data_address_allowed,
 )
 
@@ -828,12 +829,22 @@ class BLogicxHub:
         if self._conn is None:
             raise RuntimeError("Not connected")
         await self.async_stop_repeater()
+        # Once, before the search listener starts. Home Assistant already
+        # loaded this manifest off the loop; the listener only reuses the string.
+        # Imported here so the hub module still loads in tests without HA.
+        from homeassistant.loader import async_get_integration
+
+        integration = await async_get_integration(self.hass, DOMAIN)
+        version = integration.version
+        if not isinstance(version, str) or not version:
+            version = "0.0"
         self._repeater = BusRepeater(
             self._conn,
             self.host,
             port=port,
             allow_cidr=allow_cidr,
             request_lock=self._request_lock,
+            version=version,
         )
         await self._repeater.start()
 

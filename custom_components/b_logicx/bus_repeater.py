@@ -13,8 +13,8 @@ middle of those sequences.
 While that TCP port is open, this also answers the NWM search on UDP 30718.
 The setup reply names this listen port and no second port. The firmware
 query is answered with the MAC A5-51-57-10-00-00 and the first digits of
-the manifest version. Read as letters (5=S, 1=I, 7=T, 0=O) that MAC spells
-ASSISTIO.
+the version given at start. Read as letters (5=S, 1=I, 7=T, 0=O) that MAC
+spells ASSISTIO.
 The allow-list is unchanged: a machine that can see the search can still
 be refused on TCP.
 """
@@ -102,12 +102,16 @@ class BusRepeater:
         port: int = DEFAULT_BUS_REPEATER_PORT,
         allow_cidr: str | None = None,
         request_lock: asyncio.Lock | None = None,
+        version: str,
     ) -> None:
         self._conn = conn
         self._gateway_host = gateway_host
         self._port = port
         self._allow_cidr = (allow_cidr or "").strip() or None
         self._request_lock = request_lock
+        # Firmware answers reuse this string. Looking it up per packet would
+        # read manifest.json on the event loop.
+        self._version = version if version else "0.0"
         self._server: asyncio.Server | None = None
         self._clients: list[asyncio.StreamWriter] = []
         self._unsub_raw = None
@@ -194,7 +198,7 @@ class BusRepeater:
         try:
             while True:
                 data, addr = await loop.sock_recvfrom(sock, 512)
-                reply = reply_to_discover(data, self._port)
+                reply = reply_to_discover(data, self._port, self._version)
                 if reply is None:
                     continue
                 try:

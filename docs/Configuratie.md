@@ -3,7 +3,7 @@ layout: default
 lang: nl
 title: "Configuratie"
 description: "Adrestypes, de optieschermen, en YAML-import."
-last_modified_at: 2026-10-22
+last_modified_at: 2026-11-16
 alternate: /Configuration.html
 permalink: /Configuratie.html
 ---
@@ -16,7 +16,9 @@ Adressen beheer je in de **integratie-opties** (UI) of via [YAML](/YAML.html)-im
 
 Adres detecteren luistert hoogstens 30 seconden. Een RLM of SoftM zet je aan of uit. Een rolluik stuur je eerst omhoog en daarna omlaag. Voor het rolluik telt Set: dat is de richting die je stuurde. Reset is het andere relais.
 
-Importeren uit BHS leest eenmalig de ledenlijst op de BHS (poort 10014) en voegt de aangevinkte modules toe.
+Importeren uit BHS (experimenteel) leest eenmalig de ledenlijst op de BHS (poort 10014) en voegt de aangevinkte modules toe.
+
+Importeren uit FDB (experimenteel) uploadt eenmalig het databasebestand van BLConfig (.fdb). Het bestand wordt gelezen en niet bewaard. Daarna volgt hetzelfde vinkjesscherm.
 
 ![Adres detecteren, luisterend naar Set of Reset.](/images/detect-address.png)
 

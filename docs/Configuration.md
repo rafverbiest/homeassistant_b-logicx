@@ -3,7 +3,7 @@ layout: default
 lang: en
 title: "Configuration"
 description: "Address types, the option screens, and YAML import."
-last_modified_at: 2026-10-22
+last_modified_at: 2026-11-16
 alternate: /Configuratie.html
 permalink: /Configuration.html
 ---
@@ -16,7 +16,9 @@ Manage addresses in the **integration options** (UI) or via [YAML](/YAML-en.html
 
 Detect an address listens for up to 30 seconds. Turn an RLM or a SoftM on or off. Send a cover up, then down. For a cover, Set is the direction you sent. Reset is the other relay.
 
-Import from BHS reads the member list once from the BHS (port 10014) and adds the modules you check.
+Import from BHS (experimental) reads the member list once from the BHS (port 10014) and adds the modules you check.
+
+Import from FDB (experimental) uploads the BLConfig database file (.fdb) once. The file is read and not stored. The same checklist follows.
 
 ![Detect an address, listening for Set or Reset.](/images/detect-address.png)
 

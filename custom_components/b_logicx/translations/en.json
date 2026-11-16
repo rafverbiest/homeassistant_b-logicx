@@ -43,7 +43,8 @@
           "export_yaml": "Export YAML",
           "download_yaml_template": "Download YAML template",
           "import_yaml": "Import from YAML",
-          "import_bhs": "Import from BHS (experimental)"
+          "import_bhs": "Import from BHS (experimental)",
+          "import_fdb": "Import from FDB (experimental)"
         },
         "menu_option_descriptions": {
           "add_address": "Enter a group and address yourself, then choose the module type.",
@@ -56,7 +57,8 @@
           "export_yaml": "Show or download the addresses saved now.",
           "download_yaml_template": "An example file to edit and import.",
           "import_yaml": "Replace all saved addresses with a YAML file.",
-          "import_bhs": "Read the member list once. Pick which ones to add."
+          "import_bhs": "Read the member list once. Pick which ones to add.",
+          "import_fdb": "Upload the BHS database file once. It is read and not stored."
         }
       },
       "add_address": {
@@ -344,8 +346,15 @@
           "members": "Members"
         }
       },
+      "import_fdb": {
+        "title": "Import from FDB",
+        "description": "Upload the BHS database file (.fdb). The file is read once and not stored. Then choose which members to add.",
+        "data": {
+          "import_fdb": "Database file"
+        }
+      },
       "import_bhs_done": {
-        "title": "Import from BHS",
+        "title": "Members imported",
         "description": "Added {added}. Already present: {already_count}. Not imported: {leftover_count}.\n\n{leftover}"
       },
       "import_bhs_secured": {
@@ -399,6 +408,7 @@
       "bhs_blocked": "BLConfig blocked this device. Submit again to register a new one.",
       "bhs_error": "The BHS refused the request.",
       "invalid_yaml": "Could not read or parse the YAML file.",
+      "invalid_fdb": "This file is not a readable BHS database, or it has no members to import.",
       "detect_not_running": "The gateway is not connected. Start the integration and try again.",
       "template_missing": "The template file could not be found.",
       "invalid_format": "The YAML structure or one or more entries is invalid.",

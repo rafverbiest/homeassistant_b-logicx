@@ -205,6 +205,106 @@ def test_type20_odd_relay_stays_unpaired():
     assert any("12" in line for line in result.leftover)
 
 
+def test_blocks_stay_in_order_and_each_block_is_sorted_by_address():
+    members = [
+        {
+            "memberID": "hi",
+            "group": 2,
+            "address": 20,
+            "name": "late",
+            "version": "DIM1K_1",
+            "memberType": 2,
+        },
+        {
+            "memberID": "mid",
+            "group": 1,
+            "address": 5,
+            "name": "hall",
+            "version": "RLM_4",
+            "memberType": 1,
+        },
+        {
+            "memberID": "low",
+            "group": 1,
+            "address": 2,
+            "name": "porch",
+            "version": "SoftM",
+            "memberType": 4,
+        },
+        {
+            "memberID": "g2",
+            "group": 2,
+            "address": 1,
+            "name": "lamp",
+            "version": "RLM_4",
+            "memberType": 1,
+        },
+        {
+            "memberID": "up",
+            "group": 4,
+            "address": 11,
+            "name": "blind_OP",
+            "version": "RLM_4",
+            "memberType": 20,
+        },
+        {
+            "memberID": "down",
+            "group": 4,
+            "address": 10,
+            "name": "blind_NEER",
+            "version": "RLM_4",
+            "memberType": 20,
+        },
+    ]
+    result = classify_members(members, {(2, 20)})
+    assert [item.key for item in result.candidates] == [
+        "shutter:4.11:4.10",
+        "softm:1.2",
+        "rlm:1.5",
+        "rlm:2.1",
+    ]
+    assert result.already == ["2.20 late — Dimmer"]
+
+
+def test_incomplete_mark_stays_on_the_checklist_label():
+    members = [
+        {
+            "memberID": "a",
+            "group": 7,
+            "address": 12,
+            "name": "screen up",
+            "version": "RLM_4",
+            "memberType": 20,
+            "incomplete": True,
+        },
+        {
+            "memberID": "b",
+            "group": 7,
+            "address": 13,
+            "name": "screen down",
+            "version": "RLM_4",
+            "memberType": 20,
+        },
+        {
+            "memberID": "c",
+            "group": 8,
+            "address": 4,
+            "name": "spare",
+            "version": "SoftM",
+            "memberType": 4,
+            "incomplete": True,
+        },
+    ]
+    result = classify_members(members, lang="nl")
+    by_kind = {item.kind: item for item in result.candidates}
+    cover = by_kind["shutter"]
+    assert cover.entry["name"] == "screen up"
+    assert cover.label == "7.12–7.13 screen up* — rolluik"
+    soft = by_kind["softm"]
+    assert soft.entry["name"] == "spare"
+    assert soft.label == "8.4 spare* — SoftM"
+
+
 def test_unpaired_type20_is_leftover_not_rlm():
     members = [
         {
@@ -375,18 +475,18 @@ def test_softm_dimmer_sensors_drop_inm_and_exu():
 def test_sfeer_groups_sdim_and_skips_stop_reset_record():
     members = [
         {
-            "memberID": "m1",
-            "group": 5,
-            "address": 221,
-            "name": "TV",
-            "version": "SDIM",
-            "memberType": 19,
-        },
-        {
             "memberID": "m2",
             "group": 5,
             "address": 222,
             "name": "eten",
+            "version": "SDIM",
+            "memberType": 19,
+        },
+        {
+            "memberID": "m1",
+            "group": 5,
+            "address": 221,
+            "name": "TV",
             "version": "SDIM",
             "memberType": 19,
         },

@@ -64,7 +64,12 @@ def build_setup_record(port: int) -> bytes:
 
 
 def manifest_version() -> str:
-    """Version from manifest.json, the same string Home Assistant shows."""
+    """Version string in manifest.json.
+
+    This reads the file. Tests compare firmware bytes with it. The bus
+    repeater must not call it: each search answer runs on the event loop,
+    and the version is handed in when the repeater starts.
+    """
     path = Path(__file__).resolve().parents[1] / "manifest.json"
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -93,26 +98,31 @@ def version_octets(version: str) -> bytes:
     return bytes((minor << 4, major))
 
 
-def firmware_reply(mac: bytes) -> bytes | None:
-    """Captured F7 with the manifest version and the MAC it is given.
+def firmware_reply(mac: bytes, version: str) -> bytes | None:
+    """Captured F7 with the version and the MAC it is given.
 
     Byte 7 is the major and the high nibble of byte 6 is the minor, the
-    same places that read (6.A) and (6.7) on the captured modules.
+    same places that read (6.A) and (6.7) on the captured modules. The
+    version is a string already in memory. This does not open a file.
     """
     if len(mac) != 6:
         return None
     head = bytearray(_FIRMWARE_REPLY[:24])
-    head[6:8] = version_octets(manifest_version())
+    head[6:8] = version_octets(version)
     return bytes(head) + mac
 
 
-def reply_to_discover(query: bytes, port: int) -> bytes | None:
-    """Setup record for F8. For F6, the ASSISTIO MAC and the manifest version."""
+def reply_to_discover(query: bytes, port: int, version: str) -> bytes | None:
+    """Setup record for F8. For F6, the ASSISTIO MAC and the given version.
+
+    The setup record does not use the version. Both queries take it so the
+    listener can pass the one string it was started with.
+    """
     if query == DISCOVER_QUERY:
         return build_setup_record(port)
     if query != _FIRMWARE_QUERY:
         return None
-    return firmware_reply(_REPEATER_MAC)
+    return firmware_reply(_REPEATER_MAC, version)
 
 
 class DiscoveredGateway(NamedTuple):
