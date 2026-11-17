@@ -118,7 +118,7 @@ class BhsSteps:
     async def async_step_import_fdb(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Upload a BHS database file and open the member checklist."""
+        """Upload a BLConfig database file and open the member checklist."""
         errors: dict[str, str] = {}
         if user_input is not None:
             file_id = user_input.get("import_fdb")

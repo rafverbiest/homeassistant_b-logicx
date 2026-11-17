@@ -1,8 +1,8 @@
-"""Read bus members from a BHS/BLConfig Firebird database file.
+"""Read bus members from a BLConfig Firebird database file.
 
-The file is ODS 12 with 8192-byte pages, which is the database BHS stores
+The file is ODS 12 with 8192-byte pages, the database BLConfig stores
 on disk. Only the MEMBERS relation is returned, and only the columns the
-BHS import already understands: group, address, name, version, memberType,
+checklist already understands: group, address, name, version, memberType,
 and memberID. Other tables are ignored.
 
 A record Firebird marks incomplete still holds a member. Those rows are
@@ -72,7 +72,7 @@ _RELATIONS_FIELD_IDS = {
     "RDB$RELATION_NAME": 8,
 }
 
-# BHS column name to the getMembers key. NAAM is accepted when NAME is absent.
+# MEMBERS column to the getMembers key. NAAM is accepted when NAME is absent.
 _MEMBER_COLUMNS = {
     "GROUP": "group",
     "ADDRESS": "address",
