@@ -16,11 +16,11 @@ Custom integration that connects [Home Assistant](https://www.home-assistant.io/
 
 - Switches (**[RLM](https://b-logicx.be/DataSheet/DS_RLM.pdf)** / **SoftM**), **dimmers**, and **read-only** addresses (generic Set/Reset)  
 - **[Covers](https://b-logicx.be/DataSheet/DS_Rolluik.pdf)** (dual RLM) and **Sfeer** selection  
-- **AUD** media players (sources, volume up/down, mute). [BHS](https://b-logicx.be/DataSheet/DS_BHS.pdf) can control the physical player; that was tested with a [NuVoP](https://b-logicx.be/Manual/BLConfig/HTML/NuVoP.html). NUV, AUD, ASD, and ART24 use the same bus shape. Full control can also go through Home Assistant; that was tested with Spotify and should work with any player Home Assistant can link. A known source, play, stop, or mute is written back so the [DSM](https://b-logicx.be/DataSheet/DS_DSM.pdf) displays follow.  
 - **SoftM** virtual status module (VSM) inside Home Assistant  
 - **TCP bus repeater** — share the single [NWM](https://b-logicx.be/DataSheet/DS_NWM.pdf) link with [BLConfig](https://b-logicx.be/Manual/BLConfig/HTML/Introductie.html) / blxmonitor  
 - **[RTC](https://b-logicx.be/DataSheet/DS_RTC.pdf)** sync (incl. DST), **[LDM](https://b-logicx.be/DataSheet/DS_LDM.pdf)** light sensor, **[TSM](https://b-logicx.be/DataSheet/DS_TSM.pdf)** thermostat, **[WSM](https://b-logicx.be/DataSheet/DS_WSM.pdf)** wind speed (km/h), **[BM8](https://b-logicx.be/DataSheet/DS_BM8.pdf)** doorbell  
-- YAML import/export of addresses  
+- **AUD** media players: sources, volume and mute. Tested with a NuVoP through BHS, and with Spotify through Home Assistant.  
+- **Import** addresses from YAML (import and export), or once from the BHS member list or from a BLConfig database (FDB). BHS and FDB are experimental; you check what to add. The FDB file is read and not stored.  
 
 <img src="/images/integration.png" alt="Integration page with the devices under the gateway." width="1128" height="811">
 

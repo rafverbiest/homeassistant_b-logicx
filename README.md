@@ -10,11 +10,11 @@ Custom integration die [Home Assistant](https://www.home-assistant.io/) rechtstr
 
 - Schakelaars (**[RLM](https://b-logicx.be/DataSheet/DS_RLM.pdf)** / **SoftM**), **dimmers** en **alleen-lezen** (generiek Set/Reset) adressen
 - **[Rolluiken](https://b-logicx.be/DataSheet/DS_Rolluik.pdf)** (dubbele RLM) en **Sfeer**-selectie
-- **AUD**-mediaspelers (bronnen, volume omhoog/omlaag, dempen). [BHS](https://b-logicx.be/DataSheet/DS_BHS.pdf) kan de fysieke speler bedienen; dat is getest met een [NuVoP](https://b-logicx.be/Manual/BLConfig/HTML/NuVoP.html). NUV, AUD, ASD en ART24 gebruiken dezelfde busvorm. De volledige controle kan ook langs Home Assistant; dat is getest met Spotify en hoort te werken met elke speler die Home Assistant kan koppelen. Een gekende bron, afspelen, stoppen of dempen wordt teruggeschreven zodat de [DSM](https://b-logicx.be/DataSheet/DS_DSM.pdf) schermen volgen.
 - **SoftM** virtuele statusmodule (VSM) in Home Assistant
 - **TCP bus repeater** — deel de ene [NWM](https://b-logicx.be/DataSheet/DS_NWM.pdf)-verbinding met [BLConfig](https://b-logicx.be/Manual/BLConfig/HTML/Introductie.html) / blxmonitor
 - **[RTC](https://b-logicx.be/DataSheet/DS_RTC.pdf)**-synchronisatie (incl. DST), **[LDM](https://b-logicx.be/DataSheet/DS_LDM.pdf)**-lichtsensor, **[TSM](https://b-logicx.be/DataSheet/DS_TSM.pdf)**-thermostaat, **[WSM](https://b-logicx.be/DataSheet/DS_WSM.pdf)**-windsnelheid (km/h), **[BM8](https://b-logicx.be/DataSheet/DS_BM8.pdf)**-deurbel
-- YAML import/export van adressen
+- **AUD**-mediaspelers: bronnen, volume en dempen. Getest met een NuVoP via BHS, en met Spotify via Home Assistant.
+- **Importeren** van adressen: YAML (import en export), of eenmalig de ledenlijst van BHS of het databasebestand van BLConfig (FDB). BHS en FDB zijn experimenteel; je vinkt aan wat je toevoegt. Het FDB-bestand wordt gelezen en niet bewaard.
 
 <img src="docs/images/integration.png" alt="Integratiepagina met de apparaten onder de gateway." width="1128" height="811">
 
