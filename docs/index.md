@@ -4,7 +4,7 @@ lang: nl
 title: B-Logicx voor Home Assistant
 head_title: B-Logicx voor Home Assistant, zonder de Home Server
 description: Koppel Home Assistant rechtstreeks aan een B-Logicx NWM of NWX. Schakelaars, dimmers, rolluiken en Sfeer, zonder B-Logicx Home Server.
-last_modified_at: 2026-11-14
+last_modified_at: 2026-11-21
 alternate: /en.html
 ---
 
@@ -45,7 +45,7 @@ Deze integratie werkt **enkel op basis van een netwerkmodule** die elk systeem t
 - [**B-Logicx**](https://b-logicx.be/) — website van de fabrikant
 - [**GitHub-repository**](https://github.com/rafverbiest/homeassistant_b-logicx)
 - [**Releases**](https://github.com/rafverbiest/homeassistant_b-logicx/releases)
-- [**Installeren via HACS**](https://github.com/rafverbiest/homeassistant_b-logicx#installeren-met-hacs-custom-repository)
+- [**Installeren via HACS**](/Installatie.html)
 
 ## Documentatie
 

@@ -3,7 +3,7 @@ layout: default
 lang: nl
 title: "Installatie"
 description: "Installeren via HACS of met de hand, en daarna de gateway toevoegen."
-last_modified_at: 2026-10-20
+last_modified_at: 2026-11-21
 alternate: /Installation.html
 permalink: /Installatie.html
 ---
@@ -30,7 +30,7 @@ Antwoordt een gateway, kies die. Anders vul je het adres zelf in.
 
 ![Gevonden gateway, of zelf een adres invoeren.](/images/discover-gateway.png)
 
-Zie ook de [README](https://github.com/rafverbiest/homeassistant_b-logicx#installeren-met-hacs-custom-repository).
+Zie ook de [README](https://github.com/rafverbiest/homeassistant_b-logicx#installeren).
 
 ## Handmatig (zonder HACS)
 

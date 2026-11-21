@@ -4,7 +4,7 @@ lang: en
 title: B-Logicx for Home Assistant
 head_title: B-Logicx for Home Assistant, without a Home Server
 description: Connect Home Assistant directly to a B-Logicx NWM or NWX. Switches, dimmers, covers and Sfeer, with no B-Logicx Home Server required.
-last_modified_at: 2026-11-14
+last_modified_at: 2026-11-21
 alternate: /
 ---
 
@@ -45,7 +45,7 @@ This integration works **only through a network module** that every system alrea
 - [**B-Logicx**](https://b-logicx.be/) — the manufacturer's website
 - [**GitHub repository**](https://github.com/rafverbiest/homeassistant_b-logicx)
 - [**Releases**](https://github.com/rafverbiest/homeassistant_b-logicx/releases)
-- [**Install via HACS**](https://github.com/rafverbiest/homeassistant_b-logicx/blob/main/README.en.md#install-with-hacs-custom-repository)
+- [**Install via HACS**](/Installation.html)
 
 ## Documentation
 
